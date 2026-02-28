@@ -1,0 +1,11 @@
+{
+    "name": "writer-skill",
+    "version": "1.0.0",
+    "description": "写作风格 Skill。让 AI 写出有个人味道的科技文章，而不是千篇一律的 AI 味。",
+    "author": {
+        "name": "stringzhao",
+        "email": "zhaoguixiong@corp.netease.com"
+    },
+    "license": "MIT",
+    "keywords": ["writing", "style", "skill", "AI写作", "去AI味"]
+}

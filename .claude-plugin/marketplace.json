@@ -44,6 +44,16 @@
                 "name": "stringzhao",
                 "email": "zhaoguixiong@corp.netease.com"
             }
+        },
+        {
+            "name": "writer-skill",
+            "source": "./plugins/writer-skill",
+            "description": "写作风格 Skill。让 AI 写出有个人味道的科技文章",
+            "version": "1.0.0",
+            "author": {
+                "name": "stringzhao",
+                "email": "zhaoguixiong@corp.netease.com"
+            }
         }
     ]
 }
