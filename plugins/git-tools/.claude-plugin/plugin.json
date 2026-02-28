@@ -1,7 +1,7 @@
 {
     "name": "git-tools",
-    "version": "1.0.0",
-    "description": "智能 Git 提交工具。自动检测 React 代码改动，应用最佳实践优化，生成高质量的提交信息",
+    "version": "1.1.0",
+    "description": "智能 Git 提交工具。自动检测 React 代码改动，应用最佳实践优化，提交前代码理解测验，生成高质量的提交信息",
     "author": {
         "name": "stringzhao",
         "email": "zhaoguixiong@corp.netease.com"
