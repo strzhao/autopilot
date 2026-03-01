@@ -1,5 +1,5 @@
 ---
-name: writer-skill
+name: writer-blog-skill
 description: 写作风格 Skill。让 AI 产出有个人味道的科技文章。这是一份"菜谱"，不是提示词。
 ---
 

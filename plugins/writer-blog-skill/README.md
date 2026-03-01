@@ -1,4 +1,4 @@
-# writer-skill
+# writer-blog-skill
 
 写作风格 Skill 插件。让 AI 写出有个人味道的科技文章，而不是千篇一律的 AI 味。
 

@@ -200,9 +200,9 @@
 - 使用标准 POSIX 命令
 - 提供降级方案（如 notify-send 不存在时回退到终端响铃）
 
-### 5. writer-skill (v1.0.0)
+### 5. writer-blog-skill (v1.3.0)
 **类型**: Skill 插件
-**功能**: 写作风格 Skill
+**功能**: 写作风格 Skill（博客向）
 
 **核心能力**:
 - 让 AI 产出有个人味道的科技文章
@@ -215,6 +215,9 @@
 ---
 
 ## 更新日志
+
+### 2026-03-01
+- 将 writer-skill 重命名为 writer-blog-skill (v1.3.0)，为后续 writer-general-skill 做准备
 
 ### 2026-02-08
 - 添加 plugin-sync 插件，解决跨模型插件同步问题
