@@ -1,6 +1,6 @@
 {
     "name": "writer-skill",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "description": "写作技能包。包含博客向、通用向两种写作风格，让 AI 写出有个人味道的文章。",
     "author": {
         "name": "stringzhao",
