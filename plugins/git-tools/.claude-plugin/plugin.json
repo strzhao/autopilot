@@ -1,11 +1,11 @@
 {
     "name": "git-tools",
-    "version": "1.2.0",
-    "description": "智能 Git 提交工具。自动检测 React 代码改动，应用最佳实践优化，提交前代码理解测验，生成高质量的提交信息",
+    "version": "1.3.0",
+    "description": "智能 Git 提交工具。自动检测 React 代码改动，应用最佳实践优化，提交前代码理解测验，生成高质量的提交信息，提交后自动同步任务进度到 ai-todo",
     "author": {
         "name": "stringzhao",
         "email": "zhaoguixiong@corp.netease.com"
     },
     "license": "MIT",
-    "keywords": ["git", "commit", "react", "optimization", "code-review"]
+    "keywords": ["git", "commit", "react", "optimization", "code-review", "task", "todo"]
 }
