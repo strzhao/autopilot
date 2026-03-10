@@ -1,6 +1,6 @@
 {
     "name": "git-tools",
-    "version": "1.7.0",
+    "version": "1.8.0",
     "description": "智能 Git 工具集。包含智能提交（自动检测 React 改动、最佳实践优化、代码理解测验、任务同步）和本地拟真测试验证（智能分析改动、自动选择验证策略、生成验证报告）",
     "author": {
         "name": "stringzhao",
