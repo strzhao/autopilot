@@ -119,6 +119,11 @@
 │   └── writer-skill/             # 写作技能包
 │       ├── .claude-plugin/
 │       └── skills/
+│   └── worktree-setup/           # Git Worktree 自动初始化插件
+│       ├── .claude-plugin/
+│       ├── hooks/
+│       ├── scripts/
+│       └── skills/
 ├── README.md                     # 用户文档
 ├── QUICK_START.md               # 快速开始指南
 └── CLAUDE.md                    # 本文件
@@ -243,7 +248,29 @@
 
 ---
 
+### 6. worktree-setup (v1.0.0)
+**类型**: Hook 插件
+**功能**: Git Worktree 自动初始化工具
+
+**核心能力**:
+- `WorktreeCreate` hook：`claude -w <name>` 后自动完成 worktree 初始化
+- 按项目 `.claude/worktree-links` 创建符号链接（`.env.local`、`.mcp.json` 等）
+- 无配置时自动扫描 `.env*` 文件（新项目零配置可用）
+- 确定性端口分配：hash(branch_name) → 4001-4999，避免多 worktree 端口冲突
+- 自动识别 npm/yarn/pnpm 并安装依赖（含 `prisma generate`）
+- `WorktreeRemove` hook：退出时自动清理符号链接和分支
+- `/worktree-setup:repair` skill：手动修复已有 worktree 的配置缺失
+
+**使用方式**:
+安装插件后，直接使用 `claude -w <feature-name>` 即可，worktree 创建完即可使用。
+如需定制链接文件，在项目 `.claude/worktree-links` 中声明。
+
+---
+
 ## 更新日志
+
+### 2026-03-15
+- 新增 worktree-setup 插件 (v1.0.0)：Git Worktree 自动初始化，创建后开箱即用
 
 ### 2026-03-10
 - git-tools 升级至 v1.8.0：local-test 拟真服务验证 + 用户验收环节

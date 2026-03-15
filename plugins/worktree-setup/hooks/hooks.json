@@ -1,0 +1,28 @@
+{
+    "hooks": {
+        "WorktreeCreate": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/worktree-create.sh\"",
+                        "timeout": 300,
+                        "statusMessage": "初始化 worktree（npm install 中...）"
+                    }
+                ]
+            }
+        ],
+        "WorktreeRemove": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/worktree-remove.sh\"",
+                        "timeout": 60,
+                        "statusMessage": "清理 worktree..."
+                    }
+                ]
+            }
+        ]
+    }
+}

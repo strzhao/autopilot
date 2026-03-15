@@ -54,6 +54,16 @@
                 "name": "stringzhao",
                 "email": "zhaoguixiong@corp.netease.com"
             }
+        },
+        {
+            "name": "worktree-setup",
+            "source": "./plugins/worktree-setup",
+            "description": "Git Worktree 自动初始化插件。创建 worktree 后自动链接 .env 等配置文件、安装依赖、分配独立端口，开箱即用",
+            "version": "1.0.0",
+            "author": {
+                "name": "stringzhao",
+                "email": "zhaoguixiong@corp.netease.com"
+            }
         }
     ]
 }
