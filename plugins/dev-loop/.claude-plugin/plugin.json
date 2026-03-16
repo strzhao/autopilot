@@ -1,6 +1,6 @@
 {
     "name": "dev-loop",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "AI 驱动的 DevOps 闭环。从目标描述到代码合并，全程自动化，仅在关键审批点需要人工介入。",
     "author": {
         "name": "String Zhao",

@@ -97,7 +97,7 @@ mv "$TEMP_FILE" "$STATE_FILE"
 
 # design 阶段使用 Plan Mode
 if [[ "$PHASE" == "design" ]]; then
-    PROMPT="读取 .claude/dev-loop.local.md 状态文件，当前阶段: design，迭代: $NEXT_ITERATION。使用 EnterPlanMode 进入 Plan Mode，在 Plan Mode 中探索代码库并设计方案，完成后调用 ExitPlanMode 请求用户审批。按照 dev-loop skill 的 Phase: design 指引执行。"
+    PROMPT="读取 .claude/dev-loop.local.md 状态文件获取目标描述，然后立即调用 EnterPlanMode 工具进入 Plan Mode。不要在调用 EnterPlanMode 之前做任何代码探索。所有探索和设计工作必须在 Plan Mode 内完成。按照 dev-loop skill 的 Phase: design 指引执行。"
 else
     PROMPT="读取 .claude/dev-loop.local.md 状态文件，当前阶段: $PHASE，迭代: $NEXT_ITERATION。按照 dev-loop skill 的指引执行当前阶段的工作流。"
 fi
