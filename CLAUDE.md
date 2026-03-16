@@ -48,29 +48,32 @@
 
 ---
 
-### 3. git-tools (v1.8.0)
-**类型**: Skill 插件
-**功能**: 智能 Git 工具集（提交 + 本地测试验证）
+### 3. autopilot (v2.1.0)
+**类型**: Skill + Hook 插件
+**功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交）
 
 **包含 Skill**:
-- `git-tools`：智能提交工具（React 检测、最佳实践优化、代码理解测验、任务同步）
-- `local-test`：本地拟真测试验证（智能分析改动、自动选择验证策略、生成验证报告）
+- `autopilot`：全流程闭环编排器（红蓝对抗 + 五层 QA + 自动修复）
+- `autopilot-commit`：智能提交工具（React 检测、最佳实践优化、代码理解测验、任务同步）
 
 **核心能力**:
-- 三阶段并行执行模型：AI 自动分析任务依赖，独立任务并行调度，提升提交效率
-- Bugfix 验证：检测到 bugfix 时自动补充单测，确保 bug 场景有测试覆盖
-- 自动检测 React 代码改动并调用最佳实践优化
-- 提交前代码理解测验，避免 AI 代码让开发者脱节
-- 提交前智能更新 CLAUDE.md，保持文档与代码同步
-- 自动识别任务完成并升级版本号（语义化版本）
-- 提交后自动通过 ai-todo 同步任务进度，并支持通过 `ai-todo --help` 发现实时命令
+- 从目标描述到代码合并的全程自动化
+- 阶段状态机驱动：design → implement → qa → auto-fix → merge
+- 仅在两个审批门需要人工介入（设计审批 + 验收审批）
+- 红蓝对抗：蓝队按计划编码 + 红队仅看设计文档写验收测试，并行执行、信息隔离
+- 五层 QA 检查（Tier 0 红队验收测试 + Tier 1-4）+ 自动修复循环（最多 3 次重试）
+- 系统化调试方法论：观察 → 假设 → 验证 → 修复（四阶段）
+- 两阶段代码审查：设计符合性（先做）+ 代码质量（后做）
+- 防合理化表格：对抗 AI 跳过测试/修改红队测试的借口
+- 铁律：不允许修改红队测试来通过 QA，成功需要证据
+- 智能提交：三阶段并行执行模型，React 优化、Bugfix 验证、代码测验、CLAUDE.md 更新、版本升级、ai-todo 同步
 - 生成高质量中文提交信息（业务描述 + 技术说明）
-- 本地拟真测试验证：智能分析改动，自动执行类型检查/lint/单测/构建等验证
-- 拟真服务验证：启动 dev server 验证编译运行，通过后保留服务供用户手动验收
 
 **使用方式**:
-- 运行 `/git-commit` 触发智能提交工作流
-- 运行 `/local-test` 触发本地拟真测试验证
+- 运行 `/autopilot <目标描述>` 启动全流程闭环
+- `/autopilot commit` 智能提交（独立使用）
+- `/autopilot approve` 批准审批门
+- `/autopilot revise <反馈>` 要求修改
 
 ---
 
@@ -90,25 +93,6 @@
 3. 之后所有模型的插件自动保持同步
 
 ---
-
-### 7. dev-loop (v1.1.0)
-**类型**: Skill + Hook 插件
-**功能**: AI 驱动的 DevOps 闭环（红蓝对抗模式）
-
-**核心能力**:
-- 从目标描述到代码合并的全程自动化
-- 阶段状态机驱动：design → implement → qa → auto-fix → merge
-- 仅在两个审批门需要人工介入（设计审批 + 验收审批）
-- 红蓝对抗：蓝队按计划编码 + 红队仅看设计文档写验收测试，并行执行、信息隔离
-- 五层 QA 检查（Tier 0 红队验收测试 + Tier 1-4 传统检查）+ 自动修复循环（最多 3 次重试）
-- 铁律：不允许修改红队测试来通过 QA，问题一定在实现而非测试
-- 完整可追溯：状态文件保留目标、设计、红队测试、QA 报告、变更日志
-- 与 git-tools、local-test、worktree-setup 组合使用
-
-**使用方式**:
-- 运行 `/dev-loop <目标描述>` 启动闭环
-- `/dev-loop approve` 批准审批门
-- `/dev-loop revise <反馈>` 要求修改
 
 ---
 
@@ -130,8 +114,10 @@
 │   │   ├── .claude-plugin/
 │   │   ├── hooks/
 │   │   └── assets/
-│   ├── git-tools/                # Git 提交工具
+│   ├── autopilot/                # AI 自动驾驶工程套件
 │   │   ├── .claude-plugin/
+│   │   ├── hooks/
+│   │   ├── scripts/
 │   │   └── skills/
 │   ├── plugin-sync/              # 跨模型插件同步工具
 │       ├── .claude-plugin/
@@ -141,11 +127,6 @@
 │       ├── .claude-plugin/
 │       └── skills/
 │   └── worktree-setup/           # Git Worktree 自动初始化插件
-│       ├── .claude-plugin/
-│       ├── hooks/
-│       ├── scripts/
-│       └── skills/
-│   └── dev-loop/                 # AI DevOps 闭环插件
 │       ├── .claude-plugin/
 │       ├── hooks/
 │       ├── scripts/
@@ -296,7 +277,16 @@
 ## 更新日志
 
 ### 2026-03-16
-- dev-loop 升级至 v1.1.0：implement 阶段引入红蓝对抗模式（蓝队编码 + 红队独立验收测试并行执行），QA 新增 Tier 0 红队验收测试层，auto-fix 区分红蓝队失败修复策略
+- autopilot 升级至 v2.1.0：节点级时序修正 + 全面并行化
+  - 代码优化前置为 Phase 1.5（串行），修复优化后代码未经验证的时序风险
+  - 新增上下文感知：主链路模式自动跳过已由 QA 保障的步骤
+  - QA 重构为 Wave 1（Tier 0+1+3+4 并行命令）+ Wave 2（Tier 2a→2b 串行审查），耗时从 ~360s 降至 ~120s
+  - implement 准备简化：测试框架发现下放给 Agent，编排器直接并行启动蓝红队
+  - auto-fix 支持不同文件的失败项并行修复
+- dev-loop + git-tools 合并为 autopilot (v2.0.0)：品牌升级 + 统一工程套件
+  - 全流程闭环 `/autopilot <目标>` + 智能提交 `/autopilot commit`
+  - 从 superpowers 引入：防合理化表格、CSO 描述优化、成功需要证据原则、系统化调试方法论、两阶段代码审查
+  - local-test 融入 QA Tier 1 自动化流程，不再独立暴露
 
 ### 2026-03-15
 - 新增 worktree-setup 插件 (v1.0.0)：Git Worktree 自动初始化，创建后开箱即用

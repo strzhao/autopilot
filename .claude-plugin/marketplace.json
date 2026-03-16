@@ -26,10 +26,10 @@
             }
         },
         {
-            "name": "git-tools",
-            "source": "./plugins/git-tools",
-            "description": "智能 Git 提交工具。自动检测 React 代码改动，应用最佳实践优化，生成高质量的提交信息，提交后自动同步任务进度到 ai-todo",
-            "version": "1.5.0",
+            "name": "autopilot",
+            "source": "./plugins/autopilot",
+            "description": "AI 自动驾驶工程套件。全流程闭环（红蓝对抗 + 五层 QA）+ 智能提交（React 优化 + 代码测验 + 任务同步）",
+            "version": "2.0.0",
             "author": {
                 "name": "stringzhao",
                 "email": "zhaoguixiong@corp.netease.com"
@@ -59,16 +59,6 @@
             "name": "worktree-setup",
             "source": "./plugins/worktree-setup",
             "description": "Git Worktree 自动初始化插件。创建 worktree 后自动链接 .env 等配置文件、安装依赖、分配独立端口，开箱即用",
-            "version": "1.0.0",
-            "author": {
-                "name": "stringzhao",
-                "email": "zhaoguixiong@corp.netease.com"
-            }
-        },
-        {
-            "name": "dev-loop",
-            "source": "./plugins/dev-loop",
-            "description": "AI 驱动的 DevOps 闭环。从目标描述到代码合并，全程自动化，仅在设计审批和验收审批两个关键点需要人工介入",
             "version": "1.0.0",
             "author": {
                 "name": "stringzhao",

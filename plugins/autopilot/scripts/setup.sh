@@ -1,59 +1,18 @@
 #!/bin/bash
 
-# dev-loop 初始化 / 子命令路由脚本
+# autopilot 初始化 / 子命令路由脚本
 # 用法:
-#   /dev-loop <目标描述>                   初始化新的 dev-loop
-#   /dev-loop approve [反馈]               批准当前审批门
-#   /dev-loop revise <反馈>                要求修改当前阶段产出
-#   /dev-loop status                       查看当前状态
-#   /dev-loop cancel                       取消并清理
-#   /dev-loop --help                       显示帮助
+#   /autopilot <目标描述>                   启动新的 autopilot 闭环
+#   /autopilot commit                       智能提交
+#   /autopilot approve [反馈]               批准当前审批门
+#   /autopilot revise <反馈>                要求修改当前阶段产出
+#   /autopilot status                       查看当前状态
+#   /autopilot cancel                       取消并清理
+#   /autopilot --help                       显示帮助
 
 set -euo pipefail
 
-STATE_FILE=".claude/dev-loop.local.md"
-
-# ── 辅助函数 ──────────────────────────────────────────────
-
-parse_frontmatter() {
-    if [[ ! -f "$STATE_FILE" ]]; then
-        echo ""
-        return
-    fi
-    sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$STATE_FILE"
-}
-
-get_field() {
-    local field="$1"
-    local fm
-    fm=$(parse_frontmatter)
-    echo "$fm" | grep "^${field}:" | sed "s/${field}: *//" | sed 's/^"\(.*\)"$/\1/'
-}
-
-set_field() {
-    local field="$1"
-    local value="$2"
-    local temp="${STATE_FILE}.tmp.$$"
-    sed "s/^${field}: .*/${field}: ${value}/" "$STATE_FILE" > "$temp"
-    mv "$temp" "$STATE_FILE"
-}
-
-append_changelog() {
-    local entry="$1"
-    local timestamp
-    timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-    # 在 ## 变更日志 后追加
-    local temp="${STATE_FILE}.tmp.$$"
-    awk -v entry="- [${timestamp}] ${entry}" '
-        /^## 变更日志/ { print; getline; print entry; print; next }
-        { print }
-    ' "$STATE_FILE" > "$temp"
-    mv "$temp" "$STATE_FILE"
-}
-
-now_iso() {
-    date -u +%Y-%m-%dT%H:%M:%SZ
-}
+source "$(dirname "$0")/lib.sh"
 
 # ── 子命令路由 ──────────────────────────────────────────────
 
@@ -62,31 +21,40 @@ FIRST_ARG="${1:-}"
 case "$FIRST_ARG" in
     -h|--help)
         cat << 'HELP_EOF'
-dev-loop — AI 驱动的 DevOps 闭环
+autopilot — AI 自动驾驶工程套件
 
 用法:
-  /dev-loop <目标描述> [选项]           启动新的 dev-loop
-  /dev-loop approve [反馈]              批准当前审批门
-  /dev-loop revise <反馈>               要求修改
-  /dev-loop status                      查看状态
-  /dev-loop cancel                      取消并清理
+  /autopilot <目标描述> [选项]           启动全流程闭环（红蓝对抗）
+  /autopilot commit                      智能提交（React 优化 + 代码测验）
+  /autopilot approve [反馈]              批准当前审批门
+  /autopilot revise <反馈>               要求修改
+  /autopilot status                      查看状态
+  /autopilot cancel                      取消并清理
 
 选项:
   --max-iterations <n>    最大迭代次数 (默认: 30)
   --max-retries <n>       单阶段最大重试次数 (默认: 3)
 
 示例:
-  /dev-loop 实现用户头像上传功能，支持裁剪和压缩
-  /dev-loop 给 API 添加分页功能 --max-iterations 50
-  /dev-loop approve
-  /dev-loop revise 需要支持 WebP 格式
+  /autopilot 实现用户头像上传功能，支持裁剪和压缩
+  /autopilot commit
+  /autopilot approve
+  /autopilot revise 需要支持 WebP 格式
 HELP_EOF
+        exit 0
+        ;;
+
+    commit)
+        # 智能提交子命令 — 触发 autopilot-commit skill
+        echo "📦 启动智能提交工作流..."
+        echo ""
+        echo "请按照 autopilot-commit skill 的指引执行智能提交工作流。"
         exit 0
         ;;
 
     approve)
         if [[ ! -f "$STATE_FILE" ]]; then
-            echo "❌ 没有活跃的 dev-loop。使用 /dev-loop <目标> 启动新循环。" >&2
+            echo "❌ 没有活跃的 autopilot。使用 /autopilot <目标> 启动新循环。" >&2
             exit 1
         fi
         GATE=$(get_field "gate")
@@ -116,7 +84,7 @@ HELP_EOF
 
     revise)
         if [[ ! -f "$STATE_FILE" ]]; then
-            echo "❌ 没有活跃的 dev-loop。" >&2
+            echo "❌ 没有活跃的 autopilot。" >&2
             exit 1
         fi
         GATE=$(get_field "gate")
@@ -127,7 +95,7 @@ HELP_EOF
         shift  # 移除 "revise"
         FEEDBACK="$*"
         if [[ -z "$FEEDBACK" ]]; then
-            echo "❌ 请提供修改反馈。用法: /dev-loop revise <反馈>" >&2
+            echo "❌ 请提供修改反馈。用法: /autopilot revise <反馈>" >&2
             exit 1
         fi
         set_field "gate" '""'
@@ -154,7 +122,7 @@ HELP_EOF
 
     status)
         if [[ ! -f "$STATE_FILE" ]]; then
-            echo "📋 没有活跃的 dev-loop。"
+            echo "📋 没有活跃的 autopilot。"
             exit 0
         fi
         PHASE=$(get_field "phase")
@@ -166,7 +134,7 @@ HELP_EOF
         STARTED=$(get_field "started_at")
 
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "  dev-loop 状态"
+        echo "  autopilot 状态"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "阶段:     $PHASE"
         echo "审批门:   ${GATE:-无}"
@@ -179,29 +147,29 @@ HELP_EOF
 
     cancel)
         if [[ ! -f "$STATE_FILE" ]]; then
-            echo "📋 没有活跃的 dev-loop。"
+            echo "📋 没有活跃的 autopilot。"
             exit 0
         fi
         rm "$STATE_FILE"
-        echo "🛑 dev-loop 已取消，状态文件已清理。"
+        echo "🛑 autopilot 已取消，状态文件已清理。"
         echo "   代码改动仍保留在工作目录中，可通过 git 查看。"
         exit 0
         ;;
 esac
 
-# ── 初始化新的 dev-loop ────────────────────────────────────
+# ── 初始化新的 autopilot ────────────────────────────────────
 
 # 检查冲突
 if [[ -f "$STATE_FILE" ]]; then
-    echo "❌ 已有活跃的 dev-loop 在运行。" >&2
-    echo "   使用 /dev-loop status 查看状态" >&2
-    echo "   使用 /dev-loop cancel 取消后重新开始" >&2
+    echo "❌ 已有活跃的 autopilot 在运行。" >&2
+    echo "   使用 /autopilot status 查看状态" >&2
+    echo "   使用 /autopilot cancel 取消后重新开始" >&2
     exit 1
 fi
 
 if [[ -f ".claude/ralph-loop.local.md" ]]; then
     echo "❌ 检测到 ralph-loop 正在运行，两者共用 Stop hook 机制，不能同时运行。" >&2
-    echo "   请先取消 ralph-loop 后再启动 dev-loop。" >&2
+    echo "   请先取消 ralph-loop 后再启动 autopilot。" >&2
     exit 1
 fi
 
@@ -239,8 +207,8 @@ GOAL="${PROMPT_PARTS[*]}"
 
 if [[ -z "$GOAL" ]]; then
     echo "❌ 请提供目标描述。" >&2
-    echo "   用法: /dev-loop <目标描述>" >&2
-    echo "   示例: /dev-loop 实现用户头像上传功能" >&2
+    echo "   用法: /autopilot <目标描述>" >&2
+    echo "   示例: /autopilot 实现用户头像上传功能" >&2
     exit 1
 fi
 
@@ -276,12 +244,12 @@ $GOAL
 (待 qa 阶段填充)
 
 ## 变更日志
-- [$(now_iso)] dev-loop 初始化，目标: $GOAL
+- [$(now_iso)] autopilot 初始化，目标: $GOAL
 EOF
 
 # 输出信息
 cat <<EOF
-🔄 dev-loop 已启动！
+🔄 autopilot 已启动！
 
 目标: $GOAL
 最大迭代: $MAX_ITERATIONS
@@ -293,14 +261,15 @@ cat <<EOF
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 命令:
-  /dev-loop approve    批准当前审批门
-  /dev-loop revise     要求修改
-  /dev-loop status     查看状态
-  /dev-loop cancel     取消循环
+  /autopilot approve    批准当前审批门
+  /autopilot revise     要求修改
+  /autopilot status     查看状态
+  /autopilot cancel     取消循环
+  /autopilot commit     智能提交（独立使用）
 
 提示: 建议在 worktree 中运行以隔离代码改动
-      claude -w dev-loop-xxx 然后 /dev-loop <目标>
+      claude -w autopilot-xxx 然后 /autopilot <目标>
 EOF
 
 echo ""
-echo "开始设计阶段。请按照 dev-loop skill 的指引，读取 .claude/dev-loop.local.md 状态文件并执行 design 阶段。"
+echo "开始设计阶段。请按照 autopilot skill 的指引，读取 .claude/autopilot.local.md 状态文件并执行 design 阶段。"

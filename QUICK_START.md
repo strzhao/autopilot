@@ -10,7 +10,7 @@
 |--------|------|------|
 | `summarizer` | v1.0.0 | 多模态内容摘要工具，自动提取文章/视频/音频内容并生成结构化摘要 |
 | `task-notifier` | v1.0.0 | 任务完成提示音插件，在任务完成后播放系统通知 |
-| `git-tools` | v1.0.0 | 智能 Git 提交工具，自动检测 React 代码改动，应用最佳实践优化 |
+| `autopilot` | v2.0.0 | AI 自动驾驶工程套件，全流程闭环 + 智能提交 |
 
 ## 快速安装
 
@@ -80,34 +80,28 @@ TaskComplete
 
 ---
 
-### 🛠️ git-tools - 智能 Git 提交
+### 🚀 autopilot - AI 自动驾驶工程套件
 
-自动检测 React 代码改动，应用最佳实践优化，生成高质量提交信息。
+全流程闭环（红蓝对抗 + 五层 QA）+ 智能提交。
 
 **使用方法：**
 ```bash
-# 执行智能 Git 提交
-/git-commit
+# 启动全流程闭环
+/autopilot 实现用户头像上传功能
+
+# 智能提交（独立使用）
+/autopilot commit
 ```
 
 **工作流程：**
-1. 分析 Git 状态，确认有可提交的更改
-2. 智能检测 React 代码（无硬编码规则）
-3. 如有 React 代码，应用 React 最佳实践优化
-4. 应用代码简化优化
-5. 总结修改内容
-6. 生成高质量提交信息并执行提交
-
-**依赖要求：**
-- Git 命令行工具
-- react best practice skill（已存在）
-- code simple skill（已存在）
+1. 全流程：目标 → 设计 → 红蓝对抗编码 → 五层 QA → 自动修复 → 合并
+2. 智能提交：分析改动 → React 优化 → 代码测验 → 生成提交信息
 
 **验证安装：**
 ```bash
 /skills
 ```
-应该看到 `git-tools` skill。
+应该看到 `autopilot` 和 `autopilot-commit` skill。
 
 ## 项目结构
 
@@ -123,7 +117,7 @@ string-claude-code-plugin/
 └── plugins/
     ├── summarizer/             # 内容摘要插件
     ├── task-notifier/          # 任务提示音插件
-    └── git-tools/              # 智能 Git 提交工具
+    └── autopilot/              # AI 自动驾驶工程套件
 ```
 
 ## 插件开发

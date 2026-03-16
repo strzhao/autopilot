@@ -1,5 +1,5 @@
 {
-    "description": "dev-loop 自循环 Stop hook，驱动阶段状态机持续执行",
+    "description": "autopilot 自循环 Stop hook，驱动阶段状态机持续执行",
     "hooks": {
         "Stop": [
             {

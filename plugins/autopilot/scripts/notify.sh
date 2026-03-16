@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# dev-loop 审批通知脚本
+# autopilot 审批通知脚本
 # 在审批门触发时发送系统通知 + 声音提醒
 
 set -euo pipefail
@@ -9,19 +9,19 @@ SCENE="${1:-review}"
 
 case "$SCENE" in
     review-accept)
-        TITLE="dev-loop: 验收审批"
-        MSG="代码实现和测试已完成，等待您的验收。运行 /dev-loop approve 批准合并。"
+        TITLE="autopilot: 验收审批"
+        MSG="代码实现和测试已完成，等待您的验收。运行 /autopilot approve 批准合并。"
         ;;
     complete)
-        TITLE="dev-loop: 任务完成"
-        MSG="代码已成功合并，dev-loop 闭环完成。"
+        TITLE="autopilot: 任务完成"
+        MSG="代码已成功合并，autopilot 闭环完成。"
         ;;
     error)
-        TITLE="dev-loop: 需要人工介入"
+        TITLE="autopilot: 需要人工介入"
         MSG="自动修复达到上限，部分问题需要人工处理。"
         ;;
     *)
-        TITLE="dev-loop"
+        TITLE="autopilot"
         MSG="需要您的关注。"
         ;;
 esac

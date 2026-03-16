@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# dev-loop Stop Hook — 阶段状态机循环引擎
+# autopilot Stop Hook — 阶段状态机循环引擎
 # 基于 ralph-loop 的 Stop hook 模式，增加阶段状态机和审批门逻辑
 #
 # 行为:
@@ -14,11 +14,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/lib.sh"
 
 # 读取 hook 输入
 HOOK_INPUT=$(cat)
-
-STATE_FILE=".claude/dev-loop.local.md"
 
 # ── 1. 状态文件检查 ──
 
@@ -27,12 +26,6 @@ if [[ ! -f "$STATE_FILE" ]]; then
 fi
 
 # ── 2. 解析 frontmatter ──
-
-FRONTMATTER=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$STATE_FILE")
-
-get_field() {
-    echo "$FRONTMATTER" | grep "^${1}:" | sed "s/${1}: *//" | sed 's/^"\(.*\)"$/\1/'
-}
 
 PHASE=$(get_field "phase")
 GATE=$(get_field "gate")
@@ -50,13 +43,13 @@ fi
 # ── 4. 数值校验 ──
 
 if [[ ! "$ITERATION" =~ ^[0-9]+$ ]]; then
-    echo "⚠️  dev-loop: 状态文件损坏 (iteration: '$ITERATION')" >&2
+    echo "⚠️  autopilot: 状态文件损坏 (iteration: '$ITERATION')" >&2
     rm "$STATE_FILE"
     exit 0
 fi
 
 if [[ ! "$MAX_ITERATIONS" =~ ^[0-9]+$ ]]; then
-    echo "⚠️  dev-loop: 状态文件损坏 (max_iterations: '$MAX_ITERATIONS')" >&2
+    echo "⚠️  autopilot: 状态文件损坏 (max_iterations: '$MAX_ITERATIONS')" >&2
     rm "$STATE_FILE"
     exit 0
 fi
@@ -80,7 +73,7 @@ fi
 # ── 7. max_iterations 检查 ──
 
 if [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
-    echo "🛑 dev-loop: 达到最大迭代次数 ($MAX_ITERATIONS)。" >&2
+    echo "🛑 autopilot: 达到最大迭代次数 ($MAX_ITERATIONS)。" >&2
     bash "$SCRIPT_DIR/notify.sh" error 2>/dev/null || true
     rm "$STATE_FILE"
     exit 0
@@ -89,19 +82,17 @@ fi
 # ── 8. 递增 iteration ──
 
 NEXT_ITERATION=$((ITERATION + 1))
-TEMP_FILE="${STATE_FILE}.tmp.$$"
-sed "s/^iteration: .*/iteration: $NEXT_ITERATION/" "$STATE_FILE" > "$TEMP_FILE"
-mv "$TEMP_FILE" "$STATE_FILE"
+set_field "iteration" "$NEXT_ITERATION"
 
 # ── 9. 构造 block JSON ──
 
 # design 阶段使用 Plan Mode
 if [[ "$PHASE" == "design" ]]; then
-    PROMPT="读取 .claude/dev-loop.local.md 状态文件获取目标描述，然后立即调用 EnterPlanMode 工具进入 Plan Mode。不要在调用 EnterPlanMode 之前做任何代码探索。所有探索和设计工作必须在 Plan Mode 内完成。按照 dev-loop skill 的 Phase: design 指引执行。"
+    PROMPT="读取 .claude/autopilot.local.md 状态文件获取目标描述，然后立即调用 EnterPlanMode 工具进入 Plan Mode。不要在调用 EnterPlanMode 之前做任何代码探索。所有探索和设计工作必须在 Plan Mode 内完成。按照 autopilot skill 的 Phase: design 指引执行。"
 else
-    PROMPT="读取 .claude/dev-loop.local.md 状态文件，当前阶段: $PHASE，迭代: $NEXT_ITERATION。按照 dev-loop skill 的指引执行当前阶段的工作流。"
+    PROMPT="读取 .claude/autopilot.local.md 状态文件，当前阶段: $PHASE，迭代: $NEXT_ITERATION。按照 autopilot skill 的指引执行当前阶段的工作流。"
 fi
-SYSTEM_MSG="🔄 dev-loop 迭代 $NEXT_ITERATION | 阶段: $PHASE"
+SYSTEM_MSG="🔄 autopilot 迭代 $NEXT_ITERATION | 阶段: $PHASE"
 
 jq -n \
     --arg prompt "$PROMPT" \
