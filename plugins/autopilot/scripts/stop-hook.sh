@@ -16,14 +16,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
 
-# 读取 hook 输入
-HOOK_INPUT=$(cat)
-
-# ── 1. 状态文件检查 ──
+# ── 0. 快速退出：状态文件不存在时直接放行，避免读 stdin 阻塞 ──
 
 if [[ ! -f "$STATE_FILE" ]]; then
     exit 0
 fi
+
+# 读取 hook 输入（带超时保护，防止 stdin 未关闭导致挂起）
+HOOK_INPUT=$(timeout 5 cat 2>/dev/null || true)
 
 # ── 2. 解析 frontmatter ──
 
