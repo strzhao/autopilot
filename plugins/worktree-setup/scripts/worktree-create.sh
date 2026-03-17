@@ -4,7 +4,10 @@
 # stdout: 只输出 worktree 绝对路径（其他输出必须 >&2，否则 Claude 静默卡住）
 set -euo pipefail
 
-NAME=$(node -e "const d=require('fs').readFileSync(0,'utf8');process.stdout.write(JSON.parse(d).name)")
+RAW_NAME=$(node -e "const d=require('fs').readFileSync(0,'utf8');process.stdout.write(JSON.parse(d).name)")
+
+# Sanitize: 空格/特殊字符替换为连字符，确保 git 分支名合法
+NAME=$(echo "$RAW_NAME" | sed 's/[[:space:]]/-/g; s/[^a-zA-Z0-9\u4e00-\u9fff._/-]/-/g; s/--*/-/g; s/^-//; s/-$//')
 
 REPO_ROOT=$(git rev-parse --show-toplevel)
 WORKTREE_PATH="$REPO_ROOT/.claude/worktrees/$NAME"
