@@ -8,6 +8,7 @@
 #   /autopilot revise <反馈>                要求修改当前阶段产出
 #   /autopilot status                       查看当前状态
 #   /autopilot cancel                       取消并清理
+#   /autopilot doctor [--fix]                工程健康度诊断
 #   /autopilot --help                       显示帮助
 
 set -euo pipefail
@@ -26,6 +27,7 @@ autopilot — AI 自动驾驶工程套件
 用法:
   /autopilot <目标描述> [选项]           启动全流程闭环（红蓝对抗）
   /autopilot commit                      智能提交（React 优化 + 代码测验）
+  /autopilot doctor [--fix]              工程健康度诊断（评估 autopilot 兼容性）
   /autopilot approve [反馈]              批准当前审批门
   /autopilot revise <反馈>               要求修改
   /autopilot status                      查看状态
@@ -38,6 +40,8 @@ autopilot — AI 自动驾驶工程套件
 示例:
   /autopilot 实现用户头像上传功能，支持裁剪和压缩
   /autopilot commit
+  /autopilot doctor
+  /autopilot doctor --fix
   /autopilot approve
   /autopilot revise 需要支持 WebP 格式
 HELP_EOF
@@ -49,6 +53,19 @@ HELP_EOF
         echo "📦 启动智能提交工作流..."
         echo ""
         echo "请按照 autopilot-commit skill 的指引执行智能提交工作流。"
+        exit 0
+        ;;
+
+    doctor)
+        # 工程健康度诊断子命令 — 触发 autopilot-doctor skill
+        DOCTOR_ARGS="${2:-}"
+        echo "🏥 启动工程健康度诊断..."
+        echo ""
+        if [[ "$DOCTOR_ARGS" == "--fix" ]]; then
+            echo "修复模式已启用，将在诊断后自动修复可改进项。"
+            echo ""
+        fi
+        echo "请按照 autopilot-doctor skill 的指引执行诊断工作流。"
         exit 0
         ;;
 

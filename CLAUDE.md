@@ -48,13 +48,14 @@
 
 ---
 
-### 3. autopilot (v2.3.0)
+### 3. autopilot (v2.4.0)
 **类型**: Skill + Hook 插件
-**功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交）
+**功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断）
 
 **包含 Skill**:
 - `autopilot`：全流程闭环编排器（红蓝对抗 + 五层 QA + 自动修复）
 - `autopilot-commit`：智能提交工具（React 检测、最佳实践优化、代码理解测验、任务同步）
+- `autopilot-doctor`：工程健康度诊断（10 维度评分 + autopilot 兼容性矩阵 + 自动修复）
 
 **核心能力**:
 - 从目标描述到代码合并的全程自动化
@@ -68,10 +69,12 @@
 - 铁律：不允许修改红队测试来通过 QA，成功需要证据，假设需要证据
 - 智能提交：三阶段并行执行模型，React 优化、Bugfix 双模式验证（自动化测试 + 运行时验证）、代码测验、CLAUDE.md 更新、版本升级、ai-todo 同步
 - 生成高质量中文提交信息（业务描述 + 技术说明）
+- 工程诊断：10 维度加权评分（测试/类型/lint/构建/CI/结构/文档/Git/依赖/AI就绪度），S-F 等级，autopilot 兼容性矩阵，`--fix` 自动修复
 
 **使用方式**:
 - 运行 `/autopilot <目标描述>` 启动全流程闭环
 - `/autopilot commit` 智能提交（独立使用）
+- `/autopilot doctor [--fix]` 工程健康度诊断
 - `/autopilot approve` 批准审批门
 - `/autopilot revise <反馈>` 要求修改
 
@@ -275,6 +278,14 @@
 ---
 
 ## 更新日志
+
+### 2026-03-19
+- autopilot 升级至 v2.4.0：新增 autopilot-doctor 工程健康度诊断 skill
+  - 10 维度加权评分体系（测试/类型/lint/构建/CI/结构/文档/Git/依赖/AI就绪度）
+  - S/A/B/C/D/F 六级评分 + autopilot 兼容性矩阵
+  - `--fix` 模式自动修复低分项（每项确认）
+  - Wave 1/2 并行策略加速诊断
+  - 主 autopilot 在 QA 降级和 merge 阶段自动建议运行 doctor
 
 ### 2026-03-18
 - autopilot 升级至 v2.3.0：优化 git worktree 适配性

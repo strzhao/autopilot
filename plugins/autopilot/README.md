@@ -38,6 +38,8 @@ claude -w autopilot-avatar
 |------|------|
 | `/autopilot <目标>` | 启动全流程闭环 |
 | `/autopilot commit` | 智能提交（React 优化 + 代码测验 + 任务同步） |
+| `/autopilot doctor` | 工程健康度诊断（评估 autopilot 兼容性） |
+| `/autopilot doctor --fix` | 诊断 + 自动修复低分项 |
 | `/autopilot approve` | 批准当前审批门 |
 | `/autopilot revise <反馈>` | 要求修改当前阶段产出 |
 | `/autopilot status` | 查看当前状态 |
@@ -88,6 +90,17 @@ QA 发现问题时，按系统化调试方法论（观察 → 假设 → 验证 
 - CLAUDE.md 智能更新 + 版本自动升级
 - ai-todo 任务同步
 - 高质量中文提交信息
+
+## 工程诊断（/autopilot doctor）
+
+扫描项目工程基础设施，输出 10 维度加权评分（S/A/B/C/D/F 等级）：
+- 测试基础设施（20%）、类型安全（15%）、代码质量工具链（10%）、构建系统（10%）
+- CI/CD（10%）、项目结构（10%）、文档质量（10%）、Git 工作流（5%）
+- 依赖健康（5%）、AI 就绪度（5%）
+
+输出 autopilot 兼容性矩阵（哪些功能可用/降级/不可用）和 Top 3 改进建议。
+
+使用 `--fix` 自动修复低分项（每个修复前确认）。报告保存到 `.claude/doctor-report.md`。
 
 ## 可追溯性
 
