@@ -11,7 +11,9 @@
 #   5. 超过 max_iterations → 清理 + 放行
 #   6. 其他 → block + 注入阶段 prompt，继续循环
 
-set -euo pipefail
+# 安全策略：Stop hook 中任何未预期的错误都应放行（exit 0），
+# 只有明确需要 block 时才输出 JSON。避免 set -e 导致意外非零退出。
+trap 'exit 0' ERR
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
@@ -27,15 +29,15 @@ HOOK_INPUT=$(timeout 5 cat 2>/dev/null || true)
 
 # ── 2. 解析 frontmatter ──
 
-PHASE=$(get_field "phase")
-GATE=$(get_field "gate")
-ITERATION=$(get_field "iteration")
-MAX_ITERATIONS=$(get_field "max_iterations")
-STATE_SESSION=$(get_field "session_id")
+PHASE=$(get_field "phase" || true)
+GATE=$(get_field "gate" || true)
+ITERATION=$(get_field "iteration" || true)
+MAX_ITERATIONS=$(get_field "max_iterations" || true)
+STATE_SESSION=$(get_field "session_id" || true)
 
 # ── 3. Session 隔离 ──
 
-HOOK_SESSION=$(echo "$HOOK_INPUT" | jq -r '.session_id // ""')
+HOOK_SESSION=$(echo "$HOOK_INPUT" | jq -r '.session_id // ""' 2>/dev/null || true)
 if [[ -n "$STATE_SESSION" ]] && [[ "$STATE_SESSION" != "$HOOK_SESSION" ]]; then
     exit 0
 fi

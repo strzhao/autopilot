@@ -48,12 +48,12 @@
 
 ---
 
-### 3. autopilot (v2.5.0)
+### 3. autopilot (v2.6.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断）
 
 **包含 Skill**:
-- `autopilot`：全流程闭环编排器（红蓝对抗 + 五层 QA + 自动修复）
+- `autopilot`：全流程闭环编排器（红蓝对抗 + 五层 QA + 知识工程 + 自动修复）
 - `autopilot-commit`：智能提交工具（React 检测、最佳实践优化、代码理解测验、任务同步）
 - `autopilot-doctor`：工程健康度诊断（10 维度评分 + autopilot 兼容性矩阵 + 自动修复）
 
@@ -67,6 +67,7 @@
 - 两阶段代码审查：设计符合性 + 代码质量，并行 Sub-Agent 执行（置信度 ≥80 过滤）
 - 防合理化表格：对抗 AI 跳过测试/修改红队测试的借口
 - 铁律：不允许修改红队测试来通过 QA，成功需要证据，假设需要证据
+- 知识工程：design 阶段消费历史决策和模式提升设计质量，merge 阶段反馈驱动提取知识持续积累（.claude/knowledge/）
 - 智能提交：三阶段并行执行模型，React 优化、Bugfix 双模式验证（自动化测试 + 运行时验证）、代码测验、CLAUDE.md 更新、版本升级、ai-todo 同步
 - 生成高质量中文提交信息（业务描述 + 技术说明）
 - 工程诊断：10 维度加权评分（测试/类型/lint/构建/CI/结构/文档/Git/依赖/AI就绪度），S-F 等级，autopilot 兼容性矩阵，`--fix` 自动修复
@@ -278,6 +279,15 @@
 ---
 
 ## 更新日志
+
+### 2026-03-20
+- autopilot 升级至 v2.6.0：新增知识工程复合能力
+  - design 阶段：进入 Plan Mode 前自动加载 `.claude/knowledge/` 中的历史决策和模式
+  - merge 阶段：反馈驱动提取本次工作中的设计决策和调试教训，追加到知识文件
+  - 新增 `references/knowledge-engineering.md` 详细消费/提取规则（Progressive Disclosure）
+  - 知识存储：decisions.md（决策日志）+ patterns.md（模式教训），单文件 ≤150 行
+  - 状态文件模板增加知识库存在性提示
+  - 基于业内调研设计（Claude Code memory、Cursor rules、OpenAI AGENTS.md 等）
 
 ### 2026-03-19
 - autopilot 升级至 v2.5.0：QA 代码审查 Sub-Agent 化

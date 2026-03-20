@@ -232,6 +232,13 @@ fi
 # 创建状态文件
 mkdir -p "$PROJECT_ROOT/.claude"
 
+# 检查知识库是否存在
+KNOWLEDGE_HINT=""
+if [[ -d "$PROJECT_ROOT/.claude/knowledge" ]]; then
+    KNOWLEDGE_HINT="
+> 📚 项目知识库已存在: .claude/knowledge/。design 阶段请先加载相关知识上下文。"
+fi
+
 cat > "$STATE_FILE" <<EOF
 ---
 active: true
@@ -247,6 +254,7 @@ started_at: "$(now_iso)"
 
 ## 目标
 $GOAL
+$KNOWLEDGE_HINT
 
 ## 设计文档
 (待 design 阶段填充)
