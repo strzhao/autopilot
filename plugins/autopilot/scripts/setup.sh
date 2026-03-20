@@ -223,7 +223,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-GOAL="${PROMPT_PARTS[*]}"
+GOAL="${PROMPT_PARTS[*]:-}"
 
 if [[ -z "$GOAL" ]]; then
     echo "❌ 请提供目标描述。"
