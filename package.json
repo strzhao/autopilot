@@ -1,0 +1,23 @@
+{
+  "name": "string-claude-code-plugin-market",
+  "version": "1.0.0",
+  "private": true,
+  "description": "String 维护的 Claude Code 插件集合",
+  "author": "String Zhao <zhaoguixiong@corp.netease.com>",
+  "scripts": {
+    "lint": "find plugins -name '*.sh' -exec shellcheck {} +",
+    "lint:fix": "echo 'ShellCheck does not support auto-fix. Please fix issues manually.' && npm run lint",
+    "test": "node --test plugins/worktree-setup/scripts/worktree.acceptance.test.mjs",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0"
+  },
+  "lint-staged": {
+    "*.sh": "shellcheck"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

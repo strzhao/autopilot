@@ -135,6 +135,12 @@
 │       ├── hooks/
 │       ├── scripts/
 │       └── skills/
+├── package.json                  # 项目元数据 + lint/test scripts
+├── .github/
+│   └── workflows/
+│       └── ci.yml                # GitHub Actions CI (ShellCheck + tests)
+├── .husky/
+│   └── pre-commit                # husky pre-commit hook (lint-staged)
 ├── README.md                     # 用户文档
 ├── QUICK_START.md               # 快速开始指南
 └── CLAUDE.md                    # 本文件
@@ -281,6 +287,11 @@
 ## 更新日志
 
 ### 2026-03-20
+- 新增工程基础设施：ShellCheck lint + GitHub Actions CI + husky pre-commit + 统一测试入口
+  - package.json：lint（ShellCheck）+ test（node:test）+ lint-staged 配置
+  - .github/workflows/ci.yml：PR/push 自动运行 ShellCheck + worktree-setup 测试
+  - husky + lint-staged：pre-commit 自动对暂存的 .sh 文件运行 ShellCheck
+  - Autopilot Doctor 诊断等级从 C (46分) 提升至 B (62分)
 - autopilot 升级至 v2.8.0：stop-hook 强制执行知识工程步骤
   - design 阶段：stop-hook prompt 注入知识加载指令（.claude/knowledge/ 存在时先加载 decisions.md/patterns.md）
   - merge 阶段：新增 knowledge_extracted frontmatter 字段 + phase=done 回滚守卫
