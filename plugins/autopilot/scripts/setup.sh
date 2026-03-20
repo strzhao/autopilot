@@ -11,7 +11,9 @@
 #   /autopilot doctor [--fix]                工程健康度诊断
 #   /autopilot --help                       显示帮助
 
-set -euo pipefail
+set -uo pipefail
+# 注意：不用 set -e，因为此脚本通过 SKILL.md 的 !`command` 机制调用，
+# 非零退出码会阻止整个 skill 加载。所有错误通过 stdout 输出让 AI 处理。
 
 source "$(dirname "$0")/lib.sh"
 init_paths
@@ -72,14 +74,14 @@ HELP_EOF
 
     approve)
         if [[ ! -f "$STATE_FILE" ]]; then
-            echo "❌ 没有活跃的 autopilot。使用 /autopilot <目标> 启动新循环。" >&2
-            exit 1
+            echo "❌ 没有活跃的 autopilot。使用 /autopilot <目标> 启动新循环。"
+            exit 0
         fi
         GATE=$(get_field "gate")
         if [[ -z "$GATE" ]]; then
-            echo "❌ 当前不在审批门，无需 approve。" >&2
-            echo "   当前阶段: $(get_field 'phase')" >&2
-            exit 1
+            echo "❌ 当前不在审批门，无需 approve。"
+            echo "   当前阶段: $(get_field 'phase')"
+            exit 0
         fi
         FEEDBACK="${2:-}"
         set_field "gate" '""'
@@ -91,8 +93,8 @@ HELP_EOF
                 echo "✅ 验收已通过，将进入代码合并阶段。"
                 ;;
             *)
-                echo "⚠️  未知的审批门: $GATE" >&2
-                exit 1
+                echo "⚠️  未知的审批门: $GATE"
+                exit 0
                 ;;
         esac
         echo ""
@@ -102,19 +104,19 @@ HELP_EOF
 
     revise)
         if [[ ! -f "$STATE_FILE" ]]; then
-            echo "❌ 没有活跃的 autopilot。" >&2
-            exit 1
+            echo "❌ 没有活跃的 autopilot。"
+            exit 0
         fi
         GATE=$(get_field "gate")
         if [[ -z "$GATE" ]]; then
-            echo "❌ 当前不在审批门，无法 revise。" >&2
-            exit 1
+            echo "❌ 当前不在审批门，无法 revise。"
+            exit 0
         fi
         shift  # 移除 "revise"
         FEEDBACK="$*"
         if [[ -z "$FEEDBACK" ]]; then
-            echo "❌ 请提供修改反馈。用法: /autopilot revise <反馈>" >&2
-            exit 1
+            echo "❌ 请提供修改反馈。用法: /autopilot revise <反馈>"
+            exit 0
         fi
         set_field "gate" '""'
         set_field "retry_count" "0"
@@ -179,16 +181,16 @@ esac
 
 # 检查冲突
 if [[ -f "$STATE_FILE" ]]; then
-    echo "❌ 已有活跃的 autopilot 在运行。" >&2
-    echo "   使用 /autopilot status 查看状态" >&2
-    echo "   使用 /autopilot cancel 取消后重新开始" >&2
-    exit 1
+    echo "❌ 已有活跃的 autopilot 在运行。"
+    echo "   使用 /autopilot status 查看状态"
+    echo "   使用 /autopilot cancel 取消后重新开始"
+    exit 0
 fi
 
 if [[ -f ".claude/ralph-loop.local.md" ]]; then
-    echo "❌ 检测到 ralph-loop 正在运行，两者共用 Stop hook 机制，不能同时运行。" >&2
-    echo "   请先取消 ralph-loop 后再启动 autopilot。" >&2
-    exit 1
+    echo "❌ 检测到 ralph-loop 正在运行，两者共用 Stop hook 机制，不能同时运行。"
+    echo "   请先取消 ralph-loop 后再启动 autopilot。"
+    exit 0
 fi
 
 # 解析参数
@@ -200,16 +202,16 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --max-iterations)
             if [[ -z "${2:-}" ]] || ! [[ "$2" =~ ^[0-9]+$ ]]; then
-                echo "❌ --max-iterations 需要一个正整数参数" >&2
-                exit 1
+                echo "❌ --max-iterations 需要一个正整数参数"
+                exit 0
             fi
             MAX_ITERATIONS="$2"
             shift 2
             ;;
         --max-retries)
             if [[ -z "${2:-}" ]] || ! [[ "$2" =~ ^[0-9]+$ ]]; then
-                echo "❌ --max-retries 需要一个正整数参数" >&2
-                exit 1
+                echo "❌ --max-retries 需要一个正整数参数"
+                exit 0
             fi
             MAX_RETRIES="$2"
             shift 2
@@ -224,10 +226,10 @@ done
 GOAL="${PROMPT_PARTS[*]}"
 
 if [[ -z "$GOAL" ]]; then
-    echo "❌ 请提供目标描述。" >&2
-    echo "   用法: /autopilot <目标描述>" >&2
-    echo "   示例: /autopilot 实现用户头像上传功能" >&2
-    exit 1
+    echo "❌ 请提供目标描述。"
+    echo "   用法: /autopilot <目标描述>"
+    echo "   示例: /autopilot 实现用户头像上传功能"
+    exit 0
 fi
 
 # 创建状态文件
