@@ -181,10 +181,17 @@ esac
 
 # 检查冲突
 if [[ -f "$STATE_FILE" ]]; then
-    echo "❌ 已有活跃的 autopilot 在运行。"
-    echo "   使用 /autopilot status 查看状态"
-    echo "   使用 /autopilot cancel 取消后重新开始"
-    exit 0
+    EXISTING_PHASE=$(get_field "phase" || true)
+    if [[ "$EXISTING_PHASE" == "done" ]]; then
+        # phase=done 的状态文件是残留（stop hook 未及时清理），直接清理
+        rm "$STATE_FILE"
+        echo "🧹 清理了上一次已完成的 autopilot 状态文件。"
+    else
+        echo "❌ 已有活跃的 autopilot 在运行（阶段: ${EXISTING_PHASE:-unknown}）。"
+        echo "   使用 /autopilot status 查看状态"
+        echo "   使用 /autopilot cancel 取消后重新开始"
+        exit 0
+    fi
 fi
 
 if [[ -f ".claude/ralph-loop.local.md" ]]; then
