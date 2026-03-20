@@ -281,6 +281,11 @@
 ## 更新日志
 
 ### 2026-03-20
+- autopilot 升级至 v2.7.0：修复 setup.sh 从未被自动调用的严重 bug
+  - 根因：SKILL.md 没有使用 `!`command`` 预处理命令注入机制，setup.sh 是死代码
+  - 症状：状态文件从未被自动创建，状态机循环无法启动，AI 被迫即兴发挥或手动创建状态文件
+  - SKILL.md: 添加 `!`bash "${CLAUDE_PLUGIN_ROOT}/scripts/setup.sh" $ARGUMENTS`` 预处理命令
+  - 效果：用户运行 `/autopilot <目标>` 时 setup.sh 自动执行（创建状态文件、解析参数、冲突检测），AI 看到的上下文中包含 setup.sh 输出
 - worktree-setup 升级至 v2.0.0：Shell 脚本全面重写为 Node.js，消除跨平台兼容性问题
   - 三个 .sh 脚本（worktree-create/remove/repair）合并为统一入口 `scripts/worktree.mjs`
   - 名称清洗改用 JS 原生 regex（天然支持 Unicode），彻底解决 macOS sed/perl 反复报错

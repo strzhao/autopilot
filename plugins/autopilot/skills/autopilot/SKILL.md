@@ -3,6 +3,8 @@ name: autopilot
 description: 当用户需要从目标描述到代码合并的端到端自动化、或说"自动驾驶"时使用。
 ---
 
+!`bash "${CLAUDE_PLUGIN_ROOT}/scripts/setup.sh" $ARGUMENTS`
+
 # Autopilot — AI 自动驾驶工程闭环
 
 你是 autopilot 的编排器。你的职责是读取项目根目录下的 `.claude/autopilot.local.md` 状态文件，根据当前 `phase` 执行对应阶段的工作流。
