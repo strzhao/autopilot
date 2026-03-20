@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v2.7.2)
+### 3. autopilot (v2.8.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断）
 
@@ -62,7 +62,7 @@
 - 阶段状态机驱动：design → implement → qa → auto-fix → merge
 - 仅在两个审批门需要人工介入（设计审批 + 验收审批）
 - 红蓝对抗：蓝队按计划编码 + 红队仅看设计文档写验收测试，并行执行、信息隔离
-- 五层 QA 检查（Tier 0 红队验收测试 + Tier 1-4）+ 自动修复循环（最多 3 次重试）
+- 五层 QA 检查（Tier 0 红队验收测试 + Tier 1-4）+ Tier 1.5 真实场景验证（Smoke Test）+ 自动修复循环（最多 3 次重试）
 - 系统化调试方法论：观察 → 假设 → 验证 → 修复（四阶段）
 - 两阶段代码审查：设计符合性 + 代码质量，并行 Sub-Agent 执行（置信度 ≥80 过滤）
 - 防合理化表格：对抗 AI 跳过测试/修改红队测试的借口
@@ -281,6 +281,12 @@
 ## 更新日志
 
 ### 2026-03-20
+- autopilot 升级至 v2.8.0：新增 Tier 1.5 真实场景验证（Smoke Test），强制要求在 QA 阶段执行真实用户场景测试
+  - 动机：worktree-setup v2.1.0 修复中 22 个单元测试全通过，但真实 Agent worktree 测试才暴露核心根因。单元测试验证代码结构，真实测试验证用户场景
+  - design 阶段：`## 验证方案` 升级为结构化必填，要求 1-3 个可执行的真实测试场景
+  - QA 阶段：新增 Tier 1.5（Tier 1 和 Tier 2 之间），从验证方案读取场景逐个执行，不可跳过
+  - auto-fix 阶段：Tier 1.5 失败项优先级仅次于红队验收测试
+  - 蓝队 prompt：新增规则 8 — 所有任务完成后必须执行真实场景冒烟验证
 - worktree-setup 升级至 v2.1.0：修复 Agent isolation worktree 创建失败（"no successful output"）
   - 根因1：`repoRoot()` 在 worktree 内调用时返回 worktree 路径而非主仓库根，导致嵌套 worktree
   - 根因2：`create()` 使用 `process.cwd()` 而非 stdin 传入的 `cwd`，Agent 子进程 cwd 可能不在 git 仓库内
