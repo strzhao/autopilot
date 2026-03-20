@@ -1,13 +1,13 @@
-# Autopilot — Claude Code 自动驾驶工程套件
+# Claude Code 插件市场
 
 本仓库是 String 维护的 Claude Code 插件集合，提供高质量、实用的插件来增强 Claude Code 的功能。
 
 ## 项目信息
 
-- **名称**: autopilot
+- **名称**: string-claude-code-plugin-market
 - **维护者**: String Zhao
 - **邮箱**: zhaoguixiong@corp.netease.com
-- **仓库**: https://github.com/strzhao/autopilot.git
+- **仓库**: https://g.hz.netease.com/cloudmusic-agi/plugins/vip-claude-code-plugin.git
 
 ## 插件列表
 
@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v2.13.0)
+### 3. autopilot (v2.8.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断）
 
@@ -62,12 +62,12 @@
 - 阶段状态机驱动：design → implement → qa → auto-fix → merge
 - 仅在两个审批门需要人工介入（设计审批 + 验收审批）
 - 红蓝对抗：蓝队按计划编码 + 红队仅看设计文档写验收测试，并行执行、信息隔离
-- 五层 QA 检查（Tier 0 红队验收测试 + Tier 1-4）+ Tier 1.5 真实场景验证（Smoke Test）+ 自动修复循环（最多 3 次重试）
+- 五层 QA 检查（Tier 0 红队验收测试 + Tier 1-4）+ 自动修复循环（最多 3 次重试）
 - 系统化调试方法论：观察 → 假设 → 验证 → 修复（四阶段）
 - 两阶段代码审查：设计符合性 + 代码质量，并行 Sub-Agent 执行（置信度 ≥80 过滤）
 - 防合理化表格：对抗 AI 跳过测试/修改红队测试的借口
 - 铁律：不允许修改红队测试来通过 QA，成功需要证据，假设需要证据
-- 知识工程：索引驱动 + 领域分区 + 智能检索的分层知识系统（.claude/knowledge/），design 阶段两阶段检索（索引扫描 → 按需加载），merge 阶段自动 tags + index 同步 + 领域分区
+- 知识工程：design 阶段消费历史决策和模式提升设计质量，merge 阶段反馈驱动提取知识持续积累（.claude/knowledge/）
 - 智能提交：三阶段并行执行模型，React 优化、Bugfix 双模式验证（自动化测试 + 运行时验证）、代码测验、CLAUDE.md 更新、版本升级、ai-todo 同步
 - 生成高质量中文提交信息（业务描述 + 技术说明）
 - 工程诊断：10 维度加权评分（测试/类型/lint/构建/CI/结构/文档/Git/依赖/AI就绪度），S-F 等级，autopilot 兼容性矩阵，`--fix` 自动修复
@@ -78,6 +78,23 @@
 - `/autopilot doctor [--fix]` 工程健康度诊断
 - `/autopilot approve` 批准审批门
 - `/autopilot revise <反馈>` 要求修改
+
+---
+
+### 4. plugin-sync (v1.0.0)
+**类型**: Hook 插件
+**功能**: 跨模型插件同步工具
+
+**核心能力**:
+- 解决 `cc switch` 切换模型后插件丢失问题
+- 使用软链接实现所有模型共享插件目录
+- 安装插件时自动同步到共享目录
+- 切换模型时自动从共享目录恢复
+
+**使用方法**:
+1. 安装 plugin-sync 插件
+2. 运行初始化脚本：`./plugins/plugin-sync/setup.sh`
+3. 之后所有模型的插件自动保持同步
 
 ---
 
@@ -106,6 +123,10 @@
 │   │   ├── hooks/
 │   │   ├── scripts/
 │   │   └── skills/
+│   ├── plugin-sync/              # 跨模型插件同步工具
+│       ├── .claude-plugin/
+│       ├── hooks/
+│       └── assets/
 │   └── writer-skill/             # 写作技能包
 │       ├── .claude-plugin/
 │       └── skills/
@@ -238,7 +259,7 @@
 
 ---
 
-### 6. worktree-setup (v2.2.0)
+### 6. worktree-setup (v2.0.0)
 **类型**: Hook 插件
 **功能**: Git Worktree 自动初始化工具
 
@@ -246,7 +267,6 @@
 - `WorktreeCreate` hook：`claude -w <name>` 后自动完成 worktree 初始化
 - 按项目 `.claude/worktree-links` 创建符号链接（`.env.local`、`.mcp.json` 等）
 - 无配置时自动扫描 `.env*` 文件（新项目零配置可用）
-- `.claude/knowledge/` 自动链接至主仓库（知识库跨 worktree 共享）
 - 确定性端口分配：hash(branch_name) → 4001-4999，避免多 worktree 端口冲突
 - 自动识别 npm/yarn/pnpm 并安装依赖（含 `prisma generate`）
 - `WorktreeRemove` hook：退出时自动清理符号链接和分支
@@ -258,94 +278,15 @@
 
 ---
 
-### 7. npm-toolkit (v2.0.0)
-**类型**: Skill 插件
-**功能**: npm 发布全链路 + GitHub Actions CI/CD 配置工具包
-
-**包含 Skill**:
-- `npm-publish`：OIDC Trusted Publishing 自动发布（无需 npm token），5 步配置流程，Public/Private 双模板
-- `github-actions-setup`：GitHub Actions 工作流配置，6 种触发器 + 4 套项目模板 + Environment/Secrets/Permissions
-
-**核心能力**:
-- OIDC Trusted Publishing 自动发布，彻底消除 token 管理负担
-- 安全最佳实践：2FA、Granular Token、Provenance 签名、供应链安全审计
-- 发布自动化工具选型：Changesets（Monorepo）/ semantic-release（全自动）/ release-please（受控自动）
-- GitHub Actions 进阶模式：复合 Action、可复用 Workflow、缓存策略、动态 Matrix、Artifact 管理
-- Progressive Disclosure 结构：SKILL.md 精简核心流程，references/ 提供深度参考
-
-**使用方式**:
-安装插件后，发送 "配置 npm 自动发布" 触发 npm-publish，发送 "配置 GitHub Actions" 触发 github-actions-setup。
-
----
-
 ## 更新日志
 
-### 2026-03-22
-- autopilot 升级至 v2.13.0：4 项结构性缺陷修复（基于 little-bee 鼻字案例分析）
-  - Skill 委托路径红队强制门：红队 Agent 步骤标记为「必须执行」，新增产出检查门，不允许跳过红队直接进入合流
-  - 审查后修改铁律（Post-Review Modification Rule）：外部审查/评分后的代码修改必须重新运行对应验证，附 little-bee spring 动画崩溃教训
-  - Tier 1.5 变更类型覆盖检查：Wave 1.5 执行前新增前置步骤，UI 组件必须有渲染场景、API 必须有端点调用场景，缺失时 QA 自行补充
-  - 设计模板层级匹配原则：验证方案模板新增层级匹配提示，场景必须覆盖核心变更层级
-- worktree-setup 升级至 v2.2.0：新增 `.claude/knowledge/` 自动链接，知识库跨 worktree 共享
-  - 动机：`.claude/knowledge/` 是 git-tracked 文件，worktree 创建时 git checkout 生成独立副本，导致知识漂移和孤岛
-  - repair() 自动将 worktree 的 `.claude/knowledge/` 替换为指向主仓库的符号链接
-  - remove() 退出时自动清理 knowledge 符号链接
-  - 无需配置 worktree-links，knowledge 目录作为 always-link 行为自动处理
-  - autopilot 知识提取适配：merge 阶段检测符号链接后在主仓库上下文执行 git 操作
-- autopilot 升级至 v2.12.0：implement 阶段新增领域 Skill 委托机制
-  - 动机：little-bee 项目用 autopilot 批量添加汉字时，蓝队 Agent 没有调用已有的 add-hanzi skill 而从零实现，导致 audio-index 覆盖、Blob store 上传错误、音频生成 3 轮浪费等问题
-  - design 阶段：设计文档模板新增 `## 领域 Skill 委托（可选）` 字段，声明委托 Skill 名称、范围、输入
-  - implement 阶段：开头新增路由判断，有委托声明走 Skill 委托路径（调用 Skill → 收集产出 → 红队验收测试 → 合流），无声明走原有蓝/红队对抗路径
-  - 降级策略：Skill 调用失败时自动回退到蓝/红队路径
-  - 100% 向后兼容：不声明委托字段的任务走原有流程
-
-### 2026-03-21
-- npm-toolkit 升级至 v2.0.0：全面升级为 Progressive Disclosure 结构 + 安全/发布自动化/进阶 Actions 参考文档
-  - SKILL.md 重构为精简核心流程 + references/ 外置详细参考（npm-publish 195→165 行，github-actions-setup 311→196 行）
-  - 新增 troubleshooting.md：E404/E422 排障 + 安全最佳实践（2FA/Token/Provenance/供应链）
-  - 新增 release-automation.md：Changesets/semantic-release/release-please 选型与 Monorepo 发布
-  - 新增 advanced-patterns.md：复合 Action、可复用 Workflow、缓存策略、Matrix 进阶、Artifact 管理
-  - 完善 README.md（23→78 行）、plugin.json keywords 增强、CLAUDE.md 新增条目
-- autopilot 升级至 v2.11.0：知识工程从平面存储升级为分层知识系统（Progressive Disclosure）
-  - 动机：研究 AGENTS.md、CLAUDE.md、Anthropic Context Engineering 等业界最佳实践，发现当前知识工程缺少索引层、领域分区和智能检索
-  - 新增三层 Progressive Disclosure 目录结构：index.md（索引层）→ decisions.md/patterns.md（全局层）→ domains/（领域分区层）
-  - 新增 index.md 索引文件：路由层，每条目只记标题 + tags + 位置，Design 阶段 always loaded
-  - 条目格式增强：新增 `<!-- tags: tag1, tag2 -->` HTML comment 标签，支持关键词匹配检索
-  - 消费规则升级为两阶段检索：Phase 1 索引扫描（≤5s）→ Phase 2 按需加载（≤10s，最多 3 文件）
-  - 无 index.md 时 fallback 到全量加载（100% 向后兼容）
-  - 提取规则增强：自动生成 tags、同步 index.md、支持领域分区写入 domains/
-  - 全局文件 >100 行时建议将领域条目迁移到 domains/（需用户确认）
-- autopilot 升级至 v2.10.0：QA 执行效率优化（选择性重跑 + 场景并行 + 失败快速路径）
-  - 新增选择性 Tier 重跑：auto-fix 修复后仅重跑失败 Tier + Tier 1.5，而非全量 QA，预计节省 30-50% 重试时间
-  - 新增场景独立性声明：设计阶段验证方案支持 `[独立]` 标记，标记场景 Wave 1.5 可并行执行
-  - 新增 Wave 1 失败快速路径：Tier 0+1 合计 ≥3 项失败时跳过 Wave 1.5/2 直接修复，修复后全量验证
-  - 状态文件新增 `qa_scope` 字段控制选择性重跑 vs 全量 QA
-- autopilot 升级至 v2.9.0：Tier 1.5 真实场景验证从"文字约束"升级为"结构性强制"
-  - 动机：little-bee 性能优化中 45 个单元测试全通过、设计审查 10/10，但 AI 用"需启动 dev server，已通过 tsc+jest 验证"的借口跳过了 Tier 1.5，直到用户手动要求才执行
-  - Tier 1.5 从 Wave 1 独立为 Wave 1.5：独立步骤，Wave 1 完成后必须先做 Wave 1.5 再启动 Wave 2
-  - 新增 Tier 1.5 防合理化表格：覆盖 5 种常见借口模式（dev server 太重、已通过 jest、没写场景、后面再验、蓝队已测）
-  - 强制 Tier 1.5 报告格式：每个场景必须包含 `执行:` 和 `输出:` 标记，附正反例
-  - 结果判定增加 Tier 1.5 检查门：报告缺少执行证据视为 ❌ 未执行，必须补做
-
 ### 2026-03-20
-- autopilot 升级至 v2.8.0：新增 Tier 1.5 真实场景验证（Smoke Test），强制要求在 QA 阶段执行真实用户场景测试
-  - 动机：worktree-setup v2.1.0 修复中 22 个单元测试全通过，但真实 Agent worktree 测试才暴露核心根因。单元测试验证代码结构，真实测试验证用户场景
-  - design 阶段：`## 验证方案` 升级为结构化必填，要求 1-3 个可执行的真实测试场景
-  - QA 阶段：新增 Tier 1.5（Tier 1 和 Tier 2 之间），从验证方案读取场景逐个执行，不可跳过
-  - auto-fix 阶段：Tier 1.5 失败项优先级仅次于红队验收测试
-  - 蓝队 prompt：新增规则 8 — 所有任务完成后必须执行真实场景冒烟验证
-- worktree-setup 升级至 v2.1.0：修复 Agent isolation worktree 创建失败（"no successful output"）
-  - 根因1：`repoRoot()` 在 worktree 内调用时返回 worktree 路径而非主仓库根，导致嵌套 worktree
-  - 根因2：`create()` 使用 `process.cwd()` 而非 stdin 传入的 `cwd`，Agent 子进程 cwd 可能不在 git 仓库内
-  - 根因3：分支名冲突（上次失败残留）直接 exit 1，无恢复逻辑
-  - repoRoot(): 新增 `--git-common-dir` 检测，worktree 内始终解析到主仓库根
-  - create(): 使用 `input.cwd` 代替 `process.cwd()`，worktree 路径已存在时跳过创建直接修复，残留分支自动清理
-  - remove(): 同步使用 `input.cwd`
-  - git 命令全部加 `-C root` 参数，消除 cwd 依赖
-- autopilot 升级至 v2.7.2：修复空 session_id 状态文件劫持新会话的 bug
-  - 根因：setup.sh 在 CLAUDE_CODE_SESSION_ID 环境变量缺失时写入空 session_id，stop-hook 的 session 隔离检查在空值时被完全跳过
-  - stop-hook.sh: 空 session_id 视为残留文件直接放行，非空时严格匹配
-  - setup.sh: session_id 兜底生成 `autopilot-{timestamp}-{pid}` 格式随机 ID
+- autopilot 升级至 v2.8.0：stop-hook 强制执行知识工程步骤
+  - design 阶段：stop-hook prompt 注入知识加载指令（.claude/knowledge/ 存在时先加载 decisions.md/patterns.md）
+  - merge 阶段：新增 knowledge_extracted frontmatter 字段 + phase=done 回滚守卫
+  - AI 跳过知识提取时 stop-hook 自动回滚 phase 到 merge 并注入提取 prompt
+  - 根因：知识工程步骤只在 SKILL.md 文本中，未进入 stop-hook 强制注入链路，AI 直接跳过
+  - 方案：复用已验证的 stop-hook block + prompt 注入机制，零新增文件
 - autopilot 升级至 v2.7.1：修复 setup.sh 从未被自动调用 + exit 1 阻断 skill 加载
   - v2.7.0: SKILL.md 添加 `!`command`` 预处理命令注入，setup.sh 不再是死代码
   - v2.7.1: setup.sh 所有 exit 1 改为 exit 0，错误从 stderr 改到 stdout
@@ -426,6 +367,7 @@
 - writer-skill 升级至 v1.6.0：新增 writer-tech-skill，专注 RFC/Design Doc 工程规范型文档写作
 
 ### 2026-02-08
+- 添加 plugin-sync 插件，解决跨模型插件同步问题
 - 添加 task-notifier 插件
 - 更新文档结构
 
