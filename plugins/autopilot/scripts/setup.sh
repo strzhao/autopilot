@@ -242,6 +242,12 @@ fi
 # 创建状态文件
 mkdir -p "$PROJECT_ROOT/.claude"
 
+# session_id 兜底：环境变量不可用时生成随机 ID，确保 stop-hook 的 session 隔离始终生效
+SESSION_ID="${CLAUDE_CODE_SESSION_ID:-}"
+if [[ -z "$SESSION_ID" ]]; then
+    SESSION_ID="autopilot-$(date +%s)-$$"
+fi
+
 # 检查知识库是否存在
 KNOWLEDGE_HINT=""
 if [[ -d "$PROJECT_ROOT/.claude/knowledge" ]]; then
@@ -258,7 +264,7 @@ iteration: 1
 max_iterations: $MAX_ITERATIONS
 max_retries: $MAX_RETRIES
 retry_count: 0
-session_id: ${CLAUDE_CODE_SESSION_ID:-}
+session_id: $SESSION_ID
 started_at: "$(now_iso)"
 ---
 

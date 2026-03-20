@@ -45,7 +45,13 @@ STATE_SESSION=$(get_field "session_id" || true)
 # ── 3. Session 隔离 ──
 
 HOOK_SESSION=$(echo "$HOOK_INPUT" | jq -r '.session_id // ""' 2>/dev/null || true)
-if [[ -n "$STATE_SESSION" ]] && [[ "$STATE_SESSION" != "$HOOK_SESSION" ]]; then
+
+# session_id 为空说明状态文件异常（setup 时环境变量缺失），疑似残留文件，不应劫持新会话
+if [[ -z "$STATE_SESSION" ]]; then
+    echo "⚠️  autopilot: 状态文件 session_id 为空，疑似残留文件，跳过。使用 /autopilot cancel 清理或 /autopilot <目标> 重新启动。" >&2
+    exit 0
+fi
+if [[ "$STATE_SESSION" != "$HOOK_SESSION" ]]; then
     exit 0
 fi
 

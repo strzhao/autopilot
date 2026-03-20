@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v2.6.2)
+### 3. autopilot (v2.7.2)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断）
 
@@ -281,6 +281,10 @@
 ## 更新日志
 
 ### 2026-03-20
+- autopilot 升级至 v2.7.2：修复空 session_id 状态文件劫持新会话的 bug
+  - 根因：setup.sh 在 CLAUDE_CODE_SESSION_ID 环境变量缺失时写入空 session_id，stop-hook 的 session 隔离检查在空值时被完全跳过
+  - stop-hook.sh: 空 session_id 视为残留文件直接放行，非空时严格匹配
+  - setup.sh: session_id 兜底生成 `autopilot-{timestamp}-{pid}` 格式随机 ID
 - autopilot 升级至 v2.7.1：修复 setup.sh 从未被自动调用 + exit 1 阻断 skill 加载
   - v2.7.0: SKILL.md 添加 `!`command`` 预处理命令注入，setup.sh 不再是死代码
   - v2.7.1: setup.sh 所有 exit 1 改为 exit 0，错误从 stderr 改到 stdout
