@@ -105,14 +105,16 @@ NEXT_ITERATION=$((ITERATION + 1))
 set_field "iteration" "$NEXT_ITERATION"
 
 # ── 9. 构造 block JSON ──
+# 注意：macOS bash 3.2 有 multibyte bug，$VAR 后紧跟全角标点会吞掉变量值。
+# 所有变量必须用 ${VAR} 花括号界定。
 
 # design 阶段使用 Plan Mode
 if [[ "$PHASE" == "design" ]]; then
-    PROMPT="读取 $STATE_FILE 状态文件获取目标描述，然后立即调用 EnterPlanMode 工具进入 Plan Mode。不要在调用 EnterPlanMode 之前做任何代码探索。所有探索和设计工作必须在 Plan Mode 内完成。按照 autopilot skill 的 Phase: design 指引执行。"
+    PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述, 然后立即调用 EnterPlanMode 工具进入 Plan Mode. 不要在调用 EnterPlanMode 之前做任何代码探索. 所有探索和设计工作必须在 Plan Mode 内完成. 按照 autopilot skill 的 Phase: design 指引执行."
 else
-    PROMPT="读取 $STATE_FILE 状态文件，当前阶段: $PHASE，迭代: $NEXT_ITERATION。按照 autopilot skill 的指引执行当前阶段的工作流。"
+    PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: ${PHASE}, 迭代: ${NEXT_ITERATION}. 按照 autopilot skill 的指引执行当前阶段的工作流."
 fi
-SYSTEM_MSG="🔄 autopilot 迭代 $NEXT_ITERATION | 阶段: $PHASE"
+SYSTEM_MSG="autopilot iteration ${NEXT_ITERATION} | phase: ${PHASE}"
 
 jq -n \
     --arg prompt "$PROMPT" \
