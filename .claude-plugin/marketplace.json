@@ -64,6 +64,16 @@
                 "name": "stringzhao",
                 "email": "zhaoguixiong@corp.netease.com"
             }
+        },
+        {
+            "name": "npm-toolkit",
+            "source": "./plugins/npm-toolkit",
+            "description": "npm 发布与 GitHub Actions CI/CD 配置工具包。包含 OIDC trusted publishing 自动发布和 GitHub Actions 工作流配置两个技能",
+            "version": "1.0.0",
+            "author": {
+                "name": "stringzhao",
+                "email": "zhaoguixiong@corp.netease.com"
+            }
         }
     ]
 }
