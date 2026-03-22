@@ -24,8 +24,8 @@ cp -r plugins/task-notifier ~/.claude/plugins/
 ### 步骤 1：获取插件
 ```bash
 # 克隆插件仓库（如果从 GitHub 获取）
-git clone https://github.com/stringzhao/string-claude-code-plugin.git
-cd string-claude-code-plugin/plugins/task-notifier
+git clone https://github.com/strzhao/autopilot.git
+cd autopilot/plugins/task-notifier
 ```
 
 ### 步骤 2：插件说明
@@ -188,7 +188,7 @@ cp ~/.claude/plugins/task-notifier.backup/hooks/hooks.json ~/.claude/plugins/tas
    Get-Content -Path "$env:USERPROFILE\.claude\logs\claude-code.log" -Wait
    ```
 3. 在 GitHub 上提交 Issue：
-   https://github.com/stringzhao/string-claude-code-plugin/issues
+   https://github.com/strzhao/autopilot/issues
 
 ## 许可证
 

@@ -2,7 +2,7 @@
 
 ## 概述
 
-本仓库是 **String Claude Code 插件市场**，提供多个实用的 Claude Code 插件，帮助提升开发效率。
+本仓库是 **Autopilot 插件市场**，提供多个实用的 Claude Code 插件，帮助提升开发效率。
 
 ## 可用插件
 
@@ -19,7 +19,7 @@
 添加本仓库为插件市场来源：
 
 ```bash
-/plugin marketplace add https://g.hz.netease.com/cloudmusic-agi/plugins/vip-claude-code-plugin.git
+/plugin marketplace add https://github.com/strzhao/autopilot.git
 ```
 
 然后运行 `/plugins` 查看并安装可用插件。
@@ -28,8 +28,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://g.hz.netease.com/cloudmusic-agi/plugins/vip-claude-code-plugin.git
-cd string-claude-code-plugin
+git clone https://github.com/strzhao/autopilot.git
+cd autopilot
 
 # 安装指定插件（以 summarizer 为例）
 cp -r plugins/summarizer ~/.claude/plugins/
@@ -106,7 +106,7 @@ TaskComplete
 ## 项目结构
 
 ```
-string-claude-code-plugin/
+autopilot/
 ├── README.md                    # 主文档
 ├── QUICK_START.md              # 快速开始指南（本文档）
 ├── .claude-plugin/
@@ -186,7 +186,7 @@ plugin-name/
 
 - **项目维护者**：String Zhao
 - **邮箱**：zhaoguixiong@corp.netease.com
-- **仓库地址**：https://g.hz.netease.com/cloudmusic-agi/plugins/vip-claude-code-plugin.git
+- **仓库地址**：https://github.com/strzhao/autopilot
 
 ## 许可证
 

@@ -28,27 +28,27 @@ Claude Code 的 `cc switch` 命令切换模型（如从 kimi-k2.5 切换到 deep
 
 ```bash
 # 在你的插件市场目录
-/install /path/to/string-claude-code-plugin
+/install /path/to/autopilot
 ```
 
 ### 2. 运行初始化脚本
 
 ```bash
-cd ~/.claude/plugins/cache/string-claude-code-plugin-market/plugin-sync/1.0.0
+cd ~/.claude/plugins/cache/autopilot/plugin-sync/1.0.0
 ./setup.sh
 ```
 
 或手动执行：
 
 ```bash
-~/.claude/plugins/cache/string-claude-code-plugin-market/plugin-sync/1.0.0/assets/scripts/sync.sh init
+~/.claude/plugins/cache/autopilot/plugin-sync/1.0.0/assets/scripts/sync.sh init
 ```
 
 ### 3. 验证安装
 
 ```bash
 # 检查状态
-~/.claude/plugins/cache/string-claude-code-plugin-market/plugin-sync/1.0.0/assets/scripts/sync.sh status
+~/.claude/plugins/cache/autopilot/plugin-sync/1.0.0/assets/scripts/sync.sh status
 ```
 
 ## 工作原理

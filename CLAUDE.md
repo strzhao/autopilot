@@ -1,13 +1,13 @@
-# Claude Code 插件市场
+# Autopilot — Claude Code 自动驾驶工程套件
 
 本仓库是 String 维护的 Claude Code 插件集合，提供高质量、实用的插件来增强 Claude Code 的功能。
 
 ## 项目信息
 
-- **名称**: string-claude-code-plugin-market
+- **名称**: autopilot
 - **维护者**: String Zhao
 - **邮箱**: zhaoguixiong@corp.netease.com
-- **仓库**: https://g.hz.netease.com/cloudmusic-agi/plugins/vip-claude-code-plugin.git
+- **仓库**: https://github.com/strzhao/autopilot.git
 
 ## 插件列表
 

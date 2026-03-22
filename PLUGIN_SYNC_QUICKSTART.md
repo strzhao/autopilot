@@ -23,7 +23,7 @@ Hook 会自动处理：
 
 ```bash
 # 进入 plugin-sync 目录
-cd ~/.claude/plugins/cache/string-claude-code-plugin-market/plugin-sync/1.0.0
+cd ~/.claude/plugins/cache/autopilot/plugin-sync/1.0.0
 
 # 查看状态
 ./assets/scripts/sync.sh status
@@ -81,7 +81,7 @@ mv ~/.claude/plugins.backup.xxxx ~/.claude/plugins
 └── plugins.backup.xxxx/      # 原配置备份
 
 插件源码:
-~/workspace_sync/personal_projects/string-claude-code-plugin/plugins/plugin-sync/
+~/workspace_sync/personal_projects/autopilot/plugins/plugin-sync/
 ```
 
 ---

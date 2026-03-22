@@ -198,7 +198,7 @@ Task "测试任务"  # 测试提示音功能
 
 - **许可证**: MIT
 - **作者**: stringzhao (zhaoguixiong@corp.netease.com)
-- **项目地址**: https://github.com/stringzhao/string-claude-code-plugin
+- **项目地址**: https://github.com/strzhao/autopilot
 
 ## 总结
 

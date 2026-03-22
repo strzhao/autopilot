@@ -151,7 +151,7 @@ task-notifier/
 
 - 作者：stringzhao
 - 邮箱：zhaoguixiong@corp.netease.com
-- 项目地址：https://github.com/stringzhao/string-claude-code-plugin
+- 项目地址：https://github.com/strzhao/autopilot
 
 ## 更新日志
 
