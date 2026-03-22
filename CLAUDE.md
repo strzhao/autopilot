@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v2.12.0)
+### 3. autopilot (v2.13.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断）
 
@@ -281,6 +281,11 @@
 ## 更新日志
 
 ### 2026-03-22
+- autopilot 升级至 v2.13.0：4 项结构性缺陷修复（基于 little-bee 鼻字案例分析）
+  - Skill 委托路径红队强制门：红队 Agent 步骤标记为「必须执行」，新增产出检查门，不允许跳过红队直接进入合流
+  - 审查后修改铁律（Post-Review Modification Rule）：外部审查/评分后的代码修改必须重新运行对应验证，附 little-bee spring 动画崩溃教训
+  - Tier 1.5 变更类型覆盖检查：Wave 1.5 执行前新增前置步骤，UI 组件必须有渲染场景、API 必须有端点调用场景，缺失时 QA 自行补充
+  - 设计模板层级匹配原则：验证方案模板新增层级匹配提示，场景必须覆盖核心变更层级
 - worktree-setup 升级至 v2.2.0：新增 `.claude/knowledge/` 自动链接，知识库跨 worktree 共享
   - 动机：`.claude/knowledge/` 是 git-tracked 文件，worktree 创建时 git checkout 生成独立副本，导致知识漂移和孤岛
   - repair() 自动将 worktree 的 `.claude/knowledge/` 替换为指向主仓库的符号链接
