@@ -1,7 +1,7 @@
 {
     "name": "worktree-setup",
     "description": "Auto-initialize Claude Code worktrees: symlink env files, install deps, assign deterministic port",
-    "version": "2.1.0",
+    "version": "2.2.0",
     "author": {
         "name": "stringzhao",
         "email": "zhaoguixiong@corp.netease.com"

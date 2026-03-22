@@ -259,7 +259,7 @@
 
 ---
 
-### 6. worktree-setup (v2.1.0)
+### 6. worktree-setup (v2.2.0)
 **类型**: Hook 插件
 **功能**: Git Worktree 自动初始化工具
 
@@ -267,6 +267,7 @@
 - `WorktreeCreate` hook：`claude -w <name>` 后自动完成 worktree 初始化
 - 按项目 `.claude/worktree-links` 创建符号链接（`.env.local`、`.mcp.json` 等）
 - 无配置时自动扫描 `.env*` 文件（新项目零配置可用）
+- `.claude/knowledge/` 自动链接至主仓库（知识库跨 worktree 共享）
 - 确定性端口分配：hash(branch_name) → 4001-4999，避免多 worktree 端口冲突
 - 自动识别 npm/yarn/pnpm 并安装依赖（含 `prisma generate`）
 - `WorktreeRemove` hook：退出时自动清理符号链接和分支
@@ -299,6 +300,14 @@
 ---
 
 ## 更新日志
+
+### 2026-03-22
+- worktree-setup 升级至 v2.2.0：新增 `.claude/knowledge/` 自动链接，知识库跨 worktree 共享
+  - 动机：`.claude/knowledge/` 是 git-tracked 文件，worktree 创建时 git checkout 生成独立副本，导致知识漂移和孤岛
+  - repair() 自动将 worktree 的 `.claude/knowledge/` 替换为指向主仓库的符号链接
+  - remove() 退出时自动清理 knowledge 符号链接
+  - 无需配置 worktree-links，knowledge 目录作为 always-link 行为自动处理
+  - autopilot 知识提取适配：merge 阶段检测符号链接后在主仓库上下文执行 git 操作
 
 ### 2026-03-21
 - npm-toolkit 升级至 v2.0.0：全面升级为 Progressive Disclosure 结构 + 安全/发布自动化/进阶 Actions 参考文档

@@ -2,7 +2,7 @@
 // worktree.mjs — Claude Code worktree-setup plugin
 // Unified entry: create / remove / repair
 import { execSync, execFileSync } from 'child_process';
-import { readFileSync, existsSync, mkdirSync, symlinkSync, lstatSync, unlinkSync, readdirSync, writeFileSync, realpathSync } from 'fs';
+import { readFileSync, existsSync, mkdirSync, symlinkSync, lstatSync, unlinkSync, readdirSync, writeFileSync, realpathSync, rmSync } from 'fs';
 import { join, basename, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -128,6 +128,35 @@ function repair(worktreePath) {
         }
       }
     } catch { /* no .env files */ }
+  }
+
+  // ─── Knowledge directory symlink (always-link) ───
+  // Knowledge is conceptually shared across all worktrees
+  const knowledgeSrc = join(root, '.claude', 'knowledge');
+  const knowledgeDst = join(worktreePath, '.claude', 'knowledge');
+  if (existsSync(knowledgeSrc)) {
+    try {
+      const stat = lstatSync(knowledgeDst);
+      if (stat.isSymbolicLink()) {
+        log('   — .claude/knowledge 已是符号链接');
+      } else if (stat.isDirectory()) {
+        // Replace git-checked-out copy with symlink to main repo
+        log('→ 替换 .claude/knowledge 为符号链接（指向主仓库）...');
+        rmSync(knowledgeDst, { recursive: true, force: true });
+        symlinkSync(knowledgeSrc, knowledgeDst);
+        log('   ✓ .claude/knowledge → 主仓库');
+      }
+    } catch (e) {
+      // knowledgeDst doesn't exist — check if parent dir exists and create symlink
+      if (e.code === 'ENOENT') {
+        const dir = dirname(knowledgeDst);
+        if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+        symlinkSync(knowledgeSrc, knowledgeDst);
+        log('   ✓ .claude/knowledge → 主仓库');
+      } else {
+        log(`   ⚠ 无法检查 .claude/knowledge: ${e.message}`);
+      }
+    }
   }
 
   // Install dependencies
@@ -265,6 +294,15 @@ function remove() {
       }
     } catch { /* dir may not exist */ }
   }
+
+  // Clean up .claude/knowledge symlink
+  const knowledgePath = join(worktreePath, '.claude', 'knowledge');
+  try {
+    if (lstatSync(knowledgePath).isSymbolicLink()) {
+      unlinkSync(knowledgePath);
+      log('   ✓ 移除符号链接: .claude/knowledge');
+    }
+  } catch { /* not a symlink or doesn't exist */ }
 
   // Remove local-config.json
   const configPath = join(worktreePath, 'local-config.json');

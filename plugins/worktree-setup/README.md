@@ -7,6 +7,7 @@ Claude Code plugin that auto-initializes git worktrees when using `claude -w <na
 - **自动创建符号链接**：`.env.local`、`.mcp.json` 等 gitignored 配置文件
 - **自动安装依赖**：识别 npm/yarn/pnpm，自动运行 install（含 `prisma generate`）
 - **确定性端口分配**：基于分支名 hash，每个 worktree 固定端口（4001-4999），避免冲突
+- **知识目录共享**：自动将 `.claude/knowledge/` 符号链接到主仓库，所有 worktree 共享同一份知识库
 - **手动修复命令**：`/worktree-setup:repair` 修复已有 worktree
 
 ## 安装

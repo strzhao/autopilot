@@ -152,6 +152,23 @@ After autopilot-commit completes, review the full autopilot run to extract knowl
 
 **Time limit**: Complete knowledge extraction within 2 minutes. Prefer recording fewer high-quality entries over exhaustive documentation.
 
+### Worktree-Aware Extraction
+
+When running in a git worktree, `.claude/knowledge` may be a symlink to the main repo (created by worktree-setup). In this case:
+
+1. **Detection**: Check if `.claude/knowledge` is a symlink: `test -L .claude/knowledge` or use `lstatSync` in Node.js
+2. **Reading**: Transparent — symlink allows normal file reads, no special handling needed
+3. **Writing**: Transparent — edits go to the symlink target (main repo's files)
+4. **Git operations**: The symlink target lives in the main repo's working tree. Use `git -C <main-repo-root>` for add/commit:
+   ```bash
+   # Resolve main repo root from symlink target (realpath works on macOS and Linux)
+   KNOWLEDGE_REAL=$(realpath .claude/knowledge)
+   MAIN_REPO=$(cd "$KNOWLEDGE_REAL" && git rev-parse --show-toplevel)
+   git -C "$MAIN_REPO" add .claude/knowledge/
+   git -C "$MAIN_REPO" commit -m "docs(knowledge): extract {brief summary}"
+   ```
+5. **Fallback**: If `.claude/knowledge` is not a symlink (regular directory), use normal git operations in the current repo context
+
 ### Domain Partition Guide
 
 当全局文件（`decisions.md` / `patterns.md`）超过 100 行时，建议按领域迁移：
