@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v2.11.0)
+### 3. autopilot (v2.12.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断）
 
@@ -299,6 +299,14 @@
 ---
 
 ## 更新日志
+
+### 2026-03-22
+- autopilot 升级至 v2.12.0：implement 阶段新增领域 Skill 委托机制
+  - 动机：little-bee 项目用 autopilot 批量添加汉字时，蓝队 Agent 没有调用已有的 add-hanzi skill 而从零实现，导致 audio-index 覆盖、Blob store 上传错误、音频生成 3 轮浪费等问题
+  - design 阶段：设计文档模板新增 `## 领域 Skill 委托（可选）` 字段，声明委托 Skill 名称、范围、输入
+  - implement 阶段：开头新增路由判断，有委托声明走 Skill 委托路径（调用 Skill → 收集产出 → 红队验收测试 → 合流），无声明走原有蓝/红队对抗路径
+  - 降级策略：Skill 调用失败时自动回退到蓝/红队路径
+  - 100% 向后兼容：不声明委托字段的任务走原有流程
 
 ### 2026-03-21
 - npm-toolkit 升级至 v2.0.0：全面升级为 Progressive Disclosure 结构 + 安全/发布自动化/进阶 Actions 参考文档
