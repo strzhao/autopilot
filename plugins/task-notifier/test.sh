@@ -7,7 +7,8 @@ echo "=== Task Notifier 插件测试 ==="
 echo
 
 # 设置环境变量（模拟 Claude Code 环境）
-export CLAUDE_PLUGIN_ROOT="$(cd "$(dirname "$0")" && pwd)"
+CLAUDE_PLUGIN_ROOT="$(cd "$(dirname "$0")" && pwd)"
+export CLAUDE_PLUGIN_ROOT
 
 echo "1. 测试脚本执行权限..."
 if [ -x "$CLAUDE_PLUGIN_ROOT/assets/scripts/play-sound.sh" ]; then

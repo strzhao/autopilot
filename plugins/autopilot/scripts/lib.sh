@@ -12,7 +12,7 @@ STATE_FILE=""
 init_paths() {
     local target_cwd="${1:-}"
     if [[ -n "$target_cwd" ]] && [[ -d "$target_cwd" ]]; then
-        cd "$target_cwd"
+        cd "$target_cwd" || return
     fi
     PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
     STATE_FILE="${PROJECT_ROOT}/.claude/autopilot.local.md"

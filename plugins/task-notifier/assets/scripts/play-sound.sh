@@ -53,7 +53,8 @@ play_custom_sound() {
     local sound_file="$1"
     [ -z "$sound_file" ] || [ ! -f "$sound_file" ] && return 1
 
-    local os=$(detect_os)
+    local os
+    os=$(detect_os)
     case "$os" in
         macOS)
             command -v afplay >/dev/null 2>&1 && { afplay "$sound_file" & disown; return 0; }
@@ -76,7 +77,8 @@ play_custom_sound() {
 
 # 播放系统默认通知（降级方案）
 play_system_notification() {
-    local os=$(detect_os)
+    local os
+    os=$(detect_os)
 
     case "$os" in
         macOS)
@@ -94,6 +96,10 @@ play_system_notification() {
 }
 
 # 主逻辑：尝试自定义音效，失败则降级到系统通知
-custom_file=$(get_custom_sound_file) && play_custom_sound "$custom_file" || play_system_notification
+if custom_file=$(get_custom_sound_file) && play_custom_sound "$custom_file"; then
+    :
+else
+    play_system_notification
+fi
 
 exit 0

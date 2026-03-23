@@ -8,7 +8,8 @@ echo "=========================="
 echo
 
 # 设置环境变量
-export CLAUDE_PLUGIN_ROOT="$(cd "$(dirname "$0")" && pwd)"
+CLAUDE_PLUGIN_ROOT="$(cd "$(dirname "$0")" && pwd)"
+export CLAUDE_PLUGIN_ROOT
 
 echo "1. 显示插件信息"
 echo "   名称: task-notifier"
