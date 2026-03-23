@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # autopilot 审批通知脚本
-# 在审批门触发时发送系统通知 + 声音提醒
+# 在审批门触发时发送系统通知（纯文字，声音由 task-notifier 插件统一处理）
 
 set -euo pipefail
 
@@ -28,11 +28,10 @@ esac
 
 # macOS 通知
 if command -v osascript &>/dev/null; then
-    osascript -e "display notification \"$MSG\" with title \"$TITLE\" sound name \"Glass\"" 2>/dev/null || true
+    osascript -e "display notification \"$MSG\" with title \"$TITLE\"" 2>/dev/null || true
 # Linux 通知
 elif command -v notify-send &>/dev/null; then
     notify-send "$TITLE" "$MSG" 2>/dev/null || true
 fi
 
-# 终端响铃作为后备
-printf '\a' 2>/dev/null || true
+# 声音通知已移除，统一由 task-notifier 插件处理
