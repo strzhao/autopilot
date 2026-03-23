@@ -88,27 +88,9 @@ max_iterations: 30' "$STATE_FILE" && rm -f "${STATE_FILE}.bak"
     fi
 fi
 
-# ── 5. phase=done → 知识提取守卫 + 完成清理 ──
+# ── 5. phase=done → 完成清理 ──
 
 if [[ "$PHASE" == "done" ]]; then
-    KE=$(get_field "knowledge_extracted" || true)
-    if [[ "$KE" != "true" ]] && [[ "$KE" != "skipped" ]]; then
-        # 知识提取未完成，回滚到 merge 阶段
-        set_field "phase" "merge"
-        NEXT_ITERATION=$((ITERATION + 1))
-        set_field "iteration" "$NEXT_ITERATION"
-        KE_PROMPT="你跳过了知识提取步骤. 读取 ${STATE_FILE} 状态文件, 按照 autopilot skill Phase: merge 的 Step 2 执行知识提取与沉淀. 完成后用 Edit 设置 knowledge_extracted 为 true 或 skipped, 然后再设 phase: done."
-        KE_MSG="autopilot iteration ${NEXT_ITERATION} | phase: merge (知识提取回滚)"
-        jq -n \
-            --arg prompt "$KE_PROMPT" \
-            --arg msg "$KE_MSG" \
-            '{
-                "decision": "block",
-                "reason": $prompt,
-                "systemMessage": $msg
-            }'
-        exit 0
-    fi
     bash "$SCRIPT_DIR/notify.sh" complete 2>/dev/null || true
     rm "$STATE_FILE"
     exit 0
@@ -142,7 +124,7 @@ set_field "iteration" "$NEXT_ITERATION"
 
 # design 阶段使用 Plan Mode
 if [[ "$PHASE" == "design" ]]; then
-    PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. 如果项目中存在 .claude/knowledge/ 目录, 先 Read decisions.md 和 patterns.md 加载相关知识上下文. 然后立即调用 EnterPlanMode 工具进入 Plan Mode. 不要在调用 EnterPlanMode 之前做任何代码探索. 所有探索和设计工作必须在 Plan Mode 内完成. 按照 autopilot skill 的 Phase: design 指引执行."
+    PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述, 然后立即调用 EnterPlanMode 工具进入 Plan Mode. 不要在调用 EnterPlanMode 之前做任何代码探索. 所有探索和设计工作必须在 Plan Mode 内完成. 按照 autopilot skill 的 Phase: design 指引执行."
 else
     PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: ${PHASE}, 迭代: ${NEXT_ITERATION}. 按照 autopilot skill 的指引执行当前阶段的工作流."
 fi

@@ -18,6 +18,14 @@ set -uo pipefail
 source "$(dirname "$0")/lib.sh"
 init_paths
 
+# ── 参数安全处理 ──────────────────────────────────────────────
+# SKILL.md 用 "$ARGUMENTS" 引号传参（防止 shell 解析括号等特殊字符），
+# 导致所有参数合并为单个字符串。这里重新按空格拆分恢复原始行为。
+if [[ $# -eq 1 && "$1" == *" "* ]]; then
+    read -ra _SPLIT_ARGS <<< "$1"
+    set -- "${_SPLIT_ARGS[@]}"
+fi
+
 # ── 子命令路由 ──────────────────────────────────────────────
 
 FIRST_ARG="${1:-}"
@@ -242,6 +250,10 @@ fi
 # 创建状态文件
 mkdir -p "$PROJECT_ROOT/.claude"
 
+# session_id：与 ralph 一致，直接使用环境变量（可能为空）。
+# 空值时由 stop-hook 首次触发时认领真实 session_id，建立隔离。
+SESSION_ID="${CLAUDE_CODE_SESSION_ID:-}"
+
 # 检查知识库是否存在
 KNOWLEDGE_HINT=""
 if [[ -d "$PROJECT_ROOT/.claude/knowledge" ]]; then
@@ -258,8 +270,7 @@ iteration: 1
 max_iterations: $MAX_ITERATIONS
 max_retries: $MAX_RETRIES
 retry_count: 0
-knowledge_extracted: ""
-session_id: ${CLAUDE_CODE_SESSION_ID:-}
+session_id: $SESSION_ID
 started_at: "$(now_iso)"
 ---
 
