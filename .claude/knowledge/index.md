@@ -9,3 +9,4 @@
 - [2026-03-22] 外部审查后的修改必须重新验证 | tags: autopilot, qa, post-review, validation, framer-motion | → patterns.md
 - [2026-03-22] Tier 1.5 验证场景必须匹配核心变更层级 | tags: autopilot, qa, tier-1.5, ui-testing, smoke-test | → patterns.md
 - [2026-03-21] HTML comment tags 比 YAML frontmatter 更适合 AI 知识标签 | tags: knowledge, tags, ai-parsing | → patterns.md
+- [2026-03-24] SKILL.md 步骤标题需包含可搜索的"步骤"前缀 | tags: autopilot, skill, naming-convention, testing | → patterns.md
