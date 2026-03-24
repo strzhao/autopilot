@@ -587,9 +587,23 @@ autopilot-commit 完成后，回顾本次全流程产出，提取值得持久化
    c. 追加条目到目标文件（使用 `<!-- tags: ... -->` 格式）
    d. 同步更新 `index.md`：为每个新条目添加索引行（如 `index.md` 不存在则创建）
    e. 检查全局文件行数：>100 行时建议用户将领域条目迁移到 `domains/`
-   f. 检查 `.claude/knowledge` 是否为符号链接（worktree 场景）：
-      - **是符号链接**：解析真实路径，在主仓库上下文执行 `git -C <main-repo> add .claude/knowledge/ && git -C <main-repo> commit -m "docs(knowledge): ..."`
-      - **非符号链接**：正常执行 `git add .claude/knowledge/ && git commit -m "docs(knowledge): ..."`
+   f. 确定知识库 git 提交上下文（worktree 安全路由）：
+      - **步骤 1**：检查 `.claude/knowledge` 是否为符号链接
+        - 是 → 解析真实路径：`MAIN_REPO=$(cd "$(realpath .claude/knowledge)" && git rev-parse --show-toplevel)`，使用 `git -C "$MAIN_REPO"` 提交 → 完成
+      - **步骤 2**（非符号链接）：检查当前是否在 worktree 中（`.git` 是文件而非目录）
+        - 是 worktree → 通过 `git rev-parse --git-common-dir` 解析主仓库根目录，将知识文件复制到主仓库后用 `git -C` 提交，并修复符号链接以便后续运行：
+          ```bash
+          COMMON_DIR=$(git rev-parse --git-common-dir)
+          MAIN_REPO=$(cd "$COMMON_DIR/.." && pwd)
+          mkdir -p "$MAIN_REPO/.claude/knowledge/"
+          cp -r .claude/knowledge/* "$MAIN_REPO/.claude/knowledge/"
+          git -C "$MAIN_REPO" add .claude/knowledge/
+          git -C "$MAIN_REPO" commit -m "docs(knowledge): ..."
+          # 自愈：修复符号链接
+          rm -rf .claude/knowledge
+          ln -s "$MAIN_REPO/.claude/knowledge" .claude/knowledge
+          ```
+      - **步骤 3**（非 worktree）：正常执行 `git add .claude/knowledge/ && git commit -m "docs(knowledge): ..."`
 5. 无值得记录的内容 → 在变更日志追加"知识提取：本次无新增"后跳过
 
 时间限制 2 分钟。宁可少写高质量条目，不要穷举。

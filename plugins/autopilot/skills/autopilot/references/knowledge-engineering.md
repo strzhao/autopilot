@@ -154,20 +154,52 @@ After autopilot-commit completes, review the full autopilot run to extract knowl
 
 ### Worktree-Aware Extraction
 
-When running in a git worktree, `.claude/knowledge` may be a symlink to the main repo (created by autopilot's worktree hooks). In this case:
+When running in a git worktree, `.claude/knowledge` should be a symlink to the main repo (created by autopilot's WorktreeCreate hook). However, the symlink may be missing (old worktree, hook failure, etc.). Use this 3-step detection chain to ensure knowledge always commits to the main repo:
 
-1. **Detection**: Check if `.claude/knowledge` is a symlink: `test -L .claude/knowledge` or use `lstatSync` in Node.js
-2. **Reading**: Transparent — symlink allows normal file reads, no special handling needed
-3. **Writing**: Transparent — edits go to the symlink target (main repo's files)
-4. **Git operations**: The symlink target lives in the main repo's working tree. Use `git -C <main-repo-root>` for add/commit:
+#### Step 1: Symlink exists (happy path)
+Check: `test -L .claude/knowledge`
+
+If **yes**:
+- Reading/Writing: Transparent — symlink target is main repo's files
+- Git operations: Resolve main repo and commit there:
+  ```bash
+  KNOWLEDGE_REAL=$(realpath .claude/knowledge)
+  MAIN_REPO=$(cd "$KNOWLEDGE_REAL" && git rev-parse --show-toplevel)
+  git -C "$MAIN_REPO" add .claude/knowledge/
+  git -C "$MAIN_REPO" commit -m "docs(knowledge): extract {brief summary}"
+  ```
+
+#### Step 2: In worktree, symlink missing (fallback + self-heal)
+If `.claude/knowledge` is NOT a symlink, check whether we are in a worktree:
+```bash
+test -f .git   # .git is a FILE (not directory) in worktrees
+```
+
+If **yes** (in worktree, symlink missing):
+1. Resolve main repo root:
    ```bash
-   # Resolve main repo root from symlink target (realpath works on macOS and Linux)
-   KNOWLEDGE_REAL=$(realpath .claude/knowledge)
-   MAIN_REPO=$(cd "$KNOWLEDGE_REAL" && git rev-parse --show-toplevel)
+   COMMON_DIR=$(git rev-parse --git-common-dir)
+   MAIN_REPO=$(cd "$COMMON_DIR/.." && pwd)
+   ```
+2. Copy knowledge to main repo and commit:
+   ```bash
+   mkdir -p "$MAIN_REPO/.claude/knowledge/"
+   cp -r .claude/knowledge/* "$MAIN_REPO/.claude/knowledge/"
    git -C "$MAIN_REPO" add .claude/knowledge/
    git -C "$MAIN_REPO" commit -m "docs(knowledge): extract {brief summary}"
    ```
-5. **Fallback**: If `.claude/knowledge` is not a symlink (regular directory), use normal git operations in the current repo context
+3. Self-heal — repair the missing symlink for future runs:
+   ```bash
+   rm -rf .claude/knowledge
+   ln -s "$MAIN_REPO/.claude/knowledge" .claude/knowledge
+   ```
+
+#### Step 3: Normal repo (no worktree)
+If `.git` is a directory (not in a worktree), use standard git operations:
+```bash
+git add .claude/knowledge/
+git commit -m "docs(knowledge): extract {brief summary}"
+```
 
 ### Domain Partition Guide
 

@@ -29,7 +29,7 @@ import { tmpdir } from 'node:os';
  * Simulates the knowledge-symlink portion of repair().
  *
  * Per design:
- *   1. If main repo has no .claude/knowledge/ → do nothing
+ *   1. If main repo has no .claude/knowledge/ → proactively create it, then symlink
  *   2. If worktree .claude/knowledge is already a symlink → do nothing
  *   3. If worktree .claude/knowledge is a real directory → replace with symlink
  *   4. If worktree .claude/ exists but knowledge/ does not → create symlink
@@ -38,8 +38,10 @@ function repairKnowledgeSymlink(mainRepoRoot, worktreeRoot) {
   const mainKnowledge = join(mainRepoRoot, '.claude', 'knowledge');
   const wtKnowledge = join(worktreeRoot, '.claude', 'knowledge');
 
-  // Rule 1: main repo must have knowledge dir
-  if (!existsSync(mainKnowledge)) return;
+  // Rule 1: main repo has no knowledge dir → proactively create it
+  if (!existsSync(mainKnowledge)) {
+    mkdirSync(mainKnowledge, { recursive: true });
+  }
 
   // Ensure .claude/ exists in worktree
   const wtClaudeDir = join(worktreeRoot, '.claude');
@@ -162,27 +164,36 @@ describe('Knowledge Symlink — Acceptance Tests', () => {
   });
 
   // -----------------------------------------------------------------------
-  // Test 3: repair() skips when main repo has no knowledge directory
+  // Test 3: repair() proactively creates knowledge dir and symlink when
+  //         main repo has none (Layer 1 prevention)
   // -----------------------------------------------------------------------
-  it('repair() should skip if main repo has no knowledge directory', () => {
+  it('repair() should proactively create knowledge directory and symlink when main repo has none', () => {
     const { mainRepo, worktree } = scaffold('t3');
 
-    // Main repo: .claude/ exists but no knowledge/
+    // Main repo: .claude/ exists but NO knowledge/
     mkdirSync(join(mainRepo, '.claude'), { recursive: true });
 
-    // Worktree: has a real .claude/knowledge/ with content
+    // Worktree: has a real .claude/knowledge/ directory
     const wtKnowledge = join(worktree, '.claude', 'knowledge');
     mkdirSync(wtKnowledge, { recursive: true });
-    writeFileSync(join(wtKnowledge, 'patterns.md'), 'my patterns');
 
     repairKnowledgeSymlink(mainRepo, worktree);
 
-    // Assert: worktree's knowledge is still a real directory, content intact
+    const mainKnowledge = join(mainRepo, '.claude', 'knowledge');
+
+    // Assert: main repo's .claude/knowledge/ now exists
+    assert.ok(existsSync(mainKnowledge), 'main repo should have .claude/knowledge/ after repair');
+
+    // Assert: worktree's .claude/knowledge is now a symlink
     const stat = lstatSync(wtKnowledge);
-    assert.ok(!stat.isSymbolicLink(), 'should remain a real directory');
+    assert.ok(stat.isSymbolicLink(), 'worktree knowledge should be a symlink after repair');
+
+    // Assert: symlink points to main repo (write to main, read through symlink)
+    writeFileSync(join(mainKnowledge, 'probe.md'), 'probe content');
     assert.equal(
-      readFileSync(join(wtKnowledge, 'patterns.md'), 'utf8'),
-      'my patterns'
+      readFileSync(join(wtKnowledge, 'probe.md'), 'utf8'),
+      'probe content',
+      'symlink should transparently expose main repo content'
     );
   });
 
@@ -327,6 +338,41 @@ describe('Knowledge Symlink — Acceptance Tests', () => {
     assert.equal(
       readFileSync(join(mainKnowledge, 'domains', 'perf.md'), 'utf8'),
       '# Performance patterns'
+    );
+  });
+
+  // -----------------------------------------------------------------------
+  // Test 8: proactively created symlink allows transparent read/write
+  // -----------------------------------------------------------------------
+  it('repair() proactively created symlink allows transparent read/write', () => {
+    const { mainRepo, worktree } = scaffold('t8');
+
+    // Main repo: .claude/ exists but NO knowledge/
+    mkdirSync(join(mainRepo, '.claude'), { recursive: true });
+
+    // Worktree: .claude/ exists but NO knowledge/
+    mkdirSync(join(worktree, '.claude'), { recursive: true });
+
+    // repair() should proactively create the dir and symlink
+    repairKnowledgeSymlink(mainRepo, worktree);
+
+    const mainKnowledge = join(mainRepo, '.claude', 'knowledge');
+    const wtKnowledge = join(worktree, '.claude', 'knowledge');
+
+    // Write through worktree symlink → should land in main repo
+    writeFileSync(join(wtKnowledge, 'test.md'), 'content');
+    assert.equal(
+      readFileSync(join(mainKnowledge, 'test.md'), 'utf8'),
+      'content',
+      'write through worktree symlink should land in main repo'
+    );
+
+    // Write through main repo → should be readable via worktree symlink
+    writeFileSync(join(mainKnowledge, 'reverse.md'), 'reverse content');
+    assert.equal(
+      readFileSync(join(wtKnowledge, 'reverse.md'), 'utf8'),
+      'reverse content',
+      'write to main repo should be readable through worktree symlink'
     );
   });
 });

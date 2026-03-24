@@ -157,6 +157,22 @@ function repair(worktreePath) {
         log(`   ⚠ 无法检查 .claude/knowledge: ${e.message}`);
       }
     }
+  } else {
+    // Main repo has no knowledge dir yet — create it proactively
+    log('→ 主仓库无 .claude/knowledge，预创建目录并建立符号链接...');
+    mkdirSync(knowledgeSrc, { recursive: true });
+    const dir = dirname(knowledgeDst);
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    try {
+      const stat = lstatSync(knowledgeDst);
+      if (!stat.isSymbolicLink()) {
+        rmSync(knowledgeDst, { recursive: true, force: true });
+      }
+    } catch { /* doesn't exist */ }
+    if (!existsSync(knowledgeDst)) {
+      symlinkSync(knowledgeSrc, knowledgeDst);
+      log('   ✓ .claude/knowledge → 主仓库（预创建）');
+    }
   }
 
   // Install dependencies

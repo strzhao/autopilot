@@ -276,6 +276,11 @@
 
 ## 更新日志
 
+### 2026-03-25
+- autopilot 升级至 v3.0.1：修复 worktree 模式下知识提取未同步到主仓库的问题
+  - worktree.mjs repair()：主仓库无 `.claude/knowledge/` 时预创建目录+符号链接
+  - SKILL.md/knowledge-engineering.md：知识提交路由从 2 分支改为 3 分支（符号链接 / worktree 无符号链接 / 非 worktree），新增自愈机制
+
 ### 2026-03-24
 - autopilot 升级至 v3.0.0：合并 worktree-setup 插件到 autopilot
   - worktree.mjs + 测试文件迁移到 `plugins/autopilot/scripts/`
