@@ -154,7 +154,7 @@ After autopilot-commit completes, review the full autopilot run to extract knowl
 
 ### Worktree-Aware Extraction
 
-When running in a git worktree, `.claude/knowledge` may be a symlink to the main repo (created by worktree-setup). In this case:
+When running in a git worktree, `.claude/knowledge` may be a symlink to the main repo (created by autopilot's worktree hooks). In this case:
 
 1. **Detection**: Check if `.claude/knowledge` is a symlink: `test -L .claude/knowledge` or use `lstatSync` in Node.js
 2. **Reading**: Transparent — symlink allows normal file reads, no special handling needed

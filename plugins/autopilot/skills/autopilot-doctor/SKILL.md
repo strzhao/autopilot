@@ -139,16 +139,22 @@ ls dist/ build/ .next/ out/ 2>/dev/null
 ```bash
 ls .husky/ .lefthook.yml .pre-commit-config.yaml 2>/dev/null; \
 cat package.json | grep -E '"(husky|lefthook|lint-staged|commitlint)"' 2>/dev/null; \
-ls .commitlintrc* commitlint.config* 2>/dev/null
+ls .commitlintrc* commitlint.config* 2>/dev/null; \
+echo "--- worktree ---"; \
+cat .claude/worktree-links 2>/dev/null; \
+ls .env* 2>/dev/null; \
+grep -rn 'PORT=' .env* 2>/dev/null | head -5; \
+cat package.json 2>/dev/null | grep -E '"(dev|start)"' 2>/dev/null; \
+git worktree list 2>/dev/null
 ```
 
 **评分标准**（0-10）：
 
 | 分数 | 条件 |
 |------|------|
-| 9-10 | pre-commit hooks + commitlint + lint-staged |
-| 7-8 | pre-commit hooks + lint-staged |
-| 5-6 | 仅 pre-commit hooks 或仅 commitlint |
+| 9-10 | pre-commit hooks + commitlint + lint-staged + worktree-links 配置 + 端口无硬编码 |
+| 7-8 | pre-commit hooks + lint-staged + (.env 可链接或 worktree-links 存在) |
+| 5-6 | 仅 pre-commit hooks 或仅 commitlint + 无 worktree 适配 |
 | 3-4 | 工具已安装但 hooks 未激活 |
 | 0 | 无 Git 工作流工具 |
 
@@ -272,8 +278,8 @@ npm outdated 2>/dev/null | wc -l || echo "0"
 | Dim 5: CI/CD Pipeline | 0.10 |
 | Dim 6: 项目结构 | 0.10 |
 | Dim 7: 文档质量 | 0.10 |
-| Dim 8: Git 工作流 | 0.05 |
-| Dim 9: 依赖健康 | 0.05 |
+| Dim 8: Git 工作流 | 0.08 |
+| Dim 9: 依赖健康 | 0.02 |
 | Dim 10: AI 就绪度 | 0.05 |
 
 ### 等级映射
@@ -339,6 +345,7 @@ npm outdated 2>/dev/null | wc -l || echo "0"
 | Tier 3: Dev Server | ✅/⚠️/❌ | Dim 4 | 需要 dev 命令 |
 | 自动修复 lint | ✅/⚠️/❌ | Dim 3 | 需要 lint:fix script |
 | 智能提交 | ✅ | — | 始终可用 |
+| Worktree 并行开发 | ✅/⚠️/❌ | Dim 8 | 需要 worktree-links 或 .env 可链接 + 端口无硬编码 |
 
 > ✅ 完全可用 | ⚠️ 降级运行 | ❌ 不可用
 
@@ -401,7 +408,7 @@ npm outdated 2>/dev/null | wc -l || echo "0"
 | 构建系统 | 添加缺失的 build/dev scripts |
 | CI/CD | 生成 GitHub Actions 基础 workflow |
 | 文档 | 生成 CLAUDE.md 模板 + README 骨架 |
-| Git 工作流 | 初始化 husky + lint-staged |
+| Git 工作流 | 初始化 husky + lint-staged + 生成 `.claude/worktree-links`（扫描 .env* 自动填充）+ 检测硬编码端口 + 调用 worktree repair |
 | 依赖健康 | 运行 `npm audit fix` |
 | AI 就绪度 | 丰富 CLAUDE.md 内容 + 创建测试模板 |
 

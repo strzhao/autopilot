@@ -48,14 +48,15 @@
 
 ---
 
-### 3. autopilot (v2.14.0)
+### 3. autopilot (v3.0.0)
 **类型**: Skill + Hook 插件
-**功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断）
+**功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断 + Worktree 自动初始化）
 
 **包含 Skill**:
 - `autopilot`：全流程闭环编排器（红蓝对抗 + 五层 QA + 知识工程 + 自动修复）
 - `autopilot-commit`：智能提交工具（React 检测、最佳实践优化、代码理解测验、任务同步）
 - `autopilot-doctor`：工程健康度诊断（10 维度评分 + autopilot 兼容性矩阵 + 自动修复）
+- `worktree-repair`：手动修复已有 worktree 的配置缺失（符号链接 + 依赖安装）
 
 **核心能力**:
 - 从目标描述到代码合并的全程自动化
@@ -72,6 +73,7 @@
 - 智能提交：三阶段并行执行模型，React 优化、Bugfix 双模式验证（自动化测试 + 运行时验证）、代码测验、CLAUDE.md 更新、版本升级、ai-todo 同步
 - 生成高质量中文提交信息（业务描述 + 技术说明）
 - 工程诊断：10 维度加权评分（测试/类型/lint/构建/CI/结构/文档/Git/依赖/AI就绪度），S-F 等级，autopilot 兼容性矩阵，`--fix` 自动修复
+- Worktree 自动初始化：`WorktreeCreate` hook 自动链接 .env 等配置文件、安装依赖、分配独立端口；`WorktreeRemove` hook 自动清理；`/worktree-repair` 手动修复
 
 **使用方式**:
 - 运行 `/autopilot <目标描述>` 启动全流程闭环
@@ -130,11 +132,6 @@
 │       └── assets/
 │   └── writer-skill/             # 写作技能包
 │       ├── .claude-plugin/
-│       └── skills/
-│   └── worktree-setup/           # Git Worktree 自动初始化插件
-│       ├── .claude-plugin/
-│       ├── hooks/
-│       ├── scripts/
 │       └── skills/
 ├── package.json                  # 项目元数据 + lint/test scripts
 ├── .github/
@@ -277,28 +274,17 @@
 
 ---
 
-### 6. worktree-setup (v2.0.0)
-**类型**: Hook 插件
-**功能**: Git Worktree 自动初始化工具
-
-**核心能力**:
-- `WorktreeCreate` hook：`claude -w <name>` 后自动完成 worktree 初始化
-- 按项目 `.claude/worktree-links` 创建符号链接（`.env.local`、`.mcp.json` 等）
-- 无配置时自动扫描 `.env*` 文件（新项目零配置可用）
-- 确定性端口分配：hash(branch_name) → 4001-4999，避免多 worktree 端口冲突
-- 自动识别 npm/yarn/pnpm 并安装依赖（含 `prisma generate`）
-- `WorktreeRemove` hook：退出时自动清理符号链接和分支
-- `/worktree-setup:repair` skill：手动修复已有 worktree 的配置缺失
-
-**使用方式**:
-安装插件后，直接使用 `claude -w <feature-name>` 即可，worktree 创建完即可使用。
-如需定制链接文件，在项目 `.claude/worktree-links` 中声明。
-
----
-
 ## 更新日志
 
 ### 2026-03-24
+- autopilot 升级至 v3.0.0：合并 worktree-setup 插件到 autopilot
+  - worktree.mjs + 测试文件迁移到 `plugins/autopilot/scripts/`
+  - repair skill 重命名为 `worktree-repair`，迁移到 `plugins/autopilot/skills/worktree-repair/`
+  - hooks.json 合并 WorktreeCreate/WorktreeRemove hook
+  - autopilot-doctor Dim 8 增强 worktree 适配检测（worktree-links + 端口硬编码 + .env 链接性）
+  - Dim 8 权重从 0.05 调整为 0.08，Dim 9 从 0.05 调整为 0.02
+  - 兼容性矩阵新增「Worktree 并行开发」行
+  - 删除独立 worktree-setup 插件目录
 - autopilot 升级至 v2.14.0：design 阶段新增 Plan 审查 sub-agent
   - 新增 `references/plan-reviewer-prompt.md` 审查 prompt 模板
   - SKILL.md Phase: design 在 ExitPlanMode 前插入步骤 3（Plan 审查）

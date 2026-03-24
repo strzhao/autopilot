@@ -112,5 +112,5 @@ QA 发现问题时，按系统化调试方法论（观察 → 假设 → 验证 
 
 ## 与其他插件的配合
 
-- **worktree-setup**: 建议在 worktree 中运行，隔离代码改动
+- **worktree（内置）**: 建议在 worktree 中运行，隔离代码改动
 - **ralph-loop**: 两者互斥（共用 Stop hook 机制）

@@ -1,5 +1,5 @@
 ---
-name: repair
+name: worktree-repair
 description: Repair an existing Claude Code worktree — re-create missing symlinks and reinstall dependencies. Use when a worktree is missing .env files or node_modules.
 disable-model-invocation: true
 allowed-tools: Bash

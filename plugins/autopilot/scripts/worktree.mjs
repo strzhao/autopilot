@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// worktree.mjs — Claude Code worktree-setup plugin
+// worktree.mjs — autopilot worktree module
 // Unified entry: create / remove / repair
 import { execSync, execFileSync } from 'child_process';
 import { readFileSync, existsSync, mkdirSync, symlinkSync, lstatSync, unlinkSync, readdirSync, writeFileSync, realpathSync, rmSync } from 'fs';

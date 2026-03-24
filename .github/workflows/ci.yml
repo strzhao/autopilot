@@ -26,5 +26,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Run worktree-setup tests
-        run: node --test plugins/worktree-setup/scripts/worktree.acceptance.test.mjs
+      - name: Run autopilot tests
+        run: node --test plugins/autopilot/scripts/worktree.acceptance.test.mjs plugins/autopilot/scripts/knowledge-symlink.acceptance.test.mjs

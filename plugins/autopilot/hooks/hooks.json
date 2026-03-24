@@ -1,5 +1,5 @@
 {
-    "description": "autopilot 自循环 Stop hook，驱动阶段状态机持续执行",
+    "description": "autopilot 自循环 Stop hook + worktree 自动初始化/清理",
     "hooks": {
         "Stop": [
             {
@@ -8,6 +8,30 @@
                         "type": "command",
                         "command": "${CLAUDE_PLUGIN_ROOT}/scripts/stop-hook.sh",
                         "timeout": 10
+                    }
+                ]
+            }
+        ],
+        "WorktreeCreate": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/worktree.mjs\" create",
+                        "timeout": 300,
+                        "statusMessage": "初始化 worktree（npm install 中...）"
+                    }
+                ]
+            }
+        ],
+        "WorktreeRemove": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/worktree.mjs\" remove",
+                        "timeout": 60,
+                        "statusMessage": "清理 worktree..."
                     }
                 ]
             }
