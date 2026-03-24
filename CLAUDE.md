@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v2.13.0)
+### 3. autopilot (v2.14.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断）
 
@@ -61,6 +61,7 @@
 - 从目标描述到代码合并的全程自动化
 - 阶段状态机驱动：design → implement → qa → auto-fix → merge
 - 仅在两个审批门需要人工介入（设计审批 + 验收审批）
+- 设计方案审查：design 阶段 ExitPlanMode 前启动 plan-reviewer sub-agent，6 维度审查（需求完整性、技术可行性、任务分解、验证覆盖、风险评估、范围控制），置信度 ≥90 为 BLOCKER，最多 2 轮审查
 - 红蓝对抗：蓝队按计划编码 + 红队仅看设计文档写验收测试，并行执行、信息隔离
 - 五层 QA 检查（Tier 0 红队验收测试 + Tier 1-4）+ 自动修复循环（最多 3 次重试）
 - 系统化调试方法论：观察 → 假设 → 验证 → 修复（四阶段）
@@ -296,6 +297,15 @@
 ---
 
 ## 更新日志
+
+### 2026-03-24
+- autopilot 升级至 v2.14.0：design 阶段新增 Plan 审查 sub-agent
+  - 新增 `references/plan-reviewer-prompt.md` 审查 prompt 模板
+  - SKILL.md Phase: design 在 ExitPlanMode 前插入步骤 3（Plan 审查）
+  - 6 个审查维度：需求完整性、技术可行性、任务分解质量、验证方案覆盖、风险与边界、范围控制
+  - 置信度过滤：≥91 为 BLOCKER（阻断），80-90 为建议（不阻断），<80 不报告
+  - 最多 2 轮审查（初审 + 1 次重审），第 2 轮仍 FAIL 则标注交由用户判断
+  - 降级方案：Agent 工具不可用时编排器自行执行简化版审查
 
 ### 2026-03-20
 - 新增工程基础设施：ShellCheck lint + GitHub Actions CI + husky pre-commit + 统一测试入口
