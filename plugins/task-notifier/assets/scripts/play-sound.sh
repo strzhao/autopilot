@@ -57,7 +57,7 @@ play_custom_sound() {
     os=$(detect_os)
     case "$os" in
         macOS)
-            command -v afplay >/dev/null 2>&1 && { afplay "$sound_file" & disown; return 0; }
+            command -v afplay >/dev/null 2>&1 && { afplay -v 0.3 "$sound_file" & disown; return 0; }
             ;;
         Linux)
             command -v mpv >/dev/null 2>&1 && { mpv --no-video --really-quiet "$sound_file" & disown; return 0; }
