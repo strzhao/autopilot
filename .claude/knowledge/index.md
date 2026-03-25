@@ -12,3 +12,4 @@
 - [2026-03-24] SKILL.md 步骤标题需包含可搜索的"步骤"前缀 | tags: autopilot, skill, naming-convention, testing | → patterns.md
 - [2026-03-24] 插件合并时红队路径假设容易出错 | tags: autopilot, red-team, testing, file-path, merge | → patterns.md
 - [2026-03-25] 符号链接检测 ≠ worktree 检测，防御需多层 | tags: worktree, knowledge, symlink, fallback, defense-in-depth | → patterns.md
+- [2026-03-26] Tier 1.5 场景部分执行等于未执行 | tags: autopilot, qa, tier-1.5, smoke-test, partial-execution | → patterns.md

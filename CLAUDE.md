@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.0.0)
+### 3. autopilot (v3.1.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断 + Worktree 自动初始化）
 
@@ -275,6 +275,15 @@
 ---
 
 ## 更新日志
+
+### 2026-03-26
+- autopilot 升级至 v3.1.0：Tier 1.5 执行保障强化 + SKILL.md 瘦身
+  - SKILL.md 结果判定新增场景计数匹配检查（两步前置检查）
+  - stop-hook.sh QA 阶段 prompt 注入 Tier 1.5 完整性提醒
+  - 红队 prompt 新增跨系统数据流测试规则
+  - 蓝队 prompt 新增端点存在性验证规则
+  - QA 报告模板和完成报告模板外置到 references（progressive disclosure 瘦身）
+  - SKILL.md 行数从 724 降至 ≤650
 
 ### 2026-03-25
 - autopilot 升级至 v3.0.1：修复 worktree 模式下知识提取未同步到主仓库的问题
