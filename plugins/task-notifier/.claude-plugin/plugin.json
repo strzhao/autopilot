@@ -1,6 +1,6 @@
 {
     "name": "task-notifier",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "任务完成通知插件。在 Claude Code 任务执行完成后触发系统通知提醒用户。",
     "author": {
         "name": "stringzhao",
