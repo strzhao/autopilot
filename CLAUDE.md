@@ -48,14 +48,14 @@
 
 ---
 
-### 3. autopilot (v3.1.0)
+### 3. autopilot (v3.2.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断 + Worktree 自动初始化）
 
 **包含 Skill**:
 - `autopilot`：全流程闭环编排器（红蓝对抗 + 五层 QA + 知识工程 + 自动修复）
 - `autopilot-commit`：智能提交工具（React 检测、最佳实践优化、代码理解测验、任务同步）
-- `autopilot-doctor`：工程健康度诊断（10 维度评分 + autopilot 兼容性矩阵 + 自动修复）
+- `autopilot-doctor`：工程健康度诊断（10 维度评分 + 测试金字塔三层检测 + autopilot 兼容性矩阵 + 自动修复）
 - `worktree-repair`：手动修复已有 worktree 的配置缺失（符号链接 + 依赖安装）
 
 **核心能力**:
@@ -277,6 +277,14 @@
 ## 更新日志
 
 ### 2026-03-26
+- autopilot 升级至 v3.2.0：autopilot-doctor Dim 1 测试金字塔三层检测
+  - Dim 1（测试基础设施）从"有没有测试"升级到"测试层次是否完整"
+  - 新增 L2（API/集成测试）检测：API route test 文件、supertest/nock/msw 依赖、路由覆盖率
+  - 新增 L3（E2E 测试）检测：Playwright/Cypress 依赖、配置文件、E2E 测试文件
+  - 评分标准调整：仅有单元测试最高 6 分，需两层以上覆盖才能达到 7+
+  - 报告新增"测试金字塔分析"子表（Dim 1 ≤ 8 时展示）
+  - 兼容性矩阵新增 Tier 1.5 API 集成验证和 E2E 冒烟测试行
+  - --fix 模式新增 L2（API route test 示例生成）和 L3（Playwright 安装+配置+示例）修复方案
 - autopilot 升级至 v3.1.0：Tier 1.5 执行保障强化 + SKILL.md 瘦身
   - SKILL.md 结果判定新增场景计数匹配检查（两步前置检查）
   - stop-hook.sh QA 阶段 prompt 注入 Tier 1.5 完整性提醒
