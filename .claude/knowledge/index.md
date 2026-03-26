@@ -2,6 +2,7 @@
 
 ## Decisions
 - [2026-03-21] 知识工程采用三层 Progressive Disclosure 而非单层扩展 | tags: knowledge, architecture, progressive-disclosure | → decisions.md
+- [2026-03-26] doctor Dim 1 测试金字塔分层评估优于文件计数 | tags: autopilot, doctor, testing, test-pyramid, scoring | → decisions.md
 
 ## Patterns
 - [2026-03-21] Skill 插件 Progressive Disclosure 重构模式 | tags: skill, progressive-disclosure, plugin, refactoring | → patterns.md
