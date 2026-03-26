@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.2.0)
+### 3. autopilot (v3.3.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断 + Worktree 自动初始化）
 
@@ -277,6 +277,15 @@
 ## 更新日志
 
 ### 2026-03-26
+- autopilot 升级至 v3.3.0：autopilot-doctor P0+P1 质量保障增强 + 权重重分配
+  - Dim 9 扩展为"依赖与安全基线"（+.gitignore 敏感文件覆盖、input validation 库、CI 安全扫描检测），权重 2%→6%
+  - Dim 10 AI 就绪度增强（+API Schema 可发现性、Mock 基础设施、可测试性设计），权重 5%→8%
+  - Dim 3 扩展为"代码质量与健壮性"（+ErrorBoundary/自定义 Error/全局 handler 检测），权重 10%→12%
+  - Dim 4 构建系统增强（+DB migration 工具检测），权重 10%→12%
+  - Dim 8 Git 工作流增强（+.env.example 和 env schema validation 检测）
+  - 权重重分配：Dim 1/2/5/6/7 降权 → Dim 3/4/9/10 增权，总和 100%
+  - 兼容性矩阵新增"安全审查"和"红队契约测试"行
+  - --fix 新增 5 项修复方案（ErrorBoundary 模板、DB migration init、.env.example 生成、.gitignore 安全规则、OpenAPI spec 建议）
 - autopilot 升级至 v3.2.0：autopilot-doctor Dim 1 测试金字塔三层检测
   - Dim 1（测试基础设施）从"有没有测试"升级到"测试层次是否完整"
   - 新增 L2（API/集成测试）检测：API route test 文件、supertest/nock/msw 依赖、路由覆盖率
