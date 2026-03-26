@@ -152,10 +152,13 @@ chore: 升级依赖版本
 - 如果 `.claude/knowledge/` 存在且有新增内容，确认 CLAUDE.md 中有对知识库目录的提及
 
 **b) 版本号升级** — 当 commit type 为 `feat` 且任务完整落地时：
-- 查找版本文件（`.claude-plugin/plugin.json` > `package.json` > 其他）
 - `feat` → minor 升级（1.2.x → 1.3.0），breaking change → major 升级
-- 更新版本文件并 `git add`
-- 跳过：fix/chore/style/docs/test/refactor、WIP 提交、版本文件已在改动中
+- **必须更新所有版本文件**（不是择一更新）：
+  1. `.claude-plugin/plugin.json` — 插件系统依赖此文件检测新版本，**遗漏 = 用户无法更新**
+  2. `package.json`（如存在）
+  3. CLAUDE.md 中的版本号文本（如有 `(vX.Y.Z)` 格式）
+- 每个文件更新后 `git add`
+- 跳过：fix/chore/style/docs/test/refactor、WIP 提交
 
 ### 6. 任务同步
 
