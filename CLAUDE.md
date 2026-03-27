@@ -243,6 +243,17 @@
 7. 本地测试验证
 8. 提交 PR
 
+### 版本管理
+
+每个插件的版本号分布在以下文件中，升级时必须全部同步更新：
+
+| 文件 | 说明 |
+|------|------|
+| `plugins/<name>/.claude-plugin/plugin.json` | 插件系统依赖此文件检测新版本，遗漏 = 用户无法更新 |
+| `plugins/<name>/package.json`（如存在） | npm 包版本 |
+| `.claude-plugin/marketplace.json` | 仓库级插件索引，按 `name` 字段定位对应条目更新 `version` |
+| `CLAUDE.md` 中的 `(vX.Y.Z)` 文本 | 插件列表标题中的版本号 |
+
 ## 注意事项
 
 ### 安全性
@@ -277,6 +288,10 @@
 ## 更新日志
 
 ### 2026-03-27
+- autopilot-commit 版本升级重构：硬编码文件列表改为"读 CLAUDE.md + grep 校验"动态发现
+  - SKILL.md 版本升级从枚举 3 个固定路径改为"发现 → 更新 → 校验"三步流程
+  - CLAUDE.md 贡献流程新增"版本管理"小节，集中说明版本文件分布
+  - 修复 marketplace.json 存量版本偏差（4 个插件版本同步）
 - autopilot SKILL.md Progressive Disclosure 重构：系统提示从 643→106 行（-84%）
   - SKILL.md 拆分为核心路由 + 5 个 phase 参考文件（design/implement/qa/auto-fix/merge）
   - 3 个防合理化表格合并到 references/anti-rationalization.md

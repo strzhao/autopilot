@@ -153,11 +153,10 @@ chore: 升级依赖版本
 
 **b) 版本号升级** — 当 commit type 为 `feat` 且任务完整落地时：
 - `feat` → minor 升级（1.2.x → 1.3.0），breaking change → major 升级
-- **必须更新所有版本文件**（不是择一更新）：
-  1. `.claude-plugin/plugin.json` — 插件系统依赖此文件检测新版本，**遗漏 = 用户无法更新**
-  2. `package.json`（如存在）
-  3. CLAUDE.md 中的版本号文本（如有 `(vX.Y.Z)` 格式）
-- 每个文件更新后 `git add`
+- **发现 → 更新 → 校验**：
+  1. **发现**：读 CLAUDE.md 了解项目的版本文件分布规范，再用 `grep -rn '当前版本号'` 确认所有包含版本号的文件
+  2. **更新**：逐个更新发现的版本文件，每个 `git add`
+  3. **校验**：更新后再次 grep 确认所有版本文件的版本号一致，不一致则修正
 - 跳过：fix/chore/style/docs/test/refactor、WIP 提交
 
 ### 6. 任务同步
