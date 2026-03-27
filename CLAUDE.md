@@ -296,12 +296,6 @@
   - SKILL.md 版本升级从枚举 3 个固定路径改为"发现 → 更新 → 校验"三步流程
   - CLAUDE.md 贡献流程新增"版本管理"小节，集中说明版本文件分布
   - 修复 marketplace.json 存量版本偏差（4 个插件版本同步）
-- autopilot SKILL.md Progressive Disclosure 重构：系统提示从 643→106 行（-84%）
-  - SKILL.md 拆分为核心路由 + 5 个 phase 参考文件（design/implement/qa/auto-fix/merge）
-  - 3 个防合理化表格合并到 references/anti-rationalization.md
-  - plan-reviewer-prompt 精简（126→58 行）
-  - stop-hook prompt 注入加入阶段文件路径引导
-  - 蓝队 prompt 优化：只传实现计划+验证方案（不传完整设计文档）
 
 ### 2026-03-26
 - autopilot 升级至 v3.3.0：autopilot-doctor P0+P1 质量保障增强 + 权重重分配

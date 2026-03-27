@@ -124,11 +124,11 @@ set_field "iteration" "$NEXT_ITERATION"
 
 # design 阶段使用 Plan Mode
 if [[ "$PHASE" == "design" ]]; then
-    PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述, 然后读取 autopilot skill 的 references/phase-design.md 获取 design 阶段指令. 立即调用 EnterPlanMode 工具进入 Plan Mode. 不要在调用 EnterPlanMode 之前做任何代码探索."
+    PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述, 然后立即调用 EnterPlanMode 工具进入 Plan Mode. 不要在调用 EnterPlanMode 之前做任何代码探索. 所有探索和设计工作必须在 Plan Mode 内完成. 按照 autopilot skill 的 Phase: design 指引执行."
 elif [[ "$PHASE" == "qa" ]]; then
-    PROMPT="读取 ${STATE_FILE} 状态文件, 然后读取 autopilot skill 的 references/phase-qa.md 获取 qa 阶段指令并执行. 迭代: ${NEXT_ITERATION}. ⚠️ Tier 1.5 铁律: (1) 必须执行设计文档中的每一个真实测试场景, 不允许跳过; (2) 结果判定前先做场景计数匹配."
+    PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: qa, 迭代: ${NEXT_ITERATION}. ⚠️ Tier 1.5 铁律: (1) 必须执行设计文档中的每一个真实测试场景, 不允许跳过任何场景; (2) 结果判定前先做场景计数匹配——统计报告中执行:标记数量 E 与设计文档场景总数 N, E<N 则有场景被跳过, 必须补做. 按照 autopilot skill 的指引执行当前阶段的工作流."
 else
-    PROMPT="读取 ${STATE_FILE} 状态文件, 然后读取 autopilot skill 的 references/phase-${PHASE}.md 获取 ${PHASE} 阶段指令并执行. 迭代: ${NEXT_ITERATION}."
+    PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: ${PHASE}, 迭代: ${NEXT_ITERATION}. 按照 autopilot skill 的指引执行当前阶段的工作流."
 fi
 SYSTEM_MSG="autopilot iteration ${NEXT_ITERATION} | phase: ${PHASE}"
 
