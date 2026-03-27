@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.4.0)
+### 3. autopilot (v3.5.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断 + Worktree 自动初始化）
 
@@ -288,6 +288,7 @@
 ## 更新日志
 
 ### 2026-03-28
+- autopilot design 阶段新增条件性需求澄清（步骤 0.5）：借鉴 brainstorming skill 交互模式，目标不明朗时按需触发 AskUserQuestion (v3.5.0)
 - autopilot-commit 版本升级策略扩展：fix/perf 触发 patch 升级 (v3.4.0)
 
 ### 2026-03-27

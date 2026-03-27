@@ -29,7 +29,7 @@
             "name": "autopilot",
             "source": "./plugins/autopilot",
             "description": "AI 自动驾驶工程套件。全流程闭环（红蓝对抗 + 五层 QA）+ 智能提交（React 优化 + 代码测验 + 任务同步）+ Worktree 自动初始化",
-            "version": "3.4.0",
+            "version": "3.5.0",
             "author": {
                 "name": "stringzhao",
                 "email": "zhaoguixiong@corp.netease.com"
