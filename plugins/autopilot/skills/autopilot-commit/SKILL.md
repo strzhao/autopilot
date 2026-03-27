@@ -151,13 +151,14 @@ chore: 升级依赖版本
 - 更新原则：最小改动、保持风格、事实优先（不写计划中的功能）
 - 如果 `.claude/knowledge/` 存在且有新增内容，确认 CLAUDE.md 中有对知识库目录的提及
 
-**b) 版本号升级** — 当 commit type 为 `feat` 且任务完整落地时：
+**b) 版本号升级** — 当 commit type 为 `feat`/`fix`/`perf` 时：
 - `feat` → minor 升级（1.2.x → 1.3.0），breaking change → major 升级
+- `fix`/`perf` → patch 升级（1.2.0 → 1.2.1）
 - **发现 → 更新 → 校验**：
   1. **发现**：读 CLAUDE.md 了解项目的版本文件分布规范，再用 `grep -rn '当前版本号'` 确认所有包含版本号的文件
   2. **更新**：逐个更新发现的版本文件，每个 `git add`
   3. **校验**：更新后再次 grep 确认所有版本文件的版本号一致，不一致则修正
-- 跳过：fix/chore/style/docs/test/refactor、WIP 提交
+- 跳过：chore/style/docs/test/refactor、WIP 提交
 
 ### 6. 任务同步
 

@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.3.0)
+### 3. autopilot (v3.4.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断 + Worktree 自动初始化）
 
@@ -286,6 +286,9 @@
 ---
 
 ## 更新日志
+
+### 2026-03-28
+- autopilot-commit 版本升级策略扩展：fix/perf 触发 patch 升级 (v3.4.0)
 
 ### 2026-03-27
 - autopilot-commit 版本升级重构：硬编码文件列表改为"读 CLAUDE.md + grep 校验"动态发现
