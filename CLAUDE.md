@@ -276,6 +276,14 @@
 
 ## 更新日志
 
+### 2026-03-27
+- autopilot SKILL.md Progressive Disclosure 重构：系统提示从 643→106 行（-84%）
+  - SKILL.md 拆分为核心路由 + 5 个 phase 参考文件（design/implement/qa/auto-fix/merge）
+  - 3 个防合理化表格合并到 references/anti-rationalization.md
+  - plan-reviewer-prompt 精简（126→58 行）
+  - stop-hook prompt 注入加入阶段文件路径引导
+  - 蓝队 prompt 优化：只传实现计划+验证方案（不传完整设计文档）
+
 ### 2026-03-26
 - autopilot 升级至 v3.3.0：autopilot-doctor P0+P1 质量保障增强 + 权重重分配
   - Dim 9 扩展为"依赖与安全基线"（+.gitignore 敏感文件覆盖、input validation 库、CI 安全扫描检测），权重 2%→6%
