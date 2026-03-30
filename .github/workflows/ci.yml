@@ -27,4 +27,4 @@ jobs:
         with:
           node-version: '20'
       - name: Run autopilot tests
-        run: node --test plugins/autopilot/scripts/worktree.acceptance.test.mjs plugins/autopilot/scripts/knowledge-symlink.acceptance.test.mjs
+        run: node --test plugins/autopilot/scripts/worktree.acceptance.test.mjs plugins/autopilot/scripts/knowledge-symlink.acceptance.test.mjs tests/codex-autopilot-runtime.acceptance.test.mjs

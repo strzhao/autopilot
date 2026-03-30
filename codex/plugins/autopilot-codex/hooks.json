@@ -5,8 +5,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ./assets/scripts/play-sound.sh stop",
-            "statusMessage": "Playing completion sound"
+            "command": "python3 ./assets/scripts/autopilot_stop.py",
+            "timeout": 10,
+            "statusMessage": "Advancing autopilot runtime"
           }
         ]
       }

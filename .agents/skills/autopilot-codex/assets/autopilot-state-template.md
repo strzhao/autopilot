@@ -4,8 +4,11 @@ state_version: 1
 phase: "design"
 gate: ""
 iteration: 0
+max_iterations: <MAX_ITERATIONS>
 retry_count: 0
-max_retries: 3
+max_retries: <MAX_RETRIES>
+session_id: "<SESSION_ID>"
+qa_scope: ""
 started_at: "<ISO_TIMESTAMP>"
 updated_at: "<ISO_TIMESTAMP>"
 goal: "<GOAL>"

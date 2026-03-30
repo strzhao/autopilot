@@ -7,7 +7,7 @@
   "scripts": {
     "lint": "find plugins -name '*.sh' -exec shellcheck {} +",
     "lint:fix": "echo 'ShellCheck does not support auto-fix. Please fix issues manually.' && npm run lint",
-    "test": "node --test plugins/autopilot/scripts/worktree.acceptance.test.mjs plugins/autopilot/scripts/knowledge-symlink.acceptance.test.mjs",
+    "test": "node --test plugins/autopilot/scripts/worktree.acceptance.test.mjs plugins/autopilot/scripts/knowledge-symlink.acceptance.test.mjs tests/codex-autopilot-runtime.acceptance.test.mjs",
     "prepare": "husky"
   },
   "devDependencies": {

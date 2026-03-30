@@ -21,6 +21,18 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"$(git rev-parse --show-toplevel)/codex/plugins/autopilot-codex/assets/scripts/autopilot_stop.py\"",
+            "timeout": 10,
+            "statusMessage": "Advancing Codex autopilot runtime"
+          }
+        ]
+      }
     ]
   }
 }

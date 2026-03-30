@@ -9,7 +9,7 @@
 启动 Codex，那么本目录提供以下能力：
 
 - `config.toml`：启用 `codex_hooks`，并把项目说明 fallback 指向根目录 `.agents.md`
-- `hooks.json`：在会话开始和用户提交 prompt 时补充轻量提示
+- `hooks.json`：在会话开始、用户提交 prompt、以及任务 Stop 时驱动 repo-local autopilot runtime
 - `.codex/`：存放 Codex 的运行时状态和报告
 
 ## 运行约束

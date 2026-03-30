@@ -12,8 +12,9 @@
 - Repo marketplace：`.agents/plugins/marketplace.json`
 - 官方 Codex plugin 包：`codex/plugins/autopilot-codex/`
 - 全局安装/卸载辅助命令：`codex/bin/string-codex-plugin`
+- 官方 Stop hook runtime：`codex/plugins/autopilot-codex/assets/scripts/autopilot_stop.py`
 
-这些都只新增文件，没有改动现有 Claude plugin、Claude marketplace、README、CLAUDE.md 或已有插件源码。
+这些都只新增或修改 Codex 侧文件，没有改动现有 Claude plugin、Claude marketplace、README、CLAUDE.md 或已有插件源码。
 
 ## 官方安装方式
 
@@ -58,3 +59,8 @@
 - 不把 Codex runtime 写入 `.claude/`
 - 不修改现有 Claude plugin 文件
 - 不恢复旧 `codex-sync`、bridge、watcher、软链接同步方案
+- 运行时阶段与 Claude 版尽量对齐：`design -> implement -> qa -> auto-fix -> merge`
+
+对等实现对照表见：
+
+- `codex/docs/claude-vs-codex-autopilot.md`

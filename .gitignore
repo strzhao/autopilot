@@ -1,3 +1,5 @@
 .DS_Store
 document/
 node_modules/
+__pycache__/
+*.pyc

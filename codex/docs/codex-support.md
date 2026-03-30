@@ -64,6 +64,8 @@
 - 不依赖私有 bridge、watcher、session 日志轮询
 - 不把 Codex 的临时状态写回 Claude 的运行时文件
 
+当前 repo-local `.codex/hooks.json` 还承载 autopilot 的 phase-state runtime，不再只是轻量提示层；它会推进 `design -> implement -> qa -> auto-fix -> merge` 并在审批门停下。
+
 ## 使用建议
 
 如果你习惯 Claude Code 的说法，可以这样映射：
@@ -72,4 +74,8 @@
 - `/autopilot commit` -> `$autopilot-commit-codex`
 - `/autopilot doctor` -> `$autopilot-doctor-codex`
 
-如果 Codex 会话里用户直接写了 Claude 风格命令，`UserPromptSubmit` hook 会补充提示，但不会自动做旧式 bridge 转换。
+如果 Codex 会话里用户直接写了 Claude 风格命令，`UserPromptSubmit` hook 会补充提示并引导继续 `$autopilot-codex`，但不会恢复旧式 bridge 转换。
+
+逐阶段差异和对等实现见：
+
+- `codex/docs/claude-vs-codex-autopilot.md`
