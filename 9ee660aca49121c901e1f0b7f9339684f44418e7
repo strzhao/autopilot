@@ -1,0 +1,45 @@
+plugins/autopilot/.claude-plugin/plugin.json
+  e6184f41be6fab86 3
+.claude-plugin/marketplace.json
+  e6184f41be6fab86 32
+plugins/autopilot/skills/autopilot/references/plan-reviewer-prompt.md
+  e6184f41be6fab86 6,9,12,17-18,20,22-27,29-32,40,42-44
+CLAUDE.md
+  e6184f41be6fab86 51,295-304
+tests/model-assignment.acceptance.test.mjs
+  e6184f41be6fab86 2,11-12,219,221-222,227-228,232,244-245,249,252-253,259,261,270,273-274
+plugins/autopilot/skills/autopilot/references/review-checklist.md
+  e6184f41be6fab86 1
+plugins/autopilot/skills/autopilot/SKILL.md
+  e6184f41be6fab86 71,73,76-77,80,100-101,109,111,145,148,176-177,205,207,210,212,214,218-219,221,276,278,280,286,296,298-300,302,312-314,316-317,323-325,327,329,352,392,399,510,532-533,568,571-572
+plugins/autopilot/skills/autopilot/references/state-file-guide.md
+  e6184f41be6fab86 1-36
+plugins/autopilot/skills/autopilot/references/code-quality-reviewer-prompt.md
+  e6184f41be6fab86 12-13,26-34,37,39-44,46-55,57-59,61,63,65,67,69,71,73,75,77,83,85,87-94,98,101,113,120
+tests/token-optimization.acceptance.test.mjs
+  e6184f41be6fab86 1-710
+plugins/autopilot/skills/autopilot/references/knowledge-engineering.md
+  e6184f41be6fab86 3,43,68,74,76,78,80,87-89,92-95,98,102-103,105-111,113,115,117,120,122,131,133-135,138,140,142,148-150
+plugins/autopilot/skills/autopilot/references/design-reviewer-prompt.md
+  e6184f41be6fab86 6,12,17-19,24,26-28,31,34,37,43,45,47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "9ee660aca49121c901e1f0b7f9339684f44418e7",
+  "prompts": {
+    "e6184f41be6fab86": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a6b16cb4-591b-4378-b0e9-4031ae801022",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄 <zhaoguixiong@corp.netease.com>",
+      "messages": [],
+      "total_additions": 1102,
+      "total_deletions": 724,
+      "accepted_lines": 1043,
+      "overriden_lines": 1
+    }
+  }
+}
