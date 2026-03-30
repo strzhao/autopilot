@@ -1,18 +1,20 @@
 {
   "name": "autopilot-codex",
-  "version": "0.1.0",
-  "description": "Codex-native autopilot workflow bundle for repositories that want the String autopilot methodology without Claude-specific runtime hooks.",
+  "version": "0.3.0",
+  "description": "Codex-native autopilot workflow bundle with design-first workflows and a completion sound hook.",
   "skills": "./skills/",
+  "hooks": "./hooks.json",
   "interface": {
     "displayName": "Autopilot for Codex",
     "shortDescription": "Design-first autopilot workflows for Codex CLI",
-    "longDescription": "Installs autopilot-codex, autopilot-commit-codex, and autopilot-doctor-codex as official Codex plugin skills. This package keeps the workflow design-first and approval-gated without relying on repo launchers, bridge processes, watcher loops, or Claude-only hooks.",
+    "longDescription": "Installs autopilot-codex, autopilot-commit-codex, and autopilot-doctor-codex as official Codex plugin skills, and plays the preferred completion sound when a Codex turn stops. This package keeps the workflow design-first and approval-gated without relying on repo launchers, bridge processes, watcher loops, or Claude-only hooks.",
     "developerName": "String Zhao",
     "category": "Developer Tools",
     "capabilities": [
       "Design-first workflow",
       "Smart commit",
-      "Engineering diagnostics"
+      "Engineering diagnostics",
+      "Completion sound"
     ],
     "defaultPrompt": [
       "Use Autopilot for Codex to prepare a design-first implementation workflow.",
