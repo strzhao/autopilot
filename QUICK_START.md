@@ -1,8 +1,11 @@
-# Claude Code 插件 - 快速开始指南
+# Claude Code / Codex - 快速开始指南
 
 ## 概述
 
-本仓库是 **Autopilot 插件市场**，提供多个实用的 Claude Code 插件，帮助提升开发效率。
+本仓库同时提供两类能力：
+
+- **Claude Code 插件市场**：`autopilot`、`summarizer`、`task-notifier`、`writer-skill`、`npm-toolkit`
+- **Codex 官方插件**：`Autopilot for Codex`
 
 ## 可用插件
 
@@ -14,7 +17,11 @@
 
 ## 快速安装
 
-### 方法一：通过插件市场安装（推荐）
+### Claude Code
+
+以下安装方式是给 **Claude Code** 用的。
+
+#### 方法一：通过插件市场安装（推荐）
 
 添加本仓库为插件市场来源：
 
@@ -24,7 +31,7 @@
 
 然后运行 `/plugins` 查看并安装可用插件。
 
-### 方法二：手动安装
+#### 方法二：手动安装
 
 ```bash
 # 克隆仓库
@@ -35,6 +42,69 @@ cd autopilot
 cp -r plugins/summarizer ~/.claude/plugins/
 
 # 重启 Claude Code
+```
+
+### Codex CLI
+
+以下安装方式是给 **Codex CLI** 用的。目前 Codex 侧提供的是 `Autopilot for Codex`，包含这些技能：
+
+- `$autopilot-codex`
+- `$autopilot-commit-codex`
+- `$autopilot-doctor-codex`
+
+#### 方法一：通过 Codex 官方插件界面安装（推荐）
+
+```bash
+# 克隆仓库
+git clone https://github.com/strzhao/autopilot.git
+cd autopilot
+
+# 启动 Codex
+codex
+```
+
+进入 Codex 后输入：
+
+```text
+/plugins
+```
+
+然后在 `String Codex Plugins` marketplace 中安装 `Autopilot for Codex`。
+
+安装完成后，后续可以在任意工作目录直接运行 `codex`，无需继续从本仓库启动。
+
+#### 方法二：通过命令行安装
+
+```bash
+# 克隆仓库
+git clone https://github.com/strzhao/autopilot.git
+cd autopilot
+
+# 安装 Codex 插件
+codex/bin/string-codex-plugin install
+```
+
+**验证安装：**
+
+```bash
+codex/bin/string-codex-plugin list
+codex/bin/string-codex-plugin doctor
+```
+
+#### Codex 卸载
+
+官方方式：
+
+1. 运行 `codex`
+2. 输入 `/plugins`
+3. 找到 `Autopilot for Codex`
+4. 选择 uninstall
+
+命令行方式：
+
+```bash
+cd autopilot
+codex/bin/string-codex-plugin uninstall
 ```
 
 ## 插件详情
