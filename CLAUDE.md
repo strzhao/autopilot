@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.5.1)
+### 3. autopilot (v3.5.2)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断 + Worktree 自动初始化）
 
@@ -286,6 +286,12 @@
 ---
 
 ## 更新日志
+
+### 2026-03-30
+- autopilot 升级至 v3.5.2：sub-agent 模型分层优化
+  - 5 个 sub-agent（plan-reviewer、蓝/红队、design/code-reviewer）指定 model: "sonnet"，编排器保持继承用户选择
+  - 新增「成本优化」章节，记录分层策略和用户覆盖机制
+  - 预期整体成本降低 ~50%（sub-agent 从 Opus 降级 Sonnet）
 
 ### 2026-03-28
 - autopilot design 阶段新增条件性需求澄清（步骤 0.5）：借鉴 brainstorming skill 交互模式，目标不明朗时按需触发 AskUserQuestion (v3.5.0)
