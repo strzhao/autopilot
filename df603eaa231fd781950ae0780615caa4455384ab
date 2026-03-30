@@ -1,0 +1,25 @@
+.claude/knowledge/patterns.md
+  e6184f41be6fab86 67-72
+.claude/knowledge/index.md
+  e6184f41be6fab86 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "df603eaa231fd781950ae0780615caa4455384ab",
+  "prompts": {
+    "e6184f41be6fab86": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a6b16cb4-591b-4378-b0e9-4031ae801022",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄 <zhaoguixiong@corp.netease.com>",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 0,
+      "accepted_lines": 81,
+      "overriden_lines": 0
+    }
+  }
+}
