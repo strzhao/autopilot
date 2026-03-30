@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.5.2)
+### 3. autopilot (v3.5.3)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断 + Worktree 自动初始化）
 
@@ -292,6 +292,16 @@
   - 5 个 sub-agent（plan-reviewer、蓝/红队、design/code-reviewer）指定 model: "sonnet"，编排器保持继承用户选择
   - 新增「成本优化」章节，记录分层策略和用户覆盖机制
   - 预期整体成本降低 ~50%（sub-agent 从 Opus 降级 Sonnet）
+- autopilot 升级至 v3.5.3：SKILL.md token 优化压缩
+  - 防合理化表格行合并（implement 4→2 行，Tier 1.5 6→3 行，auto-fix 2→1 行）
+  - 教训段落压缩为 1 行精华（4 处）
+  - 状态文件格式模板外置到 references/state-file-guide.md
+  - merge 阶段 worktree bash 代码块改为引用 knowledge-engineering.md
+  - 设计文档模板注释精简，去除冗余教训引用
+  - 新增 Explore agent 使用指导（建议 1-2 个，最多 3 个）
+  - 新增 dev server 启动规范（lsof 检查已有进程，后台启动）
+  - 新增状态文件 Read 操作精简指导
+  - References 文件全面精简：plan-reviewer 126→80 行，design-reviewer 111→70 行，code-quality-reviewer 内联 review-checklist，knowledge-engineering 230→150 行
 
 ### 2026-03-28
 - autopilot design 阶段新增条件性需求澄清（步骤 0.5）：借鉴 brainstorming skill 交互模式，目标不明朗时按需触发 AskUserQuestion (v3.5.0)

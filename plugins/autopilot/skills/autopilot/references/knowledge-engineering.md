@@ -1,6 +1,6 @@
 # Knowledge Engineering Reference
 
-Detailed rules for the knowledge consumption and extraction steps in the autopilot pipeline.
+Detailed rules for the knowledge consumption (design phase) and extraction (merge phase) steps in the autopilot pipeline.
 
 ## Knowledge Directory Structure (Three-Layer Progressive Disclosure)
 
@@ -30,23 +30,17 @@ All content files use append-only Markdown, tracked in git. Each file stays ≤1
 
 ## Decisions
 - [2026-03-20] worktree 使用 Node.js 重写而非 Shell | tags: worktree, shell, nodejs | → decisions.md
-- [2026-03-18] autopilot 状态文件使用绝对路径 | tags: autopilot, worktree, path | → decisions.md
 
 ## Patterns
 - [2026-03-20] worktree 内 git 路径解析陷阱 | tags: git, worktree, path | → patterns.md
-- [2026-03-16] 单元测试全通过但真实场景失败 | tags: testing, smoke-test, qa | → patterns.md
 
 ## Domain Knowledge
 - frontend: 3 entries | → domains/frontend.md
-- testing: 2 entries | → domains/testing.md
 ```
 
 **索引条目格式**: `- [YYYY-MM-DD] {title} | tags: tag1, tag2, tag3 | → {file_path}`
 
-**规则**:
-- 每次提取新知识时同步更新 index.md
-- Domain Knowledge 部分只记录领域名称和条目数量
-- 索引条目与内容条目保持一一对应
+每次提取新知识时同步更新 index.md；索引条目与内容条目保持一一对应。
 
 ## Knowledge Formats
 
@@ -71,97 +65,61 @@ All content files use append-only Markdown, tracked in git. Each file stays ≤1
 **Evidence**: Concrete example from this autopilot run (command output, file:line, error message)
 ```
 
-**Tags 规则**:
-- 使用 `<!-- tags: ... -->` HTML comment 格式，不影响可读性
-- 标签从设计文档和代码变更中自动提取（模块名、技术栈、问题类型）
-- 每个条目 2-5 个标签，用逗号分隔
+Tags 使用 `<!-- tags: ... -->` HTML comment 格式；每个条目 2-5 个标签，逗号分隔。
 
 ## Consumption Rules (Design Phase) — Two-Phase Retrieval
 
 Before entering Plan Mode, scan `.claude/knowledge/` if it exists. 分两阶段执行，控制加载量：
 
-### Phase 1: Index Scan (<=5s)
+**Phase 1 — Index Scan (<=5s)**: 读取 `index.md`，用当前目标关键词匹配 tags，确定需加载的文件列表（最多 3 个）。
 
-1. 检查 `.claude/knowledge/index.md` 是否存在
-2. 如果存在：读取 `index.md`，用当前目标的关键词匹配 tags
-3. 确定需要加载的文件列表（最多 3 个文件）
-4. 进入 Phase 2
+**Phase 2 — Selective Load (<=10s)**: 按 Phase 1 文件列表读取内容，判断相关性，携带相关条目进入 Plan Mode，并在设计文档的 `## 相关历史知识` 中引用。
 
-### Phase 2: Selective Load (<=10s)
+**Fallback**: 无 `index.md` 时直接全量加载 `decisions.md` 和 `patterns.md`（<=10s）。
 
-1. 按 Phase 1 确定的文件列表，读取匹配的知识文件
-2. 判断哪些条目与当前目标相关（同模块、同技术、类似问题）
-3. 将相关条目作为内部上下文带入后续 Plan Mode
-4. 在设计文档的 `## 相关历史知识` 中引用相关条目
-
-### Fallback: No Index
-
-如果 `index.md` 不存在（旧项目或首次使用）：
-1. 回退到全量加载：读取 `decisions.md` 和 `patterns.md`（<=10s）
-2. 判断相关性，携带相关条目进入 Plan Mode
-3. 首次提取时自动创建 `index.md`
-
-**Skip conditions**: Directory does not exist, files are empty, or no entries match the current goal. Never block on knowledge loading.
+**Skip conditions**: 目录不存在、文件为空、或无条目与当前目标匹配时跳过。Never block on knowledge loading.
 
 ## Extraction Rules (Merge Phase)
 
 After autopilot-commit completes, review the full autopilot run to extract knowledge worth preserving.
 
-### Input Sources
-
-- `## 设计文档` in state file (design decisions, trade-offs)
-- `## QA 报告` in state file (failure patterns, fix history)
-- `## 变更日志` in state file (process events)
-- Auto-fix repair history (debugging insights)
-
 ### Record a Decision When
-
-- The design document contains "option A vs option B" trade-off analysis
-- A specific alternative was explicitly rejected with reasoning
-- A non-obvious technical choice was made (uncommon pattern, counter-intuitive approach)
+- 设计文档包含 option A vs option B 的权衡分析
+- 明确拒绝了某个备选方案并有理由
+- 做出了非显而易见的技术选择
 
 ### Record a Pattern/Lesson When
-
-- Auto-fix required >1 debugging round to resolve a failure
-- QA exposed a project-specific pitfall or convention
-- A reusable code pattern or anti-pattern was discovered
-- The same type of failure appeared in multiple QA tiers
+- auto-fix 需要 >1 轮调试才解决
+- QA 暴露了项目特有的陷阱或约定
+- 发现了可复用的代码模式或反模式
+- 同类型失败出现在多个 QA Tier
 
 ### Do NOT Record
-
-- Routine bug fixes with no debugging insight
-- Standard implementations with no design trade-off
-- Obvious choices with no real alternatives
-- Information already captured in CLAUDE.md
+- 无调试洞见的常规 bug 修复；标准实现无设计权衡；CLAUDE.md 中已有的信息
 
 ### Execution Steps
 
-1. Analyze input sources for candidate entries
-2. If worth recording:
+1. 分析状态文件（设计文档、QA 报告、变更日志、auto-fix 历程）中的候选条目
+2. 有值得记录的条目：
    a. `mkdir -p .claude/knowledge/`
-   b. Auto-generate tags from design document and code changes (module names, tech stack, problem type)
-   c. Determine target file:
-      - General decision → `decisions.md`
-      - General pattern → `patterns.md`
-      - Domain-specific entry → `domains/{domain}.md` (create if not exists)
-   d. Append entries (with `<!-- tags: ... -->`) to the target file
-   e. Update `index.md`: add index entry for each new knowledge entry (create `index.md` if not exists)
-   f. Check line count for global files: if >100 lines, suggest migrating domain-specific entries to `domains/`
-   g. `git add .claude/knowledge/ && git commit -m "docs(knowledge): extract {brief summary}"`
-3. If nothing worth recording: append "知识提取：本次无新增" to the changelog and skip
+   b. 从设计文档和代码变更中自动生成 tags
+   c. 确定目标文件：通用决策 → `decisions.md`；通用模式 → `patterns.md`；领域特定 → `domains/{domain}.md`
+   d. 追加条目（含 `<!-- tags: ... -->`）到目标文件
+   e. 更新 `index.md`（不存在则创建）
+   f. 全局文件 >100 行时建议用户迁移领域条目到 `domains/`
+   g. 确定知识库 git 提交上下文（见下方 Worktree-Aware Extraction）
+3. 无值得记录的内容 → 变更日志追加"知识提取：本次无新增"后跳过
 
-**Time limit**: Complete knowledge extraction within 2 minutes. Prefer recording fewer high-quality entries over exhaustive documentation.
+**Time limit**: 2 分钟内完成。宁可少写高质量条目，不要穷举。
 
-### Worktree-Aware Extraction
+## Worktree-Aware Extraction
 
-When running in a git worktree, `.claude/knowledge` should be a symlink to the main repo (created by autopilot's WorktreeCreate hook). However, the symlink may be missing (old worktree, hook failure, etc.). Use this 3-step detection chain to ensure knowledge always commits to the main repo:
+When running in a git worktree, `.claude/knowledge` should be a symlink to the main repo. Use this 3-step detection chain:
 
 #### Step 1: Symlink exists (happy path)
-Check: `test -L .claude/knowledge`
+`test -L .claude/knowledge` → 是符号链接
 
-If **yes**:
-- Reading/Writing: Transparent — symlink target is main repo's files
-- Git operations: Resolve main repo and commit there:
+- Resolve main repo and commit there:
   ```bash
   KNOWLEDGE_REAL=$(realpath .claude/knowledge)
   MAIN_REPO=$(cd "$KNOWLEDGE_REAL" && git rev-parse --show-toplevel)
@@ -170,61 +128,23 @@ If **yes**:
   ```
 
 #### Step 2: In worktree, symlink missing (fallback + self-heal)
-If `.claude/knowledge` is NOT a symlink, check whether we are in a worktree:
-```bash
-test -f .git   # .git is a FILE (not directory) in worktrees
-```
+`test -f .git` → 是 worktree（.git 是文件而非目录），但符号链接缺失
 
-If **yes** (in worktree, symlink missing):
-1. Resolve main repo root:
-   ```bash
-   COMMON_DIR=$(git rev-parse --git-common-dir)
-   MAIN_REPO=$(cd "$COMMON_DIR/.." && pwd)
-   ```
-2. Copy knowledge to main repo and commit:
-   ```bash
-   mkdir -p "$MAIN_REPO/.claude/knowledge/"
-   cp -r .claude/knowledge/* "$MAIN_REPO/.claude/knowledge/"
-   git -C "$MAIN_REPO" add .claude/knowledge/
-   git -C "$MAIN_REPO" commit -m "docs(knowledge): extract {brief summary}"
-   ```
-3. Self-heal — repair the missing symlink for future runs:
-   ```bash
-   rm -rf .claude/knowledge
-   ln -s "$MAIN_REPO/.claude/knowledge" .claude/knowledge
-   ```
+1. 解析主仓库根：`COMMON_DIR=$(git rev-parse --git-common-dir); MAIN_REPO=$(cd "$COMMON_DIR/.." && pwd)`
+2. 复制知识到主仓库并提交：`mkdir -p "$MAIN_REPO/.claude/knowledge/"; cp -r .claude/knowledge/* "$MAIN_REPO/.claude/knowledge/"; git -C "$MAIN_REPO" add .claude/knowledge/; git -C "$MAIN_REPO" commit -m "docs(knowledge): ..."`
+3. 自愈修复符号链接：`rm -rf .claude/knowledge; ln -s "$MAIN_REPO/.claude/knowledge" .claude/knowledge`
 
 #### Step 3: Normal repo (no worktree)
-If `.git` is a directory (not in a worktree), use standard git operations:
-```bash
-git add .claude/knowledge/
-git commit -m "docs(knowledge): extract {brief summary}"
-```
+`test -d .git` → 正常 git 仓库，使用标准操作：`git add .claude/knowledge/ && git commit -m "docs(knowledge): ..."`
 
-### Domain Partition Guide
+## Domain Partition Guide
 
-当全局文件（`decisions.md` / `patterns.md`）超过 100 行时，建议按领域迁移：
-
-1. 识别可聚合的条目（同一技术领域、同一模块的多个条目）
-2. 创建 `domains/{domain}.md`，将相关条目迁移过去
-3. 更新 `index.md` 中对应条目的 `→ {file_path}` 指向
-4. 从全局文件中移除已迁移的条目
+当全局文件超过 100 行时，识别可聚合的同领域条目，创建 `domains/{domain}.md`，迁移后更新 `index.md` 中的路径引用，并从全局文件删除已迁移条目。**迁移操作需要用户确认。**
 
 **常见领域划分**: frontend, backend, testing, infra, database, auth, performance
 
-**注意**: 迁移操作需要用户确认，不要自动执行。提示用户并说明迁移理由。
-
 ## Size Management
 
-### Global Files (decisions.md / patterns.md)
-
-When a global knowledge file exceeds 100 lines:
-1. Append `<!-- Warning: This file exceeds 100 lines. Consider migrating domain-specific entries to domains/. -->` at the end
-2. Notify the user: suggest reviewing entries and migrating domain-specific ones to `domains/{domain}.md`
-3. Do not auto-migrate — knowledge curation requires human judgment
-
-### Domain Files (domains/*.md)
-
-Each domain file stays <=150 lines. Exceeding this triggers:
-1. Append `<!-- Warning: This file exceeds 150 lines. Review and prune older entries. -->` at the end
-2. Notify the user: suggest pruning stale entries or further splitting the domain
+- 全局文件（decisions.md / patterns.md）超 100 行 → 追加警告注释并通知用户建议迁移
+- 领域文件（domains/*.md）超 150 行 → 追加警告注释并通知用户建议拆分或裁剪旧条目
+- 不要自动迁移——知识整理需要人工判断
