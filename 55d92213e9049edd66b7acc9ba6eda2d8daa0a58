@@ -1,0 +1,44 @@
+.claude-plugin/marketplace.json
+  e6184f41be6fab86 32
+plugins/autopilot/skills/autopilot/SKILL.md
+  e6184f41be6fab86 24-38,148,213,219,248,400,410,428
+CLAUDE.md
+  e6184f41be6fab86 51,290-295
+tests/model-assignment.acceptance.test.mjs
+  e6184f41be6fab86 1-298
+plugins/autopilot/.claude-plugin/plugin.json
+  e6184f41be6fab86 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "55d92213e9049edd66b7acc9ba6eda2d8daa0a58",
+  "prompts": {
+    "7495de0a25e1d228": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1fd9ad68-93eb-40ad-96aa-9488d26c1743",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄 <zhaoguixiong@corp.netease.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "e6184f41be6fab86": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a6b16cb4-591b-4378-b0e9-4031ae801022",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄 <zhaoguixiong@corp.netease.com>",
+      "messages": [],
+      "total_additions": 414,
+      "total_deletions": 26,
+      "accepted_lines": 403,
+      "overriden_lines": 0
+    }
+  }
+}
