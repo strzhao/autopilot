@@ -1,0 +1,6 @@
+interface:
+  display_name: "Autopilot Doctor (Codex)"
+  short_description: "Codex-native engineering health check for this repository"
+  default_prompt: "Run the Codex-native autopilot doctor workflow."
+policy:
+  allow_implicit_invocation: false

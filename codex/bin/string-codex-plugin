@@ -1,0 +1,11 @@
+#!/usr/bin/env node
+
+(async () => {
+  const { runCli } = await import("../lib/string-codex-plugin.mjs");
+  const exitCode = await runCli(process.argv.slice(2));
+  process.exitCode = exitCode;
+})().catch((error) => {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(message);
+  process.exitCode = 1;
+});

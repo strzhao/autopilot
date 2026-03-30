@@ -1,0 +1,24 @@
+{
+  "name": "autopilot-codex",
+  "version": "0.1.0",
+  "description": "Codex-native autopilot workflow bundle for repositories that want the String autopilot methodology without Claude-specific runtime hooks.",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Autopilot for Codex",
+    "shortDescription": "Design-first autopilot workflows for Codex CLI",
+    "longDescription": "Installs autopilot-codex, autopilot-commit-codex, and autopilot-doctor-codex as official Codex plugin skills. This package keeps the workflow design-first and approval-gated without relying on repo launchers, bridge processes, watcher loops, or Claude-only hooks.",
+    "developerName": "String Zhao",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Design-first workflow",
+      "Smart commit",
+      "Engineering diagnostics"
+    ],
+    "defaultPrompt": [
+      "Use Autopilot for Codex to prepare a design-first implementation workflow.",
+      "Use Autopilot Commit for Codex to prepare a verified Chinese git commit.",
+      "Use Autopilot Doctor for Codex to audit project readiness for autopilot."
+    ],
+    "brandColor": "#0f766e"
+  }
+}

@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
+
+export CODEX_HOME="$REPO_ROOT/.codex"
+
+cd "$REPO_ROOT"
+exec "${CODEX_BIN:-codex}" "$@"

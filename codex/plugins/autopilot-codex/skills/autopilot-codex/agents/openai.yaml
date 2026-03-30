@@ -1,0 +1,6 @@
+interface:
+  display_name: "Autopilot (Codex)"
+  short_description: "Codex-native autopilot workflow for this repository"
+  default_prompt: "Use the Codex-native autopilot workflow for this repository."
+policy:
+  allow_implicit_invocation: false

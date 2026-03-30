@@ -1,0 +1,16 @@
+{
+  "name": "string-codex-plugins",
+  "interface": {
+    "displayName": "String Codex Plugins",
+    "shortDescription": "Official Codex plugins maintained in this repository"
+  },
+  "plugins": [
+    {
+      "name": "autopilot-codex",
+      "source": {
+        "source": "local",
+        "path": "./codex/plugins/autopilot-codex"
+      }
+    }
+  ]
+}
