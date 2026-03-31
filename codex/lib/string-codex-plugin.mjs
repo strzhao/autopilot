@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -13,6 +14,10 @@ const REPO_ROOT = path.resolve(MODULE_DIR, "..", "..");
 const DEFAULT_MARKETPLACE_PATH = path.join(REPO_ROOT, ".agents", "plugins", "marketplace.json");
 const DEFAULT_PLUGIN_ROOT = path.join(REPO_ROOT, "codex", "plugins", DEFAULT_PLUGIN_NAME);
 const DEFAULT_MANIFEST_PATH = path.join(DEFAULT_PLUGIN_ROOT, ".codex-plugin", "plugin.json");
+const HOME_DIR = os.homedir();
+const HOME_AGENTS_DIR = path.join(HOME_DIR, ".agents");
+const HOME_PLUGINS_DIR = path.join(HOME_AGENTS_DIR, "plugins");
+const HOME_MARKETPLACE_PATH = path.join(HOME_PLUGINS_DIR, "marketplace.json");
 
 function printUsage() {
   console.log(`string-codex-plugin ${TOOL_VERSION}
@@ -22,6 +27,7 @@ Usage:
   string-codex-plugin uninstall [plugin-name] [--force-remote-sync] [--json]
   string-codex-plugin list [--json]
   string-codex-plugin doctor [--json]
+  string-codex-plugin sync-home-marketplace [plugin-name] [--json]
   string-codex-plugin help
 
 Defaults:
@@ -105,6 +111,154 @@ async function pathExists(targetPath) {
 async function loadJson(targetPath) {
   const raw = await fs.readFile(targetPath, "utf8");
   return JSON.parse(raw);
+}
+
+function resolveRepoMarketplaceIdentity(localChecks) {
+  const marketplace =
+    localChecks.marketplace && typeof localChecks.marketplace === "object"
+      ? localChecks.marketplace
+      : {};
+
+  return {
+    name:
+      typeof marketplace.name === "string" && marketplace.name
+        ? marketplace.name
+        : "string-codex-plugins",
+    interface:
+      marketplace.interface && typeof marketplace.interface === "object"
+        ? marketplace.interface
+        : {},
+  };
+}
+
+function homePluginLinkPath(localChecks, pluginName) {
+  const identity = resolveRepoMarketplaceIdentity(localChecks);
+  return path.join(HOME_PLUGINS_DIR, identity.name, pluginName);
+}
+
+function homePluginSourcePath(localChecks, pluginName) {
+  const identity = resolveRepoMarketplaceIdentity(localChecks);
+  return `./.agents/plugins/${identity.name}/${pluginName}`;
+}
+
+async function collectHomeChecks(options, localChecks) {
+  const linkPath = homePluginLinkPath(localChecks, options.pluginName);
+  const homeMarketplaceExists = await pathExists(HOME_MARKETPLACE_PATH);
+  const homePluginLinkExists = await pathExists(linkPath);
+
+  let homeMarketplace = null;
+  let homeMarketplaceError = null;
+  if (homeMarketplaceExists) {
+    try {
+      homeMarketplace = await loadJson(HOME_MARKETPLACE_PATH);
+    } catch (error) {
+      homeMarketplaceError = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  let homePluginLinkRealpath = null;
+  let homePluginLinkError = null;
+  if (homePluginLinkExists) {
+    try {
+      homePluginLinkRealpath = await fs.realpath(linkPath);
+    } catch (error) {
+      homePluginLinkError = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  const homePluginEntryPath = Array.isArray(homeMarketplace?.plugins)
+    ? homeMarketplace.plugins.find((plugin) => plugin?.name === options.pluginName)?.source?.path || ""
+    : "";
+
+  return {
+    homeMarketplacePath: HOME_MARKETPLACE_PATH,
+    homeMarketplaceExists,
+    homeMarketplace,
+    homeMarketplaceError,
+    homePluginLinkPath: linkPath,
+    homePluginLinkExists,
+    homePluginLinkRealpath,
+    homePluginLinkError,
+    expectedHomePluginSourcePath: homePluginSourcePath(localChecks, options.pluginName),
+    homePluginEntryPath,
+  };
+}
+
+async function ensureHomeMarketplace(options, localChecks) {
+  const repoIdentity = resolveRepoMarketplaceIdentity(localChecks);
+  const linkPath = homePluginLinkPath(localChecks, options.pluginName);
+  const sourcePath = homePluginSourcePath(localChecks, options.pluginName);
+
+  await fs.mkdir(path.dirname(linkPath), { recursive: true });
+
+  let shouldRewriteLink = true;
+  try {
+    const existingRealpath = await fs.realpath(linkPath);
+    shouldRewriteLink = path.resolve(existingRealpath) !== path.resolve(options.pluginRoot);
+  } catch {
+    shouldRewriteLink = true;
+  }
+
+  if (shouldRewriteLink) {
+    await fs.rm(linkPath, { recursive: true, force: true });
+    await fs.symlink(
+      options.pluginRoot,
+      linkPath,
+      process.platform === "win32" ? "junction" : "dir"
+    );
+  }
+
+  let homeMarketplace = {};
+  if (await pathExists(HOME_MARKETPLACE_PATH)) {
+    homeMarketplace = await loadJson(HOME_MARKETPLACE_PATH);
+    if (!homeMarketplace || typeof homeMarketplace !== "object" || Array.isArray(homeMarketplace)) {
+      throw new Error(`Home marketplace must be a JSON object: ${HOME_MARKETPLACE_PATH}`);
+    }
+  }
+
+  const nextMarketplace = {
+    ...homeMarketplace,
+    name:
+      typeof homeMarketplace.name === "string" && homeMarketplace.name
+        ? homeMarketplace.name
+        : repoIdentity.name,
+    interface: {
+      ...repoIdentity.interface,
+      ...(homeMarketplace.interface && typeof homeMarketplace.interface === "object"
+        ? homeMarketplace.interface
+        : {}),
+    },
+  };
+
+  const plugins = Array.isArray(homeMarketplace.plugins) ? [...homeMarketplace.plugins] : [];
+  const pluginEntry = {
+    name: options.pluginName,
+    source: {
+      source: "local",
+      path: sourcePath,
+    },
+  };
+
+  const existingIndex = plugins.findIndex((plugin) => plugin?.name === options.pluginName);
+  if (existingIndex >= 0) {
+    plugins[existingIndex] = pluginEntry;
+  } else {
+    plugins.push(pluginEntry);
+  }
+
+  nextMarketplace.plugins = plugins;
+
+  await fs.mkdir(HOME_PLUGINS_DIR, { recursive: true });
+  await fs.writeFile(`${HOME_MARKETPLACE_PATH}`, `${JSON.stringify(nextMarketplace, null, 2)}\n`, "utf8");
+
+  return {
+    homeMarketplacePath: HOME_MARKETPLACE_PATH,
+    homePluginLinkPath: linkPath,
+    homePluginSourcePath: sourcePath,
+    effectiveMarketplaceName: nextMarketplace.name,
+    repoMarketplaceName: repoIdentity.name,
+    reusedExistingMarketplaceName: nextMarketplace.name !== repoIdentity.name,
+  };
 }
 
 async function collectLocalChecks(options) {
@@ -220,6 +374,7 @@ function printTextResult(result) {
     console.log(`Installed ${result.pluginName}.`);
     console.log(`Plugin ID: ${result.plugin.pluginId}`);
     console.log(`Installed: ${result.plugin.installed ? "yes" : "no"}`);
+    console.log(`Home marketplace: ${result.homeMarketplace.homeMarketplacePath}`);
     if (result.appsNeedingAuth.length > 0) {
       console.log(`Apps needing auth: ${result.appsNeedingAuth.join(", ")}`);
     }
@@ -250,6 +405,17 @@ function printTextResult(result) {
     return;
   }
 
+  if (result.command === "sync-home-marketplace") {
+    console.log(`Synced home marketplace: ${result.homeMarketplace.homeMarketplacePath}`);
+    console.log(`Plugin link: ${result.homeMarketplace.homePluginLinkPath}`);
+    if (result.homeMarketplace.reusedExistingMarketplaceName) {
+      console.log(
+        `Marketplace name preserved: ${result.homeMarketplace.effectiveMarketplaceName}`
+      );
+    }
+    return;
+  }
+
   console.log(JSON.stringify(result, null, 2));
 }
 
@@ -272,6 +438,8 @@ async function runList(options) {
 }
 
 async function runInstall(options) {
+  const localChecks = await collectLocalChecks(options);
+
   return withClient(options, async (client) => {
     await client.request("plugin/read", {
       marketplacePath: options.marketplacePath,
@@ -284,6 +452,8 @@ async function runInstall(options) {
       forceRemoteSync: options.forceRemoteSync,
     });
 
+    const homeMarketplace = await ensureHomeMarketplace(options, localChecks);
+
     const listResponse = await client.request("plugin/list", {
       cwds: [options.repoRoot],
     });
@@ -292,6 +462,7 @@ async function runInstall(options) {
       command: "install",
       pluginName: options.pluginName,
       plugin: formatMarketplaceSummary(listResponse, options.marketplacePath, options.pluginName),
+      homeMarketplace,
       appsNeedingAuth: (installResponse.appsNeedingAuth || []).map((app) => app.name),
       authPolicy: installResponse.authPolicy,
       marketplaceLoadErrors: listResponse.marketplaceLoadErrors,
@@ -330,6 +501,7 @@ async function runUninstall(options) {
 
 async function runDoctor(options) {
   const localChecks = await collectLocalChecks(options);
+  const homeChecks = await collectHomeChecks(options, localChecks);
 
   return withClient(options, async (client, initialize) => {
     const listResponse = await client.request("plugin/list", {
@@ -388,6 +560,37 @@ async function runDoctor(options) {
         ok: Boolean(plugin),
         details: plugin ? plugin.marketplaceName : "",
       },
+      {
+        name: "home marketplace.json exists",
+        ok: homeChecks.homeMarketplaceExists,
+        details: homeChecks.homeMarketplacePath,
+      },
+      {
+        name: "home marketplace.json parses",
+        ok: homeChecks.homeMarketplaceExists && !homeChecks.homeMarketplaceError,
+        details: homeChecks.homeMarketplaceError || "",
+      },
+      {
+        name: "home marketplace includes plugin entry",
+        ok:
+          homeChecks.homeMarketplaceExists &&
+          !homeChecks.homeMarketplaceError &&
+          homeChecks.homePluginEntryPath === homeChecks.expectedHomePluginSourcePath,
+        details: homeChecks.homePluginEntryPath || "",
+      },
+      {
+        name: "home plugin link exists",
+        ok: homeChecks.homePluginLinkExists,
+        details: homeChecks.homePluginLinkPath,
+      },
+      {
+        name: "home plugin link resolves to repo plugin root",
+        ok:
+          homeChecks.homePluginLinkExists &&
+          !homeChecks.homePluginLinkError &&
+          path.resolve(homeChecks.homePluginLinkRealpath || "") === path.resolve(options.pluginRoot),
+        details: homeChecks.homePluginLinkError || homeChecks.homePluginLinkRealpath || "",
+      },
     ];
 
     return {
@@ -399,6 +602,17 @@ async function runDoctor(options) {
       marketplaceLoadErrors: listResponse.marketplaceLoadErrors,
     };
   });
+}
+
+async function runSyncHomeMarketplace(options) {
+  const localChecks = await collectLocalChecks(options);
+  const homeMarketplace = await ensureHomeMarketplace(options, localChecks);
+
+  return {
+    command: "sync-home-marketplace",
+    pluginName: options.pluginName,
+    homeMarketplace,
+  };
 }
 
 export async function runCli(argv = process.argv.slice(2)) {
@@ -422,6 +636,9 @@ export async function runCli(argv = process.argv.slice(2)) {
       break;
     case "doctor":
       result = await runDoctor(options);
+      break;
+    case "sync-home-marketplace":
+      result = await runSyncHomeMarketplace(options);
       break;
     default:
       printUsage();
