@@ -1,0 +1,42 @@
+codex/docs/official-codex-plugin.md
+  d3597d886658f229 10-26,41-44,46,62,66-75,78
+codex/docs/global-shim.md
+  d3597d886658f229 22,27-28,49
+codex/install-global.sh
+  d3597d886658f229 32-37,39
+codex/lib/string-codex-plugin.mjs
+  d3597d886658f229 2,17-20,30,116-263,377,408-414,441-442,455-456,465,504,563-584,586-593,607-615,640-641
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "7db58a16b292437f765d5981b7abb7974b232e27",
+  "prompts": {
+    "d3597d886658f229": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019d4220-cb53-70c0-a723-ef608d18cc9a",
+        "model": "gpt-5.4"
+      },
+      "human_author": "赵桂雄 <zhaoguixiong@corp.netease.com>",
+      "messages": [],
+      "total_additions": 264,
+      "total_deletions": 5,
+      "accepted_lines": 264,
+      "overriden_lines": 0
+    },
+    "e6184f41be6fab86": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a6b16cb4-591b-4378-b0e9-4031ae801022",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄 <zhaoguixiong@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 81,
+      "overriden_lines": 0
+    }
+  }
+}
