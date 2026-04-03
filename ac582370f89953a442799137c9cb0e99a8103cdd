@@ -1,0 +1,37 @@
+CLAUDE.md
+  fbae0a0cea84a364 51,290-297
+.claude-plugin/marketplace.json
+  fbae0a0cea84a364 32
+plugins/autopilot/.claude-plugin/plugin.json
+  fbae0a0cea84a364 3
+tests/model-assignment.acceptance.test.mjs
+  fbae0a0cea84a364 2,11-12,219,221-222,227-228,232,244-245,249,252-253,259,261,270,273-274
+tests/token-optimization.acceptance.test.mjs
+  fbae0a0cea84a364 2,26,555,557-558,563-564,568,580-581,585,588-589
+plugins/autopilot/scripts/stop-hook.sh
+  fbae0a0cea84a364 19,131-132
+plugins/autopilot/skills/autopilot/references/commit-agent-prompt.md
+  fbae0a0cea84a364 1-87
+plugins/autopilot/skills/autopilot/SKILL.md
+  fbae0a0cea84a364 369,490,492-503,507
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "ac582370f89953a442799137c9cb0e99a8103cdd",
+  "prompts": {
+    "fbae0a0cea84a364": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "20d9620e-5ad0-4fcc-a415-2e44afad932d",
+        "model": "glm-5.1"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 213,
+      "total_deletions": 45,
+      "accepted_lines": 210,
+      "overriden_lines": 0
+    }
+  }
+}
