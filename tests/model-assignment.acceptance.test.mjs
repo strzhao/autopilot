@@ -1,5 +1,5 @@
 /**
- * Acceptance tests for autopilot sub-agent model assignment optimization (v3.5.3).
+ * Acceptance tests for autopilot sub-agent model assignment optimization (v3.6.0).
  *
  * Red-team verification: tests are written purely from the design document,
  * without reading the blue-team implementation.
@@ -8,8 +8,8 @@
  *   - 5 sub-agent calls in SKILL.md gain `model: "sonnet"` annotation:
  *     plan-reviewer, blue-team, red-team, design-reviewer, code-quality-reviewer
  *   - New "成本优化" (cost optimization) chapter added to SKILL.md
- *   - Version bumped to 3.5.3 across plugin.json, marketplace.json, CLAUDE.md
- *   - CLAUDE.md changelog contains 2026-03-30 entry for v3.5.3
+ *   - Version bumped to 3.6.0 across plugin.json, marketplace.json, CLAUDE.md
+ *   - CLAUDE.md changelog contains 2026-03-30 entry for v3.6.0
  *
  * Run: node --test tests/model-assignment.acceptance.test.mjs
  */
@@ -216,20 +216,20 @@ describe('SKILL.md 成本优化 chapter', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. Version consistency (3.5.3)
+// 3. Version consistency (3.6.0)
 // ---------------------------------------------------------------------------
-describe('version consistency (v3.5.3)', () => {
-  it('plugin.json version must be "3.5.3"', () => {
+describe('version consistency (v3.6.0)', () => {
+  it('plugin.json version must be "3.6.0"', () => {
     const content = readFileSync(PLUGIN_JSON_PATH, 'utf-8');
     const json = JSON.parse(content);
     assert.equal(
       json.version,
-      '3.5.3',
-      `plugin.json version must be "3.5.3", got "${json.version}"`
+      '3.6.0',
+      `plugin.json version must be "3.6.0", got "${json.version}"`
     );
   });
 
-  it('marketplace.json autopilot version must be "3.5.3"', () => {
+  it('marketplace.json autopilot version must be "3.6.0"', () => {
     const content = readFileSync(MARKETPLACE_PATH, 'utf-8');
     const json = JSON.parse(content);
     const autopilot = json.plugins?.find(
@@ -241,24 +241,24 @@ describe('version consistency (v3.5.3)', () => {
     );
     assert.equal(
       autopilot.version,
-      '3.5.3',
-      `marketplace.json autopilot version must be "3.5.3", got "${autopilot.version}"`
+      '3.6.0',
+      `marketplace.json autopilot version must be "3.6.0", got "${autopilot.version}"`
     );
   });
 
-  it('CLAUDE.md must show autopilot as v3.5.3 in plugin list', () => {
+  it('CLAUDE.md must show autopilot as v3.6.0 in plugin list', () => {
     const content = readFileSync(CLAUDE_MD_PATH, 'utf-8');
     assert.ok(
-      content.includes('v3.5.3') || content.includes('(3.5.3)'),
-      'CLAUDE.md plugin list must reference autopilot version 3.5.3'
+      content.includes('v3.6.0') || content.includes('(3.6.0)'),
+      'CLAUDE.md plugin list must reference autopilot version 3.6.0'
     );
   });
 });
 
 // ---------------------------------------------------------------------------
-// 4. CLAUDE.md changelog for v3.5.3
+// 4. CLAUDE.md changelog for v3.6.0
 // ---------------------------------------------------------------------------
-describe('CLAUDE.md changelog for v3.5.3', () => {
+describe('CLAUDE.md changelog for v3.6.0', () => {
   it('must contain a 2026-03-30 changelog entry', () => {
     const content = readFileSync(CLAUDE_MD_PATH, 'utf-8');
     assert.ok(
@@ -267,11 +267,11 @@ describe('CLAUDE.md changelog for v3.5.3', () => {
     );
   });
 
-  it('must mention v3.5.3 in the changelog', () => {
+  it('must mention v3.6.0 in the changelog', () => {
     const content = readFileSync(CLAUDE_MD_PATH, 'utf-8');
     assert.ok(
-      content.includes('3.5.3'),
-      'CLAUDE.md changelog must mention version 3.5.3'
+      content.includes('3.6.0'),
+      'CLAUDE.md changelog must mention version 3.6.0'
     );
   });
 

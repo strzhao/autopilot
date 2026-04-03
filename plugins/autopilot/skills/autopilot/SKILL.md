@@ -366,7 +366,7 @@ Wave 1 完成后统计 Tier 0+1 ❌ 数量：≥3 → 跳过 Wave 1.5/2 直接 a
 
 #### 产出报告
 
-将 QA 报告**追加**（不覆盖）到状态文件的 `## QA 报告` 区域。报告格式和示例参见 `references/qa-report-template.md`。
+将 QA 报告写入状态文件的 `## QA 报告` 区域。**写入前先将所有历史轮次报告压缩为一行摘要**（格式：`### 轮次 N (时间) — ✅/❌ 简要结果`），只保留最新一轮完整报告。报告格式和示例参见 `references/qa-report-template.md`。
 
 #### 结果判定
 
@@ -487,12 +487,24 @@ Wave 1 完成后统计 Tier 0+1 ❌ 数量：≥3 → 跳过 Wave 1.5/2 直接 a
 
 ### 工作流程
 
-#### 1. 调用 autopilot-commit
-使用 `Skill: "autopilot-commit"` 执行智能提交，它会自动处理所有提交相关工作（代码优化、提交信息、CLAUDE.md 更新、版本升级等）。
+#### 1. 调用 commit Agent（上下文隔离提交）
+
+使用 Agent 工具启动 commit-agent（model: "sonnet"），**不要使用 `Skill: "autopilot-commit"`**（会继承完整父上下文，导致 3-5M token 开销）。
+
+**预收集 Agent 输入**（编排器在启动 Agent 前通过 Bash 获取）：
+- `git diff --stat` 输出（变更概况）
+- `git diff` 完整 diff（供分析具体改动）
+- 设计文档的目标一句话（从状态文件 `## 设计文档` 提取）
+- commit type 判断依据（根据变更性质判断 feat/fix/refactor 等）
+- 项目根目录路径
+
+**启动 Agent**：prompt 参考 `references/commit-agent-prompt.md` 模板，填入上述输入。Agent 执行：分析变更 → 生成 commit message（中文） → git add → git commit → 版本号升级 → CLAUDE.md 更新。
+
+编排器收到 Agent 结果后，验证 `git log --oneline -1` 确认提交成功。
 
 #### 2. 知识提取与沉淀
 
-autopilot-commit 完成后，回顾本次全流程产出，提取值得持久化的知识。
+commit Agent 完成后，回顾本次全流程产出，提取值得持久化的知识。
 
 1. 读取 `references/knowledge-engineering.md` 获取完整提取规则和格式模板
 2. 分析状态文件中的设计文档、QA 报告、变更日志、auto-fix 修复历程

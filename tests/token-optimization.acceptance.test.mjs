@@ -1,5 +1,5 @@
 /**
- * Acceptance tests for autopilot token optimization (v3.5.3).
+ * Acceptance tests for autopilot token optimization (v3.6.0).
  *
  * Red-team verification: tests are written purely from the design document,
  * without reading the blue-team implementation.
@@ -23,7 +23,7 @@
  *   8. references/state-file-guide.md must exist
  *   9. SKILL.md Explore agent guidance includes "1-2 个"
  *  10. SKILL.md Wave 1.5 includes dev server startup specification
- *  11. Version number 3.5.3 consistency
+ *  11. Version number 3.6.0 consistency
  *
  * Target line counts after optimization:
  *   - SKILL.md: < 580 lines (currently 658)
@@ -552,20 +552,20 @@ describe('SKILL.md Wave 1.5 dev server startup specification', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 12. Invariant 11: Version 3.5.3 consistency
+// 12. Invariant 11: Version 3.6.0 consistency
 // ---------------------------------------------------------------------------
-describe('version consistency (v3.5.3)', () => {
-  it('plugin.json version must be "3.5.3"', () => {
+describe('version consistency (v3.6.0)', () => {
+  it('plugin.json version must be "3.6.0"', () => {
     const content = readFileSync(PLUGIN_JSON_PATH, 'utf-8');
     const json = JSON.parse(content);
     assert.equal(
       json.version,
-      '3.5.3',
-      `plugin.json version must be "3.5.3", got "${json.version}"`
+      '3.6.0',
+      `plugin.json version must be "3.6.0", got "${json.version}"`
     );
   });
 
-  it('marketplace.json autopilot version must be "3.5.3"', () => {
+  it('marketplace.json autopilot version must be "3.6.0"', () => {
     const content = readFileSync(MARKETPLACE_PATH, 'utf-8');
     const json = JSON.parse(content);
     const autopilot = json.plugins?.find(
@@ -577,16 +577,16 @@ describe('version consistency (v3.5.3)', () => {
     );
     assert.equal(
       autopilot.version,
-      '3.5.3',
-      `marketplace.json autopilot version must be "3.5.3", got "${autopilot.version}"`
+      '3.6.0',
+      `marketplace.json autopilot version must be "3.6.0", got "${autopilot.version}"`
     );
   });
 
-  it('CLAUDE.md must reference autopilot version 3.5.3', () => {
+  it('CLAUDE.md must reference autopilot version 3.6.0', () => {
     const content = readFileSync(CLAUDE_MD_PATH, 'utf-8');
     assert.ok(
-      content.includes('3.5.3'),
-      'CLAUDE.md must reference autopilot version 3.5.3'
+      content.includes('3.6.0'),
+      'CLAUDE.md must reference autopilot version 3.6.0'
     );
   });
 });

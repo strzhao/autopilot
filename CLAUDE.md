@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.5.3)
+### 3. autopilot (v3.6.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断 + Worktree 自动初始化）
 
@@ -286,6 +286,14 @@
 ---
 
 ## 更新日志
+
+### 2026-04-03
+- autopilot 升级至 v3.6.0：merge 阶段 Agent 化提交（token 开销优化）
+  - merge 阶段调用改为 Agent 工具（model: sonnet），替代 Skill 调用，实现上下文隔离
+  - 新增 references/commit-agent-prompt.md 模板，规范 Agent 行为
+  - stop-hook.sh merge 阶段注入 Agent 调用提醒
+  - SKILL.md merge 工作流程重写：预收集输入 → 启动 Agent → 验证结果
+  - QA 报告压缩：历史轮次报告压缩为一行摘要，只保留最新一轮完整报告
 
 ### 2026-03-30
 - autopilot 升级至 v3.5.2：sub-agent 模型分层优化
