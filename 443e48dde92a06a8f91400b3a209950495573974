@@ -1,0 +1,25 @@
+.claude/knowledge/decisions.md
+  fbae0a0cea84a364 21-27
+.claude/knowledge/index.md
+  fbae0a0cea84a364 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "443e48dde92a06a8f91400b3a209950495573974",
+  "prompts": {
+    "fbae0a0cea84a364": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "20d9620e-5ad0-4fcc-a415-2e44afad932d",
+        "model": "glm-5.1"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 0,
+      "accepted_lines": 69,
+      "overriden_lines": 0
+    }
+  }
+}
