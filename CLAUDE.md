@@ -48,7 +48,33 @@
 
 ---
 
-### 3. autopilot (v3.6.0)
+### 3. autopilot (v3.7.0)
+**类型**: Skill + Hook 插件
+**功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断 + 性能保障 + Worktree 自动初始化）
+
+**包含 Skill**:
+- `autopilot`：全流程闭环编排器（红蓝对抗 + 五层 QA + 性能保障 + 知识工程 + 自动修复）
+- `autopilot-commit`：智能提交工具（React 检测、最佳实践优化、代码理解测验、任务同步）
+- `autopilot-doctor`：工程健康度诊断（11 维度评分 + 测试金字塔三层检测 + 性能保障检测 + autopilot 兼容性矩阵 + 自动修复）
+- `worktree-repair`：手动修复已有 worktree 的配置缺失（符号链接 + 依赖安装）
+
+**核心能力**:
+- 从目标描述到代码合并的全程自动化
+- 阶段状态机驱动：design → implement → qa → auto-fix → merge
+- 仅在两个审批门需要人工介入（设计审批 + 验收审批）
+- 设计方案审查：design 阶段 ExitPlanMode 前启动 plan-reviewer sub-agent，6 维度审查（需求完整性、技术可行性、任务分解、验证覆盖、风险评估、范围控制），置信度 ≥90 为 BLOCKER，最多 2 轮审查
+- 红蓝对抗：蓝队按计划编码 + 红队仅看设计文档写验收测试，并行执行、信息隔离
+- 五层 QA 检查（Tier 0 红队验收测试 + Tier 1-4）+ Tier 3.5 性能保障验证 + 自动修复循环（最多 3 次重试）
+- 系统化调试方法论：观察 → 假设 → 验证 → 修复（四阶段）
+- 两阶段代码审查：设计符合性 + 代码质量，并行 Sub-Agent 执行（置信度 ≥80 过滤）
+- 防合理化表格：对抗 AI 跳过测试/修改红队测试的借口
+- 铁律：不允许修改红队测试来通过 QA，成功需要证据，假设需要证据
+- 知识工程：design 阶段消费历史决策和模式提升设计质量，merge 阶段反馈驱动提取知识持续积累（.claude/knowledge/）
+- 智能提交：三阶段并行执行模型，React 优化、Bugfix 双模式验证（自动化测试 + 运行时验证）、代码测验、CLAUDE.md 更新、版本升级、ai-todo 同步
+- 生成高质量中文提交信息（业务描述 + 技术说明）
+- 工程诊断：11 维度加权评分（测试/类型/lint/构建/CI/结构/文档/Git/依赖/AI就绪度/性能保障），S-F 等级，autopilot 兼容性矩阵，`--fix` 自动修复
+- 性能保障：Lighthouse CI（Core Web Vitals 预算）、Playwright 性能断言（page.metrics / Web Vitals）、Bundle Size 监控（size-limit）
+- Worktree 自动初始化：`WorktreeCreate` hook 自动链接 .env 等配置文件、安装依赖、分配独立端口；`WorktreeRemove` hook 自动清理；`/worktree-repair` 手动修复
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断 + Worktree 自动初始化）
 
@@ -286,6 +312,15 @@
 ---
 
 ## 更新日志
+
+### 2026-04-04
+- autopilot 升级至 v3.7.0：工程诊断新增 Dim 11 性能保障维度 + QA 新增 Tier 3.5 性能保障验证
+  - doctor 新增 Dim 11「性能保障」（权重 8%），覆盖 P1 Lighthouse CI / P2 Playwright 性能断言 / P3 Bundle Size 监控
+  - 权重重分配：Dim 1-4 各让 0.01，Dim 5/7/8/10 各让 0.01，合计让出 0.08
+  - QA 新增 Tier 3.5：条件性性能保障验证，不阻塞 review-accept gate）
+  - --fix 新增性能保障修复方案（Lighthouse CI 配置生成 + Playwright 性能测试生成 + size-limit 配置生成）
+  - 详细工具清单、评分案例、--fix 模板外置到 references/performance-testing.md（progressive disclosure）
+  - SKILL.md 行数控制：Dim 11 在 SKILL.md 中仅 ~10 行，详细内容按需加载
 
 ### 2026-04-03
 - autopilot 升级至 v3.6.0：merge 阶段 Agent 化提交（token 开销优化）

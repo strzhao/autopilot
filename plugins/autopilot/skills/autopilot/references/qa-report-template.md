@@ -24,6 +24,11 @@
 **Tier 2a/2b: 审查**
 ✅ 设计符合性 | ⚠️ 安全: 1 低风险 | ✅ 边界处理
 
+**Tier 3.5: 性能保障验证**（条件性）
+✅ P1 Lighthouse: performance 94 (预算 ≥90 通过)
+⚠️ P2 Playwright 性能: 跳过 (无性能断言文件)
+✅ P3 Bundle Size: main.js 142KB < 200KB
+
 **总结**: 通过 5 | 警告 1 | 失败 1 → 需修复: 构建失败
 
 ### 失败 Tier 清单
