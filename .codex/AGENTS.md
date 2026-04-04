@@ -15,7 +15,7 @@
 ## 运行约束
 
 - 不要把 Codex 的运行时状态写到 `.claude/`。
-- `.claude/knowledge/` 只作为共享知识库读取。
+- `.autopilot/` 只作为共享知识库读取。
 - 如果需要仓库工作流，请优先使用：
   - `$autopilot-codex`
   - `$autopilot-commit-codex`

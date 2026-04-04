@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.6.0)
+### 3. autopilot (v3.7.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断 + Worktree 自动初始化）
 
@@ -69,7 +69,7 @@
 - 两阶段代码审查：设计符合性 + 代码质量，并行 Sub-Agent 执行（置信度 ≥80 过滤）
 - 防合理化表格：对抗 AI 跳过测试/修改红队测试的借口
 - 铁律：不允许修改红队测试来通过 QA，成功需要证据，假设需要证据
-- 知识工程：design 阶段消费历史决策和模式提升设计质量，merge 阶段反馈驱动提取知识持续积累（.claude/knowledge/）
+- 知识工程：design 阶段消费历史决策和模式提升设计质量，merge 阶段反馈驱动提取知识持续积累（.autopilot/）
 - 智能提交：三阶段并行执行模型，React 优化、Bugfix 双模式验证（自动化测试 + 运行时验证）、代码测验、CLAUDE.md 更新、版本升级、ai-todo 同步
 - 生成高质量中文提交信息（业务描述 + 技术说明）
 - 工程诊断：10 维度加权评分（测试/类型/lint/构建/CI/结构/文档/Git/依赖/AI就绪度），S-F 等级，autopilot 兼容性矩阵，`--fix` 自动修复
@@ -294,6 +294,14 @@
   - stop-hook.sh merge 阶段注入 Agent 调用提醒
   - SKILL.md merge 工作流程重写：预收集输入 → 启动 Agent → 验证结果
   - QA 报告压缩：历史轮次报告压缩为一行摘要，只保留最新一轮完整报告
+
+### 2026-04-04
+- autopilot 升级至 v3.7.0：知识库路径迁移（.claude/knowledge/ → .autopilot/）
+  - 根因：.claude/ 目录常被项目 .gitignore 忽略，导致知识库无法被 git 跟踪
+  - 新增 scripts/migrate-knowledge.sh 迁移脚本（幂等、非破坏性、支持 worktree 场景）
+  - setup.sh 启动时自动检测旧路径并迁移，失败降级为提示不阻断启动
+  - worktree.mjs 符号链接逻辑从 .claude/knowledge 改为 .autopilot
+  - 全项目 ~20 个文件 ~91 处引用同步更新（Claude + Codex 双侧）
 
 ### 2026-03-30
 - autopilot 升级至 v3.5.2：sub-agent 模型分层优化

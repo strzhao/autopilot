@@ -23,7 +23,7 @@ description: 在 Codex 中执行 autopilot doctor 时使用。适用于用户提
   - 是否还能在没有 repo-local launcher、bridge、watcher、plugin-sync 的情况下工作
   - `.codex/` 目录是否存在或可安全创建
   - 当前项目说明是否清晰可发现，例如 `.agents.md`、`AGENTS.md`、`CLAUDE.md` 中至少有一个能作为协作入口
-  - `.claude/knowledge/` 如果存在，结构是否足够清晰供 Codex 只读消费
+  - `.autopilot/` 如果存在，结构是否足够清晰供 Codex 只读消费
   - `.codex/hooks.json` 是否包含可工作的 `Stop` runtime，而不只是轻量提示 hook
   - 是否仍在依赖旧的 bridge、watcher、plugin-sync、软链接共享目录方案
 - 当用户传入 `--fix`：

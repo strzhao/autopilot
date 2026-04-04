@@ -5,7 +5,7 @@ Detailed rules for the knowledge consumption and extraction steps in the autopil
 ## Knowledge Directory Structure (Three-Layer Progressive Disclosure)
 
 ```
-.claude/knowledge/
+.autopilot/
 ├── index.md              # Layer 1: 索引层（轻量元数据，always loaded）
 ├── decisions.md          # Layer 2: 全局决策日志（保持兼容）
 ├── patterns.md           # Layer 2: 全局模式教训（保持兼容）
@@ -78,11 +78,11 @@ All content files use append-only Markdown, tracked in git. Each file stays ≤1
 
 ## Consumption Rules (Design Phase) — Two-Phase Retrieval
 
-Before entering Plan Mode, scan `.claude/knowledge/` if it exists. 分两阶段执行，控制加载量：
+Before entering Plan Mode, scan `.autopilot/` if it exists. 分两阶段执行，控制加载量：
 
 ### Phase 1: Index Scan (<=5s)
 
-1. 检查 `.claude/knowledge/index.md` 是否存在
+1. 检查 `.autopilot/index.md` 是否存在
 2. 如果存在：读取 `index.md`，用当前目标的关键词匹配 tags
 3. 确定需要加载的文件列表（最多 3 个文件）
 4. 进入 Phase 2
@@ -138,7 +138,7 @@ After autopilot-commit completes, review the full autopilot run to extract knowl
 
 1. Analyze input sources for candidate entries
 2. If worth recording:
-   a. `mkdir -p .claude/knowledge/`
+   a. `mkdir -p .autopilot/`
    b. Auto-generate tags from design document and code changes (module names, tech stack, problem type)
    c. Determine target file:
       - General decision → `decisions.md`
@@ -147,30 +147,30 @@ After autopilot-commit completes, review the full autopilot run to extract knowl
    d. Append entries (with `<!-- tags: ... -->`) to the target file
    e. Update `index.md`: add index entry for each new knowledge entry (create `index.md` if not exists)
    f. Check line count for global files: if >100 lines, suggest migrating domain-specific entries to `domains/`
-   g. `git add .claude/knowledge/ && git commit -m "docs(knowledge): extract {brief summary}"`
+   g. `git add .autopilot/ && git commit -m "docs(knowledge): extract {brief summary}"`
 3. If nothing worth recording: append "知识提取：本次无新增" to the changelog and skip
 
 **Time limit**: Complete knowledge extraction within 2 minutes. Prefer recording fewer high-quality entries over exhaustive documentation.
 
 ### Worktree-Aware Extraction
 
-When running in a git worktree, `.claude/knowledge` should be a symlink to the main repo (created by autopilot's WorktreeCreate hook). However, the symlink may be missing (old worktree, hook failure, etc.). Use this 3-step detection chain to ensure knowledge always commits to the main repo:
+When running in a git worktree, `.autopilot` should be a symlink to the main repo (created by autopilot's WorktreeCreate hook). However, the symlink may be missing (old worktree, hook failure, etc.). Use this 3-step detection chain to ensure knowledge always commits to the main repo:
 
 #### Step 1: Symlink exists (happy path)
-Check: `test -L .claude/knowledge`
+Check: `test -L .autopilot`
 
 If **yes**:
 - Reading/Writing: Transparent — symlink target is main repo's files
 - Git operations: Resolve main repo and commit there:
   ```bash
-  KNOWLEDGE_REAL=$(realpath .claude/knowledge)
+  KNOWLEDGE_REAL=$(realpath .autopilot)
   MAIN_REPO=$(cd "$KNOWLEDGE_REAL" && git rev-parse --show-toplevel)
-  git -C "$MAIN_REPO" add .claude/knowledge/
+  git -C "$MAIN_REPO" add .autopilot/
   git -C "$MAIN_REPO" commit -m "docs(knowledge): extract {brief summary}"
   ```
 
 #### Step 2: In worktree, symlink missing (fallback + self-heal)
-If `.claude/knowledge` is NOT a symlink, check whether we are in a worktree:
+If `.autopilot` is NOT a symlink, check whether we are in a worktree:
 ```bash
 test -f .git   # .git is a FILE (not directory) in worktrees
 ```
@@ -183,21 +183,21 @@ If **yes** (in worktree, symlink missing):
    ```
 2. Copy knowledge to main repo and commit:
    ```bash
-   mkdir -p "$MAIN_REPO/.claude/knowledge/"
-   cp -r .claude/knowledge/* "$MAIN_REPO/.claude/knowledge/"
-   git -C "$MAIN_REPO" add .claude/knowledge/
+   mkdir -p "$MAIN_REPO/.autopilot/"
+   cp -r .autopilot/* "$MAIN_REPO/.autopilot/"
+   git -C "$MAIN_REPO" add .autopilot/
    git -C "$MAIN_REPO" commit -m "docs(knowledge): extract {brief summary}"
    ```
 3. Self-heal — repair the missing symlink for future runs:
    ```bash
-   rm -rf .claude/knowledge
-   ln -s "$MAIN_REPO/.claude/knowledge" .claude/knowledge
+   rm -rf .autopilot
+   ln -s "$MAIN_REPO/.autopilot" .autopilot
    ```
 
 #### Step 3: Normal repo (no worktree)
 If `.git` is a directory (not in a worktree), use standard git operations:
 ```bash
-git add .claude/knowledge/
+git add .autopilot/
 git commit -m "docs(knowledge): extract {brief summary}"
 ```
 

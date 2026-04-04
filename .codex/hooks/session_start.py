@@ -49,7 +49,7 @@ def main() -> int:
             "This repository ships a repo-local Codex compatibility layer.",
             "Use .codex/AGENTS.md plus the project fallback .agents.md as the Codex instruction sources.",
             "Prefer repo skills $autopilot-codex, $autopilot-commit-codex, and $autopilot-doctor-codex for Codex-native workflows.",
-            "Keep Codex runtime state under .codex/ and treat .claude/knowledge/ as read-only shared knowledge.",
+            "Keep Codex runtime state under .codex/ and treat .autopilot/ as read-only shared knowledge.",
             "Do not recreate the historical plugin-sync or bridge/watch-based Codex integration patterns.",
             f"Session cwd: {repo_root}",
         ]

@@ -132,37 +132,33 @@ function repair(worktreePath) {
 
   // ─── Knowledge directory symlink (always-link) ───
   // Knowledge is conceptually shared across all worktrees
-  const knowledgeSrc = join(root, '.claude', 'knowledge');
-  const knowledgeDst = join(worktreePath, '.claude', 'knowledge');
+  const knowledgeSrc = join(root, '.autopilot');
+  const knowledgeDst = join(worktreePath, '.autopilot');
   if (existsSync(knowledgeSrc)) {
     try {
       const stat = lstatSync(knowledgeDst);
       if (stat.isSymbolicLink()) {
-        log('   — .claude/knowledge 已是符号链接');
+        log('   — .autopilot 已是符号链接');
       } else if (stat.isDirectory()) {
         // Replace git-checked-out copy with symlink to main repo
-        log('→ 替换 .claude/knowledge 为符号链接（指向主仓库）...');
+        log('→ 替换 .autopilot 为符号链接（指向主仓库）...');
         rmSync(knowledgeDst, { recursive: true, force: true });
         symlinkSync(knowledgeSrc, knowledgeDst);
-        log('   ✓ .claude/knowledge → 主仓库');
+        log('   ✓ .autopilot → 主仓库');
       }
     } catch (e) {
-      // knowledgeDst doesn't exist — check if parent dir exists and create symlink
+      // knowledgeDst doesn't exist — create symlink
       if (e.code === 'ENOENT') {
-        const dir = dirname(knowledgeDst);
-        if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
         symlinkSync(knowledgeSrc, knowledgeDst);
-        log('   ✓ .claude/knowledge → 主仓库');
+        log('   ✓ .autopilot → 主仓库');
       } else {
-        log(`   ⚠ 无法检查 .claude/knowledge: ${e.message}`);
+        log(`   ⚠ 无法检查 .autopilot: ${e.message}`);
       }
     }
   } else {
     // Main repo has no knowledge dir yet — create it proactively
-    log('→ 主仓库无 .claude/knowledge，预创建目录并建立符号链接...');
+    log('→ 主仓库无 .autopilot，预创建目录并建立符号链接...');
     mkdirSync(knowledgeSrc, { recursive: true });
-    const dir = dirname(knowledgeDst);
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     try {
       const stat = lstatSync(knowledgeDst);
       if (!stat.isSymbolicLink()) {
@@ -171,7 +167,7 @@ function repair(worktreePath) {
     } catch { /* doesn't exist */ }
     if (!existsSync(knowledgeDst)) {
       symlinkSync(knowledgeSrc, knowledgeDst);
-      log('   ✓ .claude/knowledge → 主仓库（预创建）');
+      log('   ✓ .autopilot → 主仓库（预创建）');
     }
   }
 
@@ -311,12 +307,12 @@ function remove() {
     } catch { /* dir may not exist */ }
   }
 
-  // Clean up .claude/knowledge symlink
-  const knowledgePath = join(worktreePath, '.claude', 'knowledge');
+  // Clean up .autopilot symlink
+  const knowledgePath = join(worktreePath, '.autopilot');
   try {
     if (lstatSync(knowledgePath).isSymbolicLink()) {
       unlinkSync(knowledgePath);
-      log('   ✓ 移除符号链接: .claude/knowledge');
+      log('   ✓ 移除符号链接: .autopilot');
     }
   } catch { /* not a symlink or doesn't exist */ }
 

@@ -149,7 +149,7 @@ chore: 升级依赖版本
 - 读取现有 CLAUDE.md → 对比改动 → Edit 最小化更新
 - 跳过：纯代码修改（bug fix/重构/性能优化）、样式/测试/注释、CLAUDE.md 已在改动中
 - 更新原则：最小改动、保持风格、事实优先（不写计划中的功能）
-- 如果 `.claude/knowledge/` 存在且有新增内容，确认 CLAUDE.md 中有对知识库目录的提及
+- 如果 `.autopilot/` 存在且有新增内容，确认 CLAUDE.md 中有对知识库目录的提及
 
 **b) 版本号升级** — 当 commit type 为 `feat`/`fix`/`perf` 时：
 - `feat` → minor 升级（1.2.x → 1.3.0），breaking change → major 升级

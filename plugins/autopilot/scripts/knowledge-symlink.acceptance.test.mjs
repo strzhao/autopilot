@@ -6,7 +6,7 @@
  * without reading the blue team implementation.
  *
  * Design contract:
- *   - repair() replaces worktree's .claude/knowledge/ with a symlink to main repo
+ *   - repair() replaces worktree's .autopilot/ with a symlink to main repo
  *   - remove() cleans up the knowledge symlink
  *   - Symlinks provide transparent read/write access to main repo knowledge
  */
@@ -29,9 +29,9 @@ import { tmpdir } from 'node:os';
  * Simulates the knowledge-symlink portion of repair().
  *
  * Per design:
- *   1. If main repo has no .claude/knowledge/ → proactively create it, then symlink
- *   2. If worktree .claude/knowledge is already a symlink → do nothing
- *   3. If worktree .claude/knowledge is a real directory → replace with symlink
+ *   1. If main repo has no .autopilot/ → proactively create it, then symlink
+ *   2. If worktree .autopilot is already a symlink → do nothing
+ *   3. If worktree .autopilot is a real directory → replace with symlink
  *   4. If worktree .claude/ exists but knowledge/ does not → create symlink
  */
 function repairKnowledgeSymlink(mainRepoRoot, worktreeRoot) {
@@ -69,7 +69,7 @@ function repairKnowledgeSymlink(mainRepoRoot, worktreeRoot) {
 /**
  * Simulates the knowledge-symlink portion of remove().
  *
- * Per design: if worktree .claude/knowledge is a symlink, remove it.
+ * Per design: if worktree .autopilot is a symlink, remove it.
  */
 function removeKnowledgeSymlink(worktreeRoot) {
   const wtKnowledge = join(worktreeRoot, '.claude', 'knowledge');
@@ -113,12 +113,12 @@ describe('Knowledge Symlink — Acceptance Tests', () => {
   it('repair() should replace real knowledge directory with symlink to main repo', () => {
     const { mainRepo, worktree } = scaffold('t1');
 
-    // Main repo has .claude/knowledge/ with a file
+    // Main repo has .autopilot/ with a file
     const mainKnowledge = join(mainRepo, '.claude', 'knowledge');
     mkdirSync(mainKnowledge, { recursive: true });
     writeFileSync(join(mainKnowledge, 'decisions.md'), '# Decisions\n');
 
-    // Worktree has .claude/knowledge/ as a real directory (with its own file)
+    // Worktree has .autopilot/ as a real directory (with its own file)
     const wtKnowledge = join(worktree, '.claude', 'knowledge');
     mkdirSync(wtKnowledge, { recursive: true });
     writeFileSync(join(wtKnowledge, 'local-only.md'), 'local content');
@@ -127,7 +127,7 @@ describe('Knowledge Symlink — Acceptance Tests', () => {
 
     // Assert: worktree's knowledge is now a symlink
     const stat = lstatSync(wtKnowledge);
-    assert.ok(stat.isSymbolicLink(), '.claude/knowledge should be a symlink after repair');
+    assert.ok(stat.isSymbolicLink(), '.autopilot should be a symlink after repair');
 
     // Assert: symlink points to main repo
     const target = readFileSync(join(wtKnowledge, 'decisions.md'), 'utf8');
@@ -173,7 +173,7 @@ describe('Knowledge Symlink — Acceptance Tests', () => {
     // Main repo: .claude/ exists but NO knowledge/
     mkdirSync(join(mainRepo, '.claude'), { recursive: true });
 
-    // Worktree: has a real .claude/knowledge/ directory
+    // Worktree: has a real .autopilot/ directory
     const wtKnowledge = join(worktree, '.claude', 'knowledge');
     mkdirSync(wtKnowledge, { recursive: true });
 
@@ -181,10 +181,10 @@ describe('Knowledge Symlink — Acceptance Tests', () => {
 
     const mainKnowledge = join(mainRepo, '.claude', 'knowledge');
 
-    // Assert: main repo's .claude/knowledge/ now exists
-    assert.ok(existsSync(mainKnowledge), 'main repo should have .claude/knowledge/ after repair');
+    // Assert: main repo's .autopilot/ now exists
+    assert.ok(existsSync(mainKnowledge), 'main repo should have .autopilot/ after repair');
 
-    // Assert: worktree's .claude/knowledge is now a symlink
+    // Assert: worktree's .autopilot is now a symlink
     const stat = lstatSync(wtKnowledge);
     assert.ok(stat.isSymbolicLink(), 'worktree knowledge should be a symlink after repair');
 
@@ -200,7 +200,7 @@ describe('Knowledge Symlink — Acceptance Tests', () => {
   // -----------------------------------------------------------------------
   // Test 4: repair() creates symlink when worktree has no knowledge yet
   // -----------------------------------------------------------------------
-  it('repair() should create symlink even if worktree has no .claude/knowledge yet', () => {
+  it('repair() should create symlink even if worktree has no .autopilot yet', () => {
     const { mainRepo, worktree } = scaffold('t4');
 
     const mainKnowledge = join(mainRepo, '.claude', 'knowledge');
