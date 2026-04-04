@@ -257,7 +257,7 @@ SESSION_ID="${CLAUDE_CODE_SESSION_ID:-}"
 # 迁移检测：旧路径 .claude/knowledge/ → 新路径 .autopilot/
 if [[ -d "$PROJECT_ROOT/.claude/knowledge" ]] && [[ ! -d "$PROJECT_ROOT/.autopilot" ]]; then
     echo "📦 检测到旧知识库 .claude/knowledge/，自动迁移到 .autopilot/ ..."
-    bash "${CLAUDE_PLUGIN_ROOT}/scripts/migrate-knowledge.sh"
+    bash "$(dirname "$0")/migrate-knowledge.sh"
     echo ""
 fi
 
@@ -269,7 +269,7 @@ if [[ -d "$PROJECT_ROOT/.autopilot" ]]; then
 elif [[ -d "$PROJECT_ROOT/.claude/knowledge" ]]; then
     KNOWLEDGE_HINT="
 > ⚠️ 知识库仍在旧路径 .claude/knowledge/，建议手动运行迁移脚本:
-> bash ${CLAUDE_PLUGIN_ROOT}/scripts/migrate-knowledge.sh"
+> bash $(dirname "$0")/migrate-knowledge.sh"
 fi
 
 cat > "$STATE_FILE" <<EOF
