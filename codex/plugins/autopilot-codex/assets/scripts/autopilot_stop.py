@@ -36,7 +36,7 @@ def build_phase_prompt(state_path: Path, phase: str, iteration: int) -> str:
     )
     if phase == "design":
         return (
-            f"{base} Load relevant .claude/knowledge context, finish the design document, run the plan reviewer sub-agent, "
+            f"{base} Load relevant .autopilot context, finish the design document, run the plan reviewer sub-agent, "
             "and stop only when gate=`design-approval`."
         )
     if phase == "implement":

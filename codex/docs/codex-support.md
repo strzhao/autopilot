@@ -35,7 +35,7 @@
 - Claude 插件市场配置仍然是 `.claude-plugin/marketplace.json`
 - 根目录 `AGENTS.md` 继续保留给 Claude 侧既有软链接，不作为本次 Codex 兼容层写入目标
 - Codex 运行时状态和报告统一写入 `.codex/`
-- `.claude/knowledge/` 只作为共享知识库读取，不作为 Codex 运行时状态目录
+- `.autopilot/` 只作为共享知识库读取，不作为 Codex 运行时状态目录
 
 ## 路径约定
 

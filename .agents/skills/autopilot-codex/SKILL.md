@@ -21,7 +21,7 @@ Claude 专有机制只作为行为 oracle，不直接把运行时写回 `.claude
 - 运行时状态文件：`.codex/autopilot.local.md`
 - 不要写入 `.claude/autopilot.local.md`
 - 可以依赖 repo-local `.codex/hooks.json` 的 `Stop` runtime
-- `.claude/knowledge/` 可作为只读知识库
+- `.autopilot/` 可作为只读知识库
 - 不恢复历史 plugin-sync、bridge、watcher
 
 ## Runtime Helpers
@@ -75,7 +75,7 @@ python3 "$AUTOPILOT_STATE_SCRIPT" cancel [--reason "<TEXT>"]
 
 ### 2. Design
 
-- 读取 `.claude/knowledge/index.md`；没有索引时退回读 `decisions.md` 和 `patterns.md`
+- 读取 `.autopilot/index.md`；没有索引时退回读 `decisions.md` 和 `patterns.md`
 - 探索代码库，识别技术栈、现有模式、测试框架、可复用模块
 - 在状态文件中写入：
   - `## 目标`

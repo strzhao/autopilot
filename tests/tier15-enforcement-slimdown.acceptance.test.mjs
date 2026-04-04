@@ -50,8 +50,8 @@ const COMPLETION_REPORT_TEMPLATE_PATH = resolve(
   ROOT,
   'plugins/autopilot/skills/autopilot/references/completion-report-template.md'
 );
-const PATTERNS_PATH = resolve(ROOT, '.claude/knowledge/patterns.md');
-const INDEX_PATH = resolve(ROOT, '.claude/knowledge/index.md');
+const PATTERNS_PATH = resolve(ROOT, '.autopilot/patterns.md');
+const INDEX_PATH = resolve(ROOT, '.autopilot/index.md');
 
 // ---------------------------------------------------------------------------
 // 1. SKILL.md Tier 1.5 scenario count check (Improvement 1)
