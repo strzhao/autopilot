@@ -133,7 +133,8 @@ elif [[ "$PHASE" == "merge" ]]; then
 else
     PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: ${PHASE}, 迭代: ${NEXT_ITERATION}. 按照 autopilot skill 的指引执行当前阶段的工作流."
 fi
-SYSTEM_MSG="autopilot iteration ${NEXT_ITERATION} | phase: ${PHASE}"
+MODE=$(get_field "mode" || true)
+SYSTEM_MSG="autopilot iteration ${NEXT_ITERATION} | phase: ${PHASE}${MODE:+ | mode: $MODE}"
 
 jq -n \
     --arg prompt "$PROMPT" \

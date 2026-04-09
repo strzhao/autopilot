@@ -37,19 +37,26 @@ autopilot — AI 自动驾驶工程套件
 
 用法:
   /autopilot <目标描述> [选项]           启动全流程闭环（红蓝对抗）
+  /autopilot <任务ID>                    匹配项目任务文件，brief 模式执行
   /autopilot commit                      智能提交（React 优化 + 代码测验）
   /autopilot doctor [--fix]              工程健康度诊断（评估 autopilot 兼容性）
   /autopilot approve [反馈]              批准当前审批门
   /autopilot revise <反馈>               要求修改
-  /autopilot status                      查看状态
+  /autopilot status                      查看状态（有项目时显示 DAG）
+  /autopilot next                        查找就绪任务
   /autopilot cancel                      取消并清理
 
 选项:
-  --max-iterations <n>    最大迭代次数 (默认: 30)
-  --max-retries <n>       单阶段最大重试次数 (默认: 3)
+  --project                 强制项目模式（跳过复杂度检测）
+  --single                  强制单任务模式（跳过复杂度检测）
+  --max-iterations <n>      最大迭代次数 (默认: 30)
+  --max-retries <n>         单阶段最大重试次数 (默认: 3)
 
 示例:
   /autopilot 实现用户头像上传功能，支持裁剪和压缩
+  /autopilot --project 复刻 Happy 到 Raven 生态
+  /autopilot 001-wire-schema
+  /autopilot next
   /autopilot commit
   /autopilot doctor
   /autopilot doctor --fix
@@ -149,27 +156,136 @@ HELP_EOF
         ;;
 
     status)
-        if [[ ! -f "$STATE_FILE" ]]; then
-            echo "📋 没有活跃的 autopilot。"
+        if [[ -f "$STATE_FILE" ]]; then
+            PHASE=$(get_field "phase")
+            GATE=$(get_field "gate")
+            ITERATION=$(get_field "iteration")
+            MAX_ITER=$(get_field "max_iterations")
+            RETRY=$(get_field "retry_count")
+            MAX_RETRY=$(get_field "max_retries")
+            STARTED=$(get_field "started_at")
+            MODE=$(get_field "mode" || true)
+
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "  autopilot 状态"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "阶段:     $PHASE"
+            echo "审批门:   ${GATE:-无}"
+            echo "迭代:     $ITERATION / $MAX_ITER"
+            echo "重试:     $RETRY / $MAX_RETRY"
+            echo "开始时间: $STARTED"
+            [[ -n "$MODE" ]] && echo "模式:     $MODE"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        fi
+        # 项目 DAG 状态（无论是否有活跃 autopilot 都尝试显示）
+        DAG_FILE="$PROJECT_ROOT/.autopilot/project/dag.yaml"
+        if [[ -f "$DAG_FILE" ]]; then
+            [[ -f "$STATE_FILE" ]] && echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "  项目 DAG"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            # 用 awk 解析 dag.yaml（兼容 bash 3.2）
+            awk '
+            /^[[:space:]]*-[[:space:]]*id:/ {
+                gsub(/.*id:[[:space:]]*"?/, ""); gsub(/".*/, ""); id=$0
+                title=""; status=""
+            }
+            /^[[:space:]]*title:/ {
+                gsub(/.*title:[[:space:]]*"?/, ""); gsub(/".*/, ""); title=$0
+            }
+            /^[[:space:]]*status:/ {
+                gsub(/.*status:[[:space:]]*"?/, ""); gsub(/".*/, ""); status=$0
+                if (id != "" && title != "") {
+                    total++
+                    if (status == "done") { icon="✅"; done_count++ }
+                    else if (status == "in_progress") icon="🔄"
+                    else if (status == "failed") icon="❌"
+                    else if (status == "skipped") icon="⏭️"
+                    else icon="⏳"
+                    printf "  %s %s: %s\n", icon, id, title
+                    id=""; title=""; status=""
+                }
+            }
+            END {
+                printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                printf "  进度: %d / %d 完成\n", done_count, total
+                printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            }
+            ' "$DAG_FILE"
+        elif [[ ! -f "$STATE_FILE" ]]; then
+            echo "📋 没有活跃的 autopilot，也没有项目 DAG。"
+        fi
+        exit 0
+        ;;
+
+    next)
+        DAG_FILE="$PROJECT_ROOT/.autopilot/project/dag.yaml"
+        if [[ ! -f "$DAG_FILE" ]]; then
+            echo "❌ 没有项目 DAG。使用 /autopilot --project <目标> 创建项目。"
             exit 0
         fi
-        PHASE=$(get_field "phase")
-        GATE=$(get_field "gate")
-        ITERATION=$(get_field "iteration")
-        MAX_ITER=$(get_field "max_iterations")
-        RETRY=$(get_field "retry_count")
-        MAX_RETRY=$(get_field "max_retries")
-        STARTED=$(get_field "started_at")
-
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "  autopilot 状态"
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "阶段:     $PHASE"
-        echo "审批门:   ${GATE:-无}"
-        echo "迭代:     $ITERATION / $MAX_ITER"
-        echo "重试:     $RETRY / $MAX_RETRY"
-        echo "开始时间: $STARTED"
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        # 用 awk 解析 DAG 并找就绪任务（兼容 bash 3.2，不用 declare -A）
+        awk '
+        /^[[:space:]]*-[[:space:]]*id:/ {
+            gsub(/.*id:[[:space:]]*"?/, ""); gsub(/".*/, ""); id=$0
+            title=""; status=""; deps=""
+        }
+        /^[[:space:]]*title:/ {
+            gsub(/.*title:[[:space:]]*"?/, ""); gsub(/".*/, ""); title=$0
+        }
+        /^[[:space:]]*status:/ {
+            gsub(/.*status:[[:space:]]*"?/, ""); gsub(/".*/, ""); status=$0
+        }
+        /^[[:space:]]*depends_on:/ {
+            gsub(/.*depends_on:[[:space:]]*/, ""); deps=$0
+        }
+        # 当读到下一个 id 或 EOF 前，处理完整任务
+        /^[[:space:]]*-[[:space:]]*id:/ && NR > 1 {
+            # 保存上一个任务
+        }
+        {
+            if (id != "" && title != "" && status != "") {
+                ids[++n] = id
+                titles[id] = title
+                statuses[id] = status
+                dep_lists[id] = deps
+                id=""; title=""; status=""; deps=""
+            }
+        }
+        END {
+            all_done = 1; has_ready = 0
+            for (i = 1; i <= n; i++) {
+                tid = ids[i]
+                if (statuses[tid] != "done" && statuses[tid] != "skipped") all_done = 0
+                if (statuses[tid] != "pending") continue
+                # 检查依赖是否全部 done
+                d = dep_lists[tid]
+                gsub(/[\[\]" ]/, "", d)
+                ready = 1
+                if (d != "") {
+                    split(d, darr, ",")
+                    for (j in darr) {
+                        if (darr[j] != "" && statuses[darr[j]] != "done") {
+                            ready = 0; break
+                        }
+                    }
+                }
+                if (ready) {
+                    if (!has_ready) printf "📋 就绪任务（可立即执行）：\n"
+                    has_ready = 1
+                    printf "   → /autopilot %s\n     %s\n", tid, titles[tid]
+                }
+            }
+            if (all_done && !has_ready) printf "🎉 所有任务已完成！\n"
+            else if (!has_ready) {
+                printf "⏳ 没有就绪任务。以下任务正在阻塞：\n"
+                for (i = 1; i <= n; i++) {
+                    tid = ids[i]
+                    if (statuses[tid] == "pending") printf "   ⏳ %s: %s\n", tid, titles[tid]
+                }
+            }
+        }
+        ' "$DAG_FILE"
         exit 0
         ;;
 
@@ -212,6 +328,8 @@ fi
 PROMPT_PARTS=()
 MAX_ITERATIONS=30
 MAX_RETRIES=3
+MODE_OVERRIDE=""
+BRIEF_FILE=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -231,6 +349,14 @@ while [[ $# -gt 0 ]]; do
             MAX_RETRIES="$2"
             shift 2
             ;;
+        --project)
+            MODE_OVERRIDE="project"
+            shift
+            ;;
+        --single)
+            MODE_OVERRIDE="single"
+            shift
+            ;;
         *)
             PROMPT_PARTS+=("$1")
             shift
@@ -245,6 +371,18 @@ if [[ -z "$GOAL" ]]; then
     echo "   用法: /autopilot <目标描述>"
     echo "   示例: /autopilot 实现用户头像上传功能"
     exit 0
+fi
+
+# 任务文件自然语言匹配（项目模式下）
+TASKS_DIR="$PROJECT_ROOT/.autopilot/project/tasks"
+if [[ -d "$TASKS_DIR" ]] && [[ -f "$PROJECT_ROOT/.autopilot/project/dag.yaml" ]]; then
+    # 先精确前缀匹配，再模糊包含匹配
+    MATCH=$(find "$TASKS_DIR" -maxdepth 1 -name "${GOAL}*.md" ! -name "*.handoff.md" 2>/dev/null | head -1)
+    [[ -z "$MATCH" ]] && MATCH=$(find "$TASKS_DIR" -maxdepth 1 -name "*${GOAL}*.md" ! -name "*.handoff.md" 2>/dev/null | head -1)
+    if [[ -n "$MATCH" ]]; then
+        BRIEF_FILE="$(realpath "$MATCH")"
+        echo "📎 匹配到项目任务: $(basename "$MATCH")"
+    fi
 fi
 
 # 创建状态文件
@@ -272,7 +410,37 @@ elif [[ -d "$PROJECT_ROOT/.claude/knowledge" ]]; then
 > bash $(dirname "$0")/migrate-knowledge.sh"
 fi
 
-cat > "$STATE_FILE" <<EOF
+# Brief 模式：从任务简报文件启动
+if [[ -n "$BRIEF_FILE" ]]; then
+    # 读取 brief 内容（限制前 100 行）
+    BRIEF_CONTENT=$(head -100 "$BRIEF_FILE")
+
+    # 解析 brief 的 depends_on 字段，收集 handoff 文件
+    HANDOFF_CONTENT=""
+    BRIEF_DIR=$(dirname "$BRIEF_FILE")
+    # macOS 兼容：不用 grep -P，用 sed 提取 depends_on 数组中的引号内容
+    DEPS=$(sed -n 's/.*depends_on:.*\[//p' "$BRIEF_FILE" 2>/dev/null | sed 's/\].*//;s/[",]/ /g' || true)
+    for dep in $DEPS; do
+        dep="${dep//\"/}"
+        HANDOFF="$BRIEF_DIR/${dep}.handoff.md"
+        if [[ -f "$HANDOFF" ]]; then
+            HANDOFF_CONTENT="${HANDOFF_CONTENT}
+--- handoff: ${dep} ---
+$(head -50 "$HANDOFF")
+"
+        fi
+    done
+
+    # 读取架构设计摘要（前 60 行）
+    DESIGN_SUMMARY=""
+    DESIGN_FILE="$PROJECT_ROOT/.autopilot/project/design.md"
+    if [[ -f "$DESIGN_FILE" ]]; then
+        DESIGN_SUMMARY="
+--- 架构设计摘要 ---
+$(head -60 "$DESIGN_FILE")"
+    fi
+
+    cat > "$STATE_FILE" <<EOF
 ---
 active: true
 phase: "design"
@@ -281,6 +449,47 @@ iteration: 1
 max_iterations: $MAX_ITERATIONS
 max_retries: $MAX_RETRIES
 retry_count: 0
+mode: "single"
+brief_file: "$BRIEF_FILE"
+session_id: $SESSION_ID
+started_at: "$(now_iso)"
+---
+
+## 目标
+$BRIEF_CONTENT
+$HANDOFF_CONTENT
+$DESIGN_SUMMARY
+$KNOWLEDGE_HINT
+
+## 设计文档
+(待 design 阶段填充)
+
+## 实现计划
+(待 design 阶段填充)
+
+## 红队验收测试
+(待 implement 阶段填充)
+
+## QA 报告
+(待 qa 阶段填充)
+
+## 变更日志
+- [$(now_iso)] autopilot 初始化（brief 模式），任务: $(basename "$BRIEF_FILE")
+EOF
+
+else
+    # 正常模式状态文件
+    cat > "$STATE_FILE" <<EOF
+---
+active: true
+phase: "design"
+gate: ""
+iteration: 1
+max_iterations: $MAX_ITERATIONS
+max_retries: $MAX_RETRIES
+retry_count: 0
+mode: "${MODE_OVERRIDE}"
+brief_file: ""
 session_id: $SESSION_ID
 started_at: "$(now_iso)"
 ---
@@ -304,6 +513,7 @@ $KNOWLEDGE_HINT
 ## 变更日志
 - [$(now_iso)] autopilot 初始化，目标: $GOAL
 EOF
+fi
 
 # 输出信息
 IS_WORKTREE=""
@@ -311,16 +521,28 @@ if [[ -f "$PROJECT_ROOT/.git" ]]; then
     IS_WORKTREE="(worktree: $(basename "$PROJECT_ROOT"))"
 fi
 
+# 根据模式调整输出
+if [[ -n "$BRIEF_FILE" ]]; then
+    DISPLAY_GOAL="任务: $(basename "$BRIEF_FILE" .md)"
+    PHASE_FLOW="design → implement → qa → merge (brief 模式)"
+elif [[ "$MODE_OVERRIDE" == "project" ]]; then
+    DISPLAY_GOAL="$GOAL"
+    PHASE_FLOW="design → 复杂度检测 → 架构设计 → DAG 创建 → done"
+else
+    DISPLAY_GOAL="$GOAL"
+    PHASE_FLOW="design → 审批 → implement → qa → 审批 → merge"
+fi
+
 cat <<EOF
 🔄 autopilot 已启动！
 
-目标: $GOAL
+目标: $DISPLAY_GOAL
 最大迭代: $MAX_ITERATIONS
 最大重试: $MAX_RETRIES
 状态文件: $STATE_FILE ${IS_WORKTREE}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  阶段流程: design → 审批 → implement → qa → 审批 → merge
+  阶段流程: $PHASE_FLOW
   当前阶段: design（AI 正在分析目标并设计方案）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -328,6 +550,7 @@ cat <<EOF
   /autopilot approve    批准当前审批门
   /autopilot revise     要求修改
   /autopilot status     查看状态
+  /autopilot next       查找就绪任务（项目模式）
   /autopilot cancel     取消循环
   /autopilot commit     智能提交（独立使用）
 
