@@ -1,0 +1,59 @@
+plugins/autopilot/skills/autopilot/SKILL.md
+  2afbf010302192de 6
+CLAUDE.md
+  2afbf010302192de 51
+.claude-plugin/marketplace.json
+  2afbf010302192de 32
+plugins/autopilot/.claude-plugin/plugin.json
+  2afbf010302192de 3
+.shellcheckrc
+  2afbf010302192de 1-2
+plugins/autopilot/scripts/setup.sh
+  2afbf010302192de 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.6",
+  "base_commit_sha": "51baf0bd2b81a74ad5ab00c5bae91356050423d6",
+  "prompts": {
+    "2afbf010302192de": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "97dad07d-a238-430b-9ad3-0c0d1f430e30",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 6,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    },
+    "e5fb4360e35ab949": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "44ccab8a-6ecb-4288-85bb-7952c6efec6e",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "fbae0a0cea84a364": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "20d9620e-5ad0-4fcc-a415-2e44afad932d",
+        "model": "glm-5.1"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  }
+}
