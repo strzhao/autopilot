@@ -17,4 +17,4 @@
 - [2026-03-25] 符号链接检测 ≠ worktree 检测，防御需多层 | tags: worktree, knowledge, symlink, fallback, defense-in-depth | → patterns.md
 - [2026-03-26] Tier 1.5 场景部分执行等于未执行 | tags: autopilot, qa, tier-1.5, smoke-test, partial-execution | → patterns.md
 - [2026-03-27] Skill 规范不应硬编码项目特定的文件路径 | tags: autopilot-commit, skill, version, hardcoding, claude-md | → patterns.md
-- [2026-03-30] SKILL.md 文档文本中的 agent 名称会干扰红队 indexOf 测试 | tags: autopilot, red-team, testing, indexOf, text-proximity | → patterns.md
+- [2026-03-30] SKILL.md 文档文本中的标识符会干扰红队正则测试 | tags: autopilot, red-team, testing, indexOf, text-proximity, regex | → patterns.md

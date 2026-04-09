@@ -65,8 +65,8 @@
 **Lesson**: Skill 规范应引导 AI 从项目文档（CLAUDE.md）中自主发现需要操作的文件，而非硬编码固定路径。硬编码的问题：(1) 新增文件时必须同步修改 Skill 规范 (2) 不同项目结构不同，硬编码不通用 (3) AI 按列表执行时容易"完成列表=完成任务"的心态遗漏列表外的文件。正确做法：CLAUDE.md 集中维护项目特定信息，Skill 规范只描述通用流程（发现→更新→校验）
 **Evidence**: marketplace.json autopilot 版本 3.0.1 vs plugin.json 3.3.1（差 6 个版本），eb0e38c 修复后仍未覆盖
 
-### [2026-03-30] SKILL.md 文档文本中的 agent 名称会干扰红队 indexOf 测试
-<!-- tags: autopilot, red-team, testing, indexOf, text-proximity -->
-**Scenario**: 成本优化章节表格包含 agent 名称（plan-reviewer、红队、design-reviewer），红队验收测试用 `indexOf('agent-name')` + 2000 字符窗口查找 `model: "sonnet"`，但首次匹配命中了文档文本而非 Agent 调用行
-**Lesson**: SKILL.md 中新增文档章节引用 agent 名称时，要注意红队测试的 indexOf 匹配机制——首次出现位置可能远离实际 Agent 调用。两种缓解：(1) 文档中使用中文别名（"设计审查 Agent"）而非英文标识符 (2) 在 Agent 调用行中明确包含 agent 名称（如 `使用 Agent 工具启动 design-reviewer（model: "sonnet"）`）。核心原则：文档描述用中文泛称，精确标识符只出现在技术定义处
-**Evidence**: 红队 17 测试初始 2 个失败→3 个失败→1 个失败→全通过，修复 3 轮
+### [2026-03-30] SKILL.md 文档文本中的标识符会干扰红队正则测试
+<!-- tags: autopilot, red-team, testing, indexOf, text-proximity, regex -->
+**Scenario**: (1) 成本优化章节表格包含 agent 名称（plan-reviewer、红队、design-reviewer），红队验收测试用 `indexOf('agent-name')` + 2000 字符窗口查找 `model: "sonnet"`，首次匹配命中文档文本而非 Agent 调用行。(2) v3.8.0 步骤 2 文本"供步骤 3 的 Plan 审查使用"包含"步骤 3"，红队测试用 `/步骤\s*3/` 提取步骤 2 内容时正则提前截断，导致步骤 2 中的降级/隔离关键词无法被检测到。
+**Lesson**: SKILL.md 中文档描述引用其他步骤编号或 agent 标识符时，会被红队测试的正则/indexOf 匹配机制误命中。两类缓解：(1) agent 名称用中文泛称，精确标识符只出现在技术定义处 (2) 跨步骤引用避免使用"步骤 N"格式，改用"后续 Plan 审查"等无编号泛称。核心原则：文档描述中的任何标识符都可能成为正则锚点。
+**Evidence**: v3.5.2 红队 17 测试 2→3→1→0 失败修复 3 轮；v3.8.0 红队 36 测试因"步骤 3"引用导致 step2Match 仅捕获 294 字符（预期 ~800），修复改为"后续 Plan 审查"后通过
