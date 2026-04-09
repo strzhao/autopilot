@@ -1,0 +1,2 @@
+# SC1091: Not following sourced file (shellcheck can't resolve dynamic paths)
+disable=SC1091

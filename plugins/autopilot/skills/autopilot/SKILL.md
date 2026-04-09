@@ -3,7 +3,7 @@ name: autopilot
 description: 当用户需要从目标描述到代码合并的端到端自动化、或说"自动驾驶"时使用。
 ---
 
-!`bash "${CLAUDE_PLUGIN_ROOT}/scripts/setup.sh" "$ARGUMENTS"`
+!`bash "${CLAUDE_PLUGIN_ROOT}/scripts/setup.sh" '$ARGUMENTS'`
 
 # Autopilot — AI 自动驾驶工程闭环
 

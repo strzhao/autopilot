@@ -19,7 +19,7 @@ source "$(dirname "$0")/lib.sh"
 init_paths
 
 # ── 参数安全处理 ──────────────────────────────────────────────
-# SKILL.md 用 "$ARGUMENTS" 引号传参（防止 shell 解析括号等特殊字符），
+# SKILL.md 用 '$ARGUMENTS' 单引号传参（防止 zsh glob/brace 展开），
 # 导致所有参数合并为单个字符串。这里重新按空格拆分恢复原始行为。
 if [[ $# -eq 1 && "$1" == *" "* ]]; then
     read -ra _SPLIT_ARGS <<< "$1"
