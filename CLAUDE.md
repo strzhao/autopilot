@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.7.1)
+### 3. autopilot (v3.8.0)
 <<<<<<< HEAD
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断 + 性能保障 + Worktree 自动初始化）
@@ -64,6 +64,7 @@
 - 阶段状态机驱动：design → implement → qa → auto-fix → merge
 - 仅在两个审批门需要人工介入（设计审批 + 验收审批）
 - 设计方案审查：design 阶段 ExitPlanMode 前启动 plan-reviewer sub-agent，6 维度审查（需求完整性、技术可行性、任务分解、验证覆盖、风险评估、范围控制），置信度 ≥90 为 BLOCKER，最多 2 轮审查
+- 设计阶段验收场景独立生成 + Plan Reviewer 双向覆盖校验（三层信息隔离验证链）
 - 红蓝对抗：蓝队按计划编码 + 红队仅看设计文档写验收测试，并行执行、信息隔离
 - 五层 QA 检查（Tier 0 红队验收测试 + Tier 1-4）+ Tier 3.5 性能保障验证 + 自动修复循环（最多 3 次重试）
 - 系统化调试方法论：观察 → 假设 → 验证 → 修复（四阶段）
@@ -288,6 +289,14 @@
 ---
 
 ## 更新日志
+
+### 2026-04-09
+- autopilot 升级至 v3.8.0：design 阶段新增验收场景生成器 + Plan Reviewer 双向覆盖校验
+  - 新增 references/scenario-generator-prompt.md 验收场景生成器 prompt 模板
+  - 验收场景生成器与 Explore agent 并行运行，从纯目标视角生成 e2e 文本用例（信息隔离）
+  - Plan Reviewer 增强：Dim 1 正向覆盖校验 + Dim 4 反向覆盖校验 + 场景覆盖分析输出
+  - 三层信息隔离验证链：L1 验收场景（仅目标）→ L2 Plan Reviewer（设计+场景）→ L3 红队（仅设计）
+  - 降级策略：生成器失败时 Plan Reviewer 走原有流程
 
 ### 2026-04-04
 - autopilot 升级至 v3.7.0：工程诊断新增 Dim 11 性能保障维度 + QA 新增 Tier 3.5 性能保障验证
