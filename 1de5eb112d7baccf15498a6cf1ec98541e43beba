@@ -1,0 +1,48 @@
+tests/scenario-generator-v3.8.acceptance.test.mjs
+  e5fb4360e35ab949 1-696
+plugins/autopilot/skills/autopilot/SKILL.md
+  e5fb4360e35ab949 81,119-121,138,152-154
+plugins/autopilot/skills/autopilot/references/scenario-generator-prompt.md
+  e5fb4360e35ab949 1-50
+plugins/autopilot/skills/autopilot/references/plan-reviewer-prompt.md
+  e5fb4360e35ab949 17-19,25,28,47-50
+CLAUDE.md
+  e5fb4360e35ab949 51,67,293-300
+.claude-plugin/marketplace.json
+  e5fb4360e35ab949 32
+plugins/autopilot/.claude-plugin/plugin.json
+  e5fb4360e35ab949 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.6",
+  "base_commit_sha": "1de5eb112d7baccf15498a6cf1ec98541e43beba",
+  "prompts": {
+    "e5fb4360e35ab949": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "44ccab8a-6ecb-4288-85bb-7952c6efec6e",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 865,
+      "total_deletions": 15,
+      "accepted_lines": 860,
+      "overriden_lines": 2
+    },
+    "fbae0a0cea84a364": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "20d9620e-5ad0-4fcc-a415-2e44afad932d",
+        "model": "glm-5.1"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
