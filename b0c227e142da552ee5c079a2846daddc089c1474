@@ -1,0 +1,25 @@
+.autopilot/decisions.md
+  dbbbd47493e9e999 24-30
+.autopilot/index.md
+  dbbbd47493e9e999 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "b0c227e142da552ee5c079a2846daddc089c1474",
+  "prompts": {
+    "dbbbd47493e9e999": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "278a4453-fcea-435a-835f-b8627d647661",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 0,
+      "accepted_lines": 60,
+      "overriden_lines": 0
+    }
+  }
+}
