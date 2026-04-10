@@ -2,7 +2,7 @@
 
 ## 状态文件字段说明
 
-状态文件 `.claude/autopilot.local.md` 的 frontmatter 包含以下字段：
+状态文件 `.autopilot/autopilot.local.md` 的 frontmatter 包含以下字段：
 - `phase`: 当前阶段（design → implement → qa → auto-fix → merge → done），AI 更新
 - `gate`: 审批门标记，AI 更新
 - `iteration`: 当前迭代次数，stop-hook 自动递增，AI 不修改

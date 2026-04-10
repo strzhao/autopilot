@@ -18,6 +18,25 @@ set -uo pipefail
 source "$(dirname "$0")/lib.sh"
 init_paths
 
+# ── 早期迁移：.claude/autopilot.local.md → .autopilot/autopilot.local.md ──
+# 此迁移必须在所有子命令路由之前执行，确保状态文件可被读取
+if [[ -f "$PROJECT_ROOT/.claude/autopilot.local.md" ]] && [[ ! -f "$PROJECT_ROOT/.autopilot/autopilot.local.md" ]]; then
+    mkdir -p "$PROJECT_ROOT/.autopilot"
+    if mv "$PROJECT_ROOT/.claude/autopilot.local.md" "$PROJECT_ROOT/.autopilot/autopilot.local.md"; then
+        echo "📦 状态文件迁移: .claude/autopilot.local.md → .autopilot/autopilot.local.md"
+    else
+        echo "⚠️ 状态文件迁移失败，将创建新文件"
+    fi
+fi
+
+# ── 早期迁移：.claude/worktree-links → .autopilot/worktree-links ──
+if [[ -f "$PROJECT_ROOT/.claude/worktree-links" ]] && [[ ! -f "$PROJECT_ROOT/.autopilot/worktree-links" ]]; then
+    mkdir -p "$PROJECT_ROOT/.autopilot"
+    if mv "$PROJECT_ROOT/.claude/worktree-links" "$PROJECT_ROOT/.autopilot/worktree-links"; then
+        echo "📦 worktree-links 迁移: .claude/worktree-links → .autopilot/worktree-links"
+    fi
+fi
+
 # ── 参数安全处理 ──────────────────────────────────────────────
 # SKILL.md 用 '$ARGUMENTS' 单引号传参（防止 zsh glob/brace 展开），
 # 导致所有参数合并为单个字符串。这里重新按空格拆分恢复原始行为。
@@ -386,14 +405,15 @@ if [[ -d "$TASKS_DIR" ]] && [[ -f "$PROJECT_ROOT/.autopilot/project/dag.yaml" ]]
 fi
 
 # 创建状态文件
-mkdir -p "$PROJECT_ROOT/.claude"
+mkdir -p "$PROJECT_ROOT/.autopilot"
 
 # session_id：与 ralph 一致，直接使用环境变量（可能为空）。
 # 空值时由 stop-hook 首次触发时认领真实 session_id，建立隔离。
 SESSION_ID="${CLAUDE_CODE_SESSION_ID:-}"
 
 # 迁移检测：旧路径 .claude/knowledge/ → 新路径 .autopilot/
-if [[ -d "$PROJECT_ROOT/.claude/knowledge" ]] && [[ ! -d "$PROJECT_ROOT/.autopilot" ]]; then
+# 注意：检查 .autopilot/index.md 而非 .autopilot/ 目录，因为上面 mkdir -p 已创建该目录
+if [[ -d "$PROJECT_ROOT/.claude/knowledge" ]] && [[ ! -f "$PROJECT_ROOT/.autopilot/index.md" ]]; then
     echo "📦 检测到旧知识库 .claude/knowledge/，自动迁移到 .autopilot/ ..."
     bash "$(dirname "$0")/migrate-knowledge.sh"
     echo ""

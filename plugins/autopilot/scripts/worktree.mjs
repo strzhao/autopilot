@@ -85,11 +85,11 @@ function repair(worktreePath) {
   const root = repoRoot(worktreePath);
   log(`→ 修复 worktree: ${worktreePath}`);
 
-  const linksFile = join(root, '.claude', 'worktree-links');
+  const linksFile = join(root, '.autopilot', 'worktree-links');
   const links = parseLinksFile(linksFile);
 
   if (links.length > 0) {
-    log('→ 按 .claude/worktree-links 创建符号链接...');
+    log('→ 按 .autopilot/worktree-links 创建符号链接...');
     for (const file of links) {
       const src = join(root, file);
       const dst = join(worktreePath, file);
@@ -113,7 +113,7 @@ function repair(worktreePath) {
       }
     }
   } else {
-    log('→ 无 .claude/worktree-links，自动链接 .env* 文件...');
+    log('→ 无 .autopilot/worktree-links，自动链接 .env* 文件...');
     try {
       const entries = readdirSync(root).filter(f => f.startsWith('.env'));
       for (const file of entries) {
@@ -278,7 +278,7 @@ function remove() {
 
   const cwd = input.cwd || process.cwd();
   const root = repoRoot(cwd);
-  const linksFile = join(root, '.claude', 'worktree-links');
+  const linksFile = join(root, '.autopilot', 'worktree-links');
   const links = parseLinksFile(linksFile);
 
   // Remove symlinks first (avoid git worktree remove error on tracked files)

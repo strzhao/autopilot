@@ -23,7 +23,7 @@ description: 当用户需要提交代码、运行 git commit、或说"提交"时
 
 autopilot-commit 有两种调用场景，需要智能判断并跳过多余步骤：
 
-- **主链路模式**：当前项目根目录存在 `.claude/autopilot.local.md` 且 phase 为 `"merge"` → 代码已通过五层 QA，跳过 Phase 1.5（代码优化）、Bugfix 验证、代码理解测验。再优化可能破坏已验证状态。在 worktree 中时，检查 worktree 根目录的 `.claude/autopilot.local.md`。
+- **主链路模式**：当前项目根目录存在 `.autopilot/autopilot.local.md` 且 phase 为 `"merge"` → 代码已通过五层 QA，跳过 Phase 1.5（代码优化）、Bugfix 验证、代码理解测验。再优化可能破坏已验证状态。在 worktree 中时，检查 worktree 根目录的 `.autopilot/autopilot.local.md`。
 - **独立模式**：其他所有情况 → 执行完整流程。
 
 ## 工作框架

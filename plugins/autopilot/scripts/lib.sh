@@ -15,7 +15,7 @@ init_paths() {
         cd "$target_cwd" || return
     fi
     PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-    STATE_FILE="${PROJECT_ROOT}/.claude/autopilot.local.md"
+    STATE_FILE="${PROJECT_ROOT}/.autopilot/autopilot.local.md"
 }
 
 parse_frontmatter() {

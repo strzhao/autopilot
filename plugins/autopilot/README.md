@@ -101,11 +101,11 @@ QA 发现问题时，按系统化调试方法论（观察 → 假设 → 验证 
 
 输出 autopilot 兼容性矩阵（哪些功能可用/降级/不可用）和 Top 3 改进建议。
 
-使用 `--fix` 自动修复低分项（每个修复前确认）。报告保存到 `.claude/doctor-report.md`。
+使用 `--fix` 自动修复低分项（每个修复前确认）。报告保存到 `.autopilot/doctor-report.md`。
 
 ## 可追溯性
 
-所有过程记录在 `.claude/autopilot.local.md` 状态文件中：
+所有过程记录在 `.autopilot/autopilot.local.md` 状态文件中：
 - 目标描述、设计文档、实现计划
 - 红队验收测试和验收标准
 - 每轮 QA 报告（完整保留历史）

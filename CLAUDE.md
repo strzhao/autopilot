@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.8.1)
+### 3. autopilot (v3.10.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断 + 性能保障 + Worktree 自动初始化）
 
@@ -290,6 +290,12 @@
 ## 更新日志
 
 ### 2026-04-10
+- autopilot 升级至 v3.10.0：运行时文件从 .claude/ 迁移到 .autopilot/，消除受保护目录权限弹窗
+  - 状态文件迁移：.claude/autopilot.local.md → .autopilot/autopilot.local.md
+  - 诊断报告迁移：.claude/doctor-report.md → .autopilot/doctor-report.md
+  - worktree-links 迁移：.claude/worktree-links → .autopilot/worktree-links
+  - setup.sh 新增旧路径自动迁移逻辑（状态文件 + worktree-links）
+  - 新增 11 个红队验收测试验证路径迁移正确性
 - writer-skill 升级至 v1.9.0：新增 writer-profession-skill，专业技术博客写作风格
   - 面向企业级产品公告、行业分析、技术深度解析等专业场景
   - 风格源自 Anthropic 官方博客 10 篇训练文章：数据驱动、倒金字塔结构、表格承载对比、破折号句法签名
