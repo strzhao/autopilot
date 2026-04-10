@@ -273,21 +273,29 @@
 - 使用标准 POSIX 命令
 - 提供降级方案（如 notify-send 不存在时回退到终端响铃）
 
-### 5. writer-skill (v1.6.0)
+### 5. writer-skill (v1.9.0)
 **类型**: Skill 插件
-**功能**: 写作技能包（博客向 + 通用向 + 技术文档向）
+**功能**: 写作技能包（博客向 + 通用向 + 技术文档向 + 专业技术博客向）
 
 **包含 Skill**:
 - `writer-blog-skill`：科技博客向，叙事驱动、口语化、类比落地
 - `writer-general-skill`：通用写作向，适配评论、分析、访谈整理等多种场景
 - `writer-tech-skill`：技术文档向，面向 RFC/Design Doc，语气精确、克制、直接
+- `writer-profession-skill`：专业技术博客向，面向企业级产品公告/行业分析/技术深度解析，数据驱动、结构精密、信息密度高
 
 **使用方式**:
-安装插件后，根据场景调用 `/writer-blog-skill`、`/writer-general-skill` 或 `/writer-tech-skill`。
+安装插件后，根据场景调用 `/writer-blog-skill`、`/writer-general-skill`、`/writer-tech-skill` 或 `/writer-profession-skill`。
 
 ---
 
 ## 更新日志
+
+### 2026-04-10
+- writer-skill 升级至 v1.9.0：新增 writer-profession-skill，专业技术博客写作风格
+  - 面向企业级产品公告、行业分析、技术深度解析等专业场景
+  - 风格源自 Anthropic 官方博客 10 篇训练文章：数据驱动、倒金字塔结构、表格承载对比、破折号句法签名
+  - 新增 references/review-criteria.md 验收标准（好问题 × 好结构 × 好节奏）
+  - 5 种内容模板：产品公告、行业分析、技术深度、安全专题
 
 ### 2026-04-09
 - autopilot 升级至 v3.8.0：design 阶段新增验收场景生成器 + Plan Reviewer 双向覆盖校验
