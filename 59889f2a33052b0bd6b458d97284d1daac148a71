@@ -1,0 +1,27 @@
+plugins/writer-skill/.claude-plugin/plugin.json
+  cf31bc91233165df 3-4
+.claude-plugin/marketplace.json
+  cf31bc91233165df 41-42
+CLAUDE.md
+  cf31bc91233165df 276,278,286
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.6",
+  "base_commit_sha": "59889f2a33052b0bd6b458d97284d1daac148a71",
+  "prompts": {
+    "cf31bc91233165df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8a75fada-dfd0-47ae-a7dd-808732c956fc",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 8,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    }
+  }
+}
