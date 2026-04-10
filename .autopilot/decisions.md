@@ -21,6 +21,13 @@
 
 ### [2026-04-03] merge 阶段 Agent 化优于 Skill 调用
 <!-- tags: autopilot, token-optimization, merge, agent, cost -->
+
+### [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免
+<!-- tags: autopilot, file-path, permission, claude-code, migration -->
+**Background**: Claude Code 将 `.claude/` 硬编码为受保护目录，即使 bypassPermissions 开启仍弹权限确认。豁免列表仅含 commands/agents/skills/worktrees 四个子目录。autopilot 状态文件、诊断报告、worktree-links 三个运行时文件在 `.claude/` 下反复触发确认，严重影响自动驾驶体验。
+**Choice**: 全部迁移到 `.autopilot/`（与知识库同级），setup.sh 添加旧路径自动迁移逻辑。知识库迁移条件从检查目录存在改为检查 `index.md` 存在（避免 mkdir -p 创建空目录后迁移被跳过的协调 bug）。
+**Alternatives rejected**: (1) PreToolUse Hook 自动 approve（绕过安全机制，不是正解）；(2) 只迁移状态文件（worktree-links 和 doctor-report 同样触发弹窗，不彻底）
+**Trade-offs**: 需要存量用户迁移（setup.sh 自动处理），SKILL.md 中 ~15 处路径引用需同步更新。但一次性迁移后彻底消除权限弹窗，长期收益远大于短期成本。
 **Background**: 成本分析显示 autopilot 单日消耗 100M tokens（$809.73），其中 merge 阶段的 Skill: autopilot-commit 调用单次消耗 3-5M tokens——因为在编排器主线程运行，继承了完整的设计文档、QA 报告、所有工具调用历史等父上下文。93.35% 的 tokens 是 cache_read。
 **Choice**: merge 阶段改用 Agent 工具启动 commit-agent（model: sonnet），Agent 获得独立的新鲜上下文窗口，只包含显式传入的 git diff + 设计目标 + commit 规则。同时新增 stop-hook merge 分支注入 Agent 路径提醒。QA 报告压缩：历史轮次压缩为一行摘要，只保留最新完整报告。
 **Alternatives rejected**: SKILL.md 路由器瘦身（572→85 行）——之前尝试过出过问题，不再重复。

@@ -5,6 +5,7 @@
 - [2026-03-26] doctor Dim 1 测试金字塔分层评估优于文件计数 | tags: autopilot, doctor, testing, test-pyramid, scoring | → decisions.md
 - [2026-03-27] SKILL.md Phase 分片优于状态文件索引 | tags: autopilot, skill, progressive-disclosure, token-optimization | → decisions.md
 - [2026-04-03] merge 阶段 Agent 化优于 Skill 调用 | tags: autopilot, token-optimization, merge, agent, cost | → decisions.md
+- [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → decisions.md
 
 ## Patterns
 - [2026-03-21] Skill 插件 Progressive Disclosure 重构模式 | tags: skill, progressive-disclosure, plugin, refactoring | → patterns.md
