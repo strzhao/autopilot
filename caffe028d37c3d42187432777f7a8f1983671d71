@@ -1,0 +1,45 @@
+CLAUDE.md
+  dbbbd47493e9e999 51,293-298
+plugins/autopilot/.claude-plugin/plugin.json
+  dbbbd47493e9e999 3
+.claude-plugin/marketplace.json
+  dbbbd47493e9e999 32
+plugins/autopilot/skills/autopilot/SKILL.md
+  dbbbd47493e9e999 10,12,43
+plugins/autopilot/scripts/setup.sh
+  dbbbd47493e9e999 21-39,408,415-416
+plugins/autopilot/skills/autopilot-commit/SKILL.md
+  dbbbd47493e9e999 26
+plugins/autopilot/scripts/lib.sh
+  dbbbd47493e9e999 18
+plugins/autopilot/skills/autopilot/references/state-file-guide.md
+  dbbbd47493e9e999 5
+plugins/autopilot/skills/autopilot-doctor/SKILL.md
+  dbbbd47493e9e999 24,180,484,511
+plugins/autopilot/scripts/path-migration.acceptance.test.mjs
+  dbbbd47493e9e999 1-351
+plugins/autopilot/README.md
+  dbbbd47493e9e999 104,108
+plugins/autopilot/scripts/worktree.mjs
+  dbbbd47493e9e999 88,92,116,281
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "caffe028d37c3d42187432777f7a8f1983671d71",
+  "prompts": {
+    "dbbbd47493e9e999": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "278a4453-fcea-435a-835f-b8627d647661",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 435,
+      "total_deletions": 40,
+      "accepted_lines": 419,
+      "overriden_lines": 2
+    }
+  }
+}
