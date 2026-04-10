@@ -1,0 +1,31 @@
+plugins/writer-skill/.claude-plugin/plugin.json
+  cf31bc91233165df 3-4
+plugins/writer-skill/skills/writer-profession-skill/references/review-criteria.md
+  cf31bc91233165df 1-66
+.claude-plugin/marketplace.json
+  cf31bc91233165df 41-42
+plugins/writer-skill/skills/writer-profession-skill/SKILL.md
+  cf31bc91233165df 1-285
+CLAUDE.md
+  cf31bc91233165df 276,278,284,287,293-299
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.6",
+  "base_commit_sha": "1b2fe0fde66a47a854a1cc5cdf65dd471abc9d46",
+  "prompts": {
+    "cf31bc91233165df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8a75fada-dfd0-47ae-a7dd-808732c956fc",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 366,
+      "total_deletions": 7,
+      "accepted_lines": 366,
+      "overriden_lines": 0
+    }
+  }
+}
