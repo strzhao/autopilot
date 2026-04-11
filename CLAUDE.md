@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.12.0)
+### 3. autopilot (v3.12.1)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + Deep Design 交互式设计 + 需求管理 + 智能提交 + 工程诊断 + 性能保障 + Worktree 自动初始化）
 
@@ -291,6 +291,13 @@
 ---
 
 ## 更新日志
+
+### 2026-04-12
+- autopilot 升级至 v3.12.1：修复项目模式 `/autopilot next` 误判"所有任务已完成"的 bug
+  - get_first_ready_task awk 兼容 `name:` 和 `title:` 两种 dag.yaml 字段名（AI 常写 `name:` 而非规范的 `title:`）
+  - 修复空 DAG 解析时 vacuous truth 导致 ALL_DONE 误判（n==0 时 all_done 为 true）
+  - setup.sh status 显示 awk 同步兼容 `name:` / `title:`
+  - stop-hook.sh 新增 Case 0.5：项目模式设计完成的专属处理 + notify.sh 新增 project-design-complete 通知
 
 ### 2026-04-11
 - autopilot 升级至 v3.11.0：项目模式 Auto-Chain 自动链式执行 + 全项目 QA + SKILL.md Token 优化

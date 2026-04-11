@@ -28,6 +28,10 @@ case "$SCENE" in
         TITLE="autopilot: 项目完成"
         MSG="全项目 QA 通过，项目已完成！"
         ;;
+    project-design-complete)
+        TITLE="autopilot: 项目设计完成"
+        MSG="DAG 已创建，运行 /autopilot next 启动第一个任务。"
+        ;;
     error)
         TITLE="autopilot: 需要人工介入"
         MSG="自动修复达到上限，部分问题需要人工处理。"

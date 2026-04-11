@@ -107,6 +107,13 @@ if [[ "$PHASE" == "done" ]]; then
     BRIEF_FILE=$(get_field "brief_file" || true)
     DAG_FILE="$PROJECT_ROOT/.autopilot/project/dag.yaml"
 
+    # Case 0.5: 项目模式设计完成（非子任务）→ 通知 + 清理 active 指针
+    if [[ "$MODE" == "project" ]] && [[ -z "$BRIEF_FILE" ]] && [[ -f "$DAG_FILE" ]]; then
+        bash "$SCRIPT_DIR/notify.sh" project-design-complete 2>/dev/null || true
+        rm -f "$PROJECT_ROOT/.autopilot/active"
+        exit 0
+    fi
+
     # Case 1: AI 信号了下一个任务 → 自动链接
     if [[ -n "$NEXT_TASK" ]] && [[ -f "$DAG_FILE" ]]; then
         TASK_FILE="$PROJECT_ROOT/.autopilot/project/tasks/${NEXT_TASK}.md"

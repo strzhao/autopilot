@@ -103,8 +103,8 @@ get_first_ready_task() {
         gsub(/.*id:[[:space:]]*"?/, ""); gsub(/".*/, ""); id=$0
         title=""; status=""; deps=""
     }
-    /^[[:space:]]*title:/ {
-        gsub(/.*title:[[:space:]]*"?/, ""); gsub(/".*/, ""); title=$0
+    /^[[:space:]]*(title|name):/ {
+        gsub(/.*:[[:space:]]*"?/, ""); gsub(/".*/, ""); title=$0
     }
     /^[[:space:]]*status:/ {
         gsub(/.*status:[[:space:]]*"?/, ""); gsub(/".*/, ""); status=$0
@@ -141,7 +141,7 @@ get_first_ready_task() {
             if (ready) first_ready = tid
         }
         if (first_ready != "") print first_ready
-        else if (all_done) print "ALL_DONE"
+        else if (all_done && n > 0) print "ALL_DONE"
     }' "$dag_file"
 }
 

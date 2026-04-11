@@ -220,8 +220,8 @@ HELP_EOF
                 gsub(/.*id:[[:space:]]*"?/, ""); gsub(/".*/, ""); id=$0
                 title=""; status=""
             }
-            /^[[:space:]]*title:/ {
-                gsub(/.*title:[[:space:]]*"?/, ""); gsub(/".*/, ""); title=$0
+            /^[[:space:]]*(title|name):/ {
+                gsub(/.*:[[:space:]]*"?/, ""); gsub(/".*/, ""); title=$0
             }
             /^[[:space:]]*status:/ {
                 gsub(/.*status:[[:space:]]*"?/, ""); gsub(/".*/, ""); status=$0
@@ -274,8 +274,8 @@ HELP_EOF
                 gsub(/.*id:[[:space:]]*"?/, ""); gsub(/".*/, ""); id=$0
                 title=""; status=""
             }
-            /^[[:space:]]*title:/ {
-                gsub(/.*title:[[:space:]]*"?/, ""); gsub(/".*/, ""); title=$0
+            /^[[:space:]]*(title|name):/ {
+                gsub(/.*:[[:space:]]*"?/, ""); gsub(/".*/, ""); title=$0
             }
             /^[[:space:]]*status:/ {
                 gsub(/.*status:[[:space:]]*"?/, ""); gsub(/".*/, ""); status=$0
