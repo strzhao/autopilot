@@ -1,0 +1,53 @@
+CLAUDE.md
+  bad92d70ff04b594 51,64-67,295-306
+.claude-plugin/marketplace.json
+  bad92d70ff04b594 32
+plugins/autopilot/skills/autopilot/references/auto-fix-phase.md
+  bad92d70ff04b594 1-77
+plugins/autopilot/skills/autopilot-project/SKILL.md
+  bad92d70ff04b594 83,86-93,99
+plugins/autopilot/skills/autopilot/references/implement-phase.md
+  bad92d70ff04b594 1-69
+plugins/autopilot/scripts/lib.sh
+  bad92d70ff04b594 49-259
+plugins/autopilot/scripts/notify.sh
+  bad92d70ff04b594 19-30
+plugins/autopilot/scripts/setup.sh
+  bad92d70ff04b594 246-264,266-267,269-272,274,276-278,405,420-421
+plugins/autopilot/skills/autopilot/SKILL.md
+  bad92d70ff04b594 29,31,45-54,56,58-61,63,75-77,79-85,139,142,186,190,192,194,198,214,217,224,226-229,231-232,234,243-245,247-250,252,264-267,269,276,280-285,287,295,297,309,311-312,322,327,329-330
+plugins/autopilot/skills/autopilot/project-mode.acceptance.test.mjs
+  bad92d70ff04b594 3-4,16,33-59,61,71-73,91,103,113,121-134,170,180,189,197,206,214-229,231-232,234-238,241-242,244-257,259-272,274-385,387-495,508-513,527,529-539,542,544,570-580
+plugins/autopilot/.claude-plugin/plugin.json
+  bad92d70ff04b594 3
+plugins/autopilot/skills/autopilot/references/merge-phase.md
+  bad92d70ff04b594 1-68
+plugins/autopilot/scripts/stop-hook.sh
+  bad92d70ff04b594 92,94,97-155,175,177-182,188-189,191-195
+plugins/autopilot/skills/autopilot/references/auto-chain-guide.md
+  bad92d70ff04b594 1-54
+plugins/autopilot/skills/autopilot/references/qa-phase.md
+  bad92d70ff04b594 1-183
+plugins/autopilot/skills/autopilot/references/project-qa-guide.md
+  bad92d70ff04b594 1-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "bd677b37ba247df5cc3be5ee3c7904e0242b6b74",
+  "prompts": {
+    "bad92d70ff04b594": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fec15d39-75ce-4fc1-bab8-92b0cf425636",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 1334,
+      "total_deletions": 614,
+      "accepted_lines": 1312,
+      "overriden_lines": 0
+    }
+  }
+}
