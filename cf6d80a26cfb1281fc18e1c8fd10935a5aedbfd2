@@ -1,0 +1,45 @@
+plugins/autopilot/scripts/stop-hook.sh
+  38376d06a06dba8d 99,102,114-117,131,138-141,153,156,159,177,196,200-201
+plugins/autopilot/skills/autopilot/references/spec-reviewer-prompt.md
+  38376d06a06dba8d 1-43
+plugins/autopilot/skills/autopilot/references/deep-design-guide.md
+  38376d06a06dba8d 1-112
+plugins/autopilot/scripts/visual-companion/frame-template.html
+  38376d06a06dba8d 5,8
+plugins/autopilot/scripts/lib.sh
+  38376d06a06dba8d 11,19-31,63-93,152,197,209,213,245,270,282,286
+plugins/autopilot/scripts/setup.sh
+  38376d06a06dba8d 21-27,29-31,34-38,78,86,297-300,312-314,334,363-364,395,421-424,441,445,484-486,499
+plugins/autopilot/.claude-plugin/plugin.json
+  38376d06a06dba8d 3-4
+.claude-plugin/marketplace.json
+  38376d06a06dba8d 31-32
+plugins/autopilot/skills/autopilot/references/visual-companion-guide.md
+  38376d06a06dba8d 1-65
+CLAUDE.md
+  38376d06a06dba8d 51,53
+plugins/autopilot/skills/autopilot/project-mode.acceptance.test.mjs
+  38376d06a06dba8d 61-71,80-90,153-209,410,412,423,427,469-471,481,485,502,513,517,535,561,565,575,592,595,635-649
+plugins/autopilot/skills/autopilot/SKILL.md
+  38376d06a06dba8d 10,13,38,74-94,128,131,307-312,337,341
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "cf6d80a26cfb1281fc18e1c8fd10935a5aedbfd2",
+  "prompts": {
+    "38376d06a06dba8d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5ba362f2-730e-4c2b-9a53-23c7163dca74",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 511,
+      "total_deletions": 63,
+      "accepted_lines": 486,
+      "overriden_lines": 0
+    }
+  }
+}
