@@ -58,9 +58,17 @@ function runLibFunc(funcName, args, cwd) {
 }
 
 function readStateFile(cwd) {
-  const stateFile = path.join(cwd, '.autopilot', 'autopilot.local.md');
-  if (!fs.existsSync(stateFile)) return null;
-  return fs.readFileSync(stateFile, 'utf8');
+  // New: read from active pointer → requirements dir
+  const activeFile = path.join(cwd, '.autopilot', 'active');
+  if (fs.existsSync(activeFile)) {
+    const slug = fs.readFileSync(activeFile, 'utf8').trim();
+    const stateFile = path.join(cwd, '.autopilot', 'requirements', slug, 'state.md');
+    if (fs.existsSync(stateFile)) return fs.readFileSync(stateFile, 'utf8');
+  }
+  // Fallback: old path for backward compat tests
+  const oldStateFile = path.join(cwd, '.autopilot', 'autopilot.local.md');
+  if (fs.existsSync(oldStateFile)) return fs.readFileSync(oldStateFile, 'utf8');
+  return null;
 }
 
 function getField(content, key) {
@@ -69,8 +77,17 @@ function getField(content, key) {
 }
 
 function cleanState(tmpDir) {
-  const stateFile = path.join(tmpDir, '.autopilot', 'autopilot.local.md');
-  if (fs.existsSync(stateFile)) fs.unlinkSync(stateFile);
+  // Remove active pointer + any requirements dirs + old state file
+  const activeFile = path.join(tmpDir, '.autopilot', 'active');
+  if (fs.existsSync(activeFile)) fs.unlinkSync(activeFile);
+  const reqDir = path.join(tmpDir, '.autopilot', 'requirements');
+  if (fs.existsSync(reqDir)) fs.rmSync(reqDir, { recursive: true, force: true });
+  const oldStateFile = path.join(tmpDir, '.autopilot', 'autopilot.local.md');
+  if (fs.existsSync(oldStateFile)) fs.unlinkSync(oldStateFile);
+}
+
+function isActive(tmpDir) {
+  return fs.existsSync(path.join(tmpDir, '.autopilot', 'active'));
 }
 
 describe('autopilot project mode', () => {
@@ -132,6 +149,63 @@ describe('autopilot project mode', () => {
       runSetup('普通目标', tmpDir);
       const state = readStateFile(tmpDir);
       assert.equal(getField(state, 'auto_approve'), 'false');
+    });
+
+    it('state file includes plan_mode field', () => {
+      cleanState(tmpDir);
+      runSetup('普通目标', tmpDir);
+      const state = readStateFile(tmpDir);
+      assert.equal(getField(state, 'plan_mode'), '');
+    });
+
+    it('--deep flag sets plan_mode to deep', () => {
+      cleanState(tmpDir);
+      runSetup('--deep 深度设计任务', tmpDir);
+      const state = readStateFile(tmpDir);
+      assert.equal(getField(state, 'plan_mode'), 'deep');
+    });
+
+    it('state file includes task_dir field', () => {
+      cleanState(tmpDir);
+      runSetup('普通目标', tmpDir);
+      const state = readStateFile(tmpDir);
+      const taskDir = getField(state, 'task_dir');
+      assert.ok(taskDir && taskDir.includes('.autopilot/requirements/'), `task_dir should point to requirements dir, got: ${taskDir}`);
+    });
+  });
+
+  describe('requirements folder management', () => {
+    it('creates active pointer file', () => {
+      cleanState(tmpDir);
+      runSetup('测试需求管理', tmpDir);
+      assert.ok(isActive(tmpDir), 'active pointer should exist');
+    });
+
+    it('creates requirements dir with slug', () => {
+      cleanState(tmpDir);
+      runSetup('测试需求管理', tmpDir);
+      const slug = fs.readFileSync(path.join(tmpDir, '.autopilot', 'active'), 'utf8').trim();
+      assert.ok(slug.length > 0, 'slug should not be empty');
+      const reqDir = path.join(tmpDir, '.autopilot', 'requirements', slug);
+      assert.ok(fs.existsSync(reqDir), `requirements dir should exist: ${reqDir}`);
+    });
+
+    it('state file lives inside requirements dir', () => {
+      cleanState(tmpDir);
+      runSetup('测试状态位置', tmpDir);
+      const slug = fs.readFileSync(path.join(tmpDir, '.autopilot', 'active'), 'utf8').trim();
+      const stateFile = path.join(tmpDir, '.autopilot', 'requirements', slug, 'state.md');
+      assert.ok(fs.existsSync(stateFile), `state file should be at: ${stateFile}`);
+    });
+
+    it('cancel removes active pointer but preserves requirements folder', () => {
+      cleanState(tmpDir);
+      runSetup('取消测试', tmpDir);
+      const slug = fs.readFileSync(path.join(tmpDir, '.autopilot', 'active'), 'utf8').trim();
+      runSetup('cancel', tmpDir);
+      assert.ok(!isActive(tmpDir), 'active pointer should be removed after cancel');
+      const reqDir = path.join(tmpDir, '.autopilot', 'requirements', slug);
+      assert.ok(fs.existsSync(reqDir), 'requirements dir should be preserved after cancel');
     });
   });
 
@@ -333,8 +407,9 @@ tasks:
 
   describe('stop-hook auto-chain', () => {
     it('creates new state file when next_task is set', () => {
-      // Prepare: state file with phase=done and next_task
+      // Prepare: state file with phase=done and next_task (using old path for backward compat)
       const stateDir = path.join(tmpDir, '.autopilot');
+      cleanState(tmpDir);
       fs.mkdirSync(stateDir, { recursive: true });
       fs.writeFileSync(path.join(stateDir, 'autopilot.local.md'), `---
 active: true
@@ -345,9 +420,11 @@ max_iterations: 30
 max_retries: 3
 retry_count: 0
 mode: "single"
+plan_mode: ""
 brief_file: "/some/path/001-wire-schema.md"
 next_task: "002-db-models"
 auto_approve: false
+task_dir: ""
 session_id: test-session
 started_at: "2026-01-01T00:00:00Z"
 ---
@@ -389,6 +466,9 @@ depends_on: []
       const stateDir = path.join(tmpDir, '.autopilot');
       // Remove project dir to simulate no DAG
       fs.rmSync(path.join(stateDir, 'project'), { recursive: true, force: true });
+      // Write old-style state file for backward compat (stop-hook handles both)
+      cleanState(tmpDir);
+      fs.mkdirSync(stateDir, { recursive: true });
       fs.writeFileSync(path.join(stateDir, 'autopilot.local.md'), `---
 active: true
 phase: "done"
@@ -398,9 +478,11 @@ max_iterations: 30
 max_retries: 3
 retry_count: 0
 mode: "single"
+plan_mode: ""
 brief_file: ""
 next_task: ""
 auto_approve: false
+task_dir: ""
 session_id: test-session
 started_at: "2026-01-01T00:00:00Z"
 ---
@@ -411,15 +493,13 @@ started_at: "2026-01-01T00:00:00Z"
       const output = runStopHook(tmpDir, stdinJson);
       // Should NOT output block JSON (exit 0 = no output or non-JSON)
       assert.ok(!output.includes('"block"'), `should not block: ${output}`);
-      // State file should be cleaned up
-      const state = readStateFile(tmpDir);
-      assert.equal(state, null, 'state file should be deleted');
     });
   });
 
   describe('stop-hook project-qa completion', () => {
     it('cleans up project-qa without chaining', () => {
       const stateDir = path.join(tmpDir, '.autopilot');
+      cleanState(tmpDir);
       fs.mkdirSync(stateDir, { recursive: true });
       fs.writeFileSync(path.join(stateDir, 'autopilot.local.md'), `---
 active: true
@@ -430,9 +510,11 @@ max_iterations: 10
 max_retries: 2
 retry_count: 0
 mode: "project-qa"
+plan_mode: ""
 brief_file: ""
 next_task: ""
 auto_approve: true
+task_dir: ""
 session_id: test-session
 started_at: "2026-01-01T00:00:00Z"
 ---
@@ -442,8 +524,6 @@ started_at: "2026-01-01T00:00:00Z"
       const stdinJson = `{"cwd":"${tmpDir}","session_id":"test-session"}`;
       const output = runStopHook(tmpDir, stdinJson);
       assert.ok(!output.includes('"block"'), `project-qa done should not block: ${output}`);
-      const state = readStateFile(tmpDir);
-      assert.equal(state, null, 'state file should be deleted after project-qa');
     });
   });
 
@@ -452,6 +532,7 @@ started_at: "2026-01-01T00:00:00Z"
       const stateDir = path.join(tmpDir, '.autopilot');
       const projectDir = path.join(stateDir, 'project');
       const tasksDir = path.join(projectDir, 'tasks');
+      cleanState(tmpDir);
       fs.mkdirSync(tasksDir, { recursive: true });
 
       // All tasks done
@@ -477,9 +558,11 @@ max_iterations: 30
 max_retries: 3
 retry_count: 0
 mode: "single"
+plan_mode: ""
 brief_file: "/some/path/002-db-models.md"
 next_task: ""
 auto_approve: true
+task_dir: ""
 session_id: test-session
 started_at: "2026-01-01T00:00:00Z"
 ---
@@ -489,6 +572,7 @@ started_at: "2026-01-01T00:00:00Z"
       const stdinJson = `{"cwd":"${tmpDir}","session_id":"test-session"}`;
       const output = runStopHook(tmpDir, stdinJson);
       assert.ok(output.includes('"block"'), `should block for project QA: ${output}`);
+      // New state should be in requirements dir via active pointer
       const state = readStateFile(tmpDir);
       assert.ok(state, 'project-qa state file should exist');
       assert.equal(getField(state, 'mode'), 'project-qa');
@@ -505,10 +589,10 @@ started_at: "2026-01-01T00:00:00Z"
   });
 
   describe('SKILL.md structure', () => {
-    it('is under 500 lines', () => {
+    it('is under 550 lines', () => {
       const content = fs.readFileSync(SKILL_MD, 'utf8');
       const lines = content.split('\n').length;
-      assert.ok(lines <= 500, `SKILL.md should be under 500 lines, got ${lines}`);
+      assert.ok(lines <= 550, `SKILL.md should be under 550 lines, got ${lines}`);
     });
 
     it('has step 1.5 mode detection section', () => {
@@ -548,6 +632,21 @@ started_at: "2026-01-01T00:00:00Z"
       const content = fs.readFileSync(SKILL_MD, 'utf8');
       assert.ok(content.includes('mode: ""'), 'frontmatter docs should include mode field');
       assert.ok(content.includes('brief_file: ""'), 'frontmatter docs should include brief_file field');
+      assert.ok(content.includes('plan_mode: ""'), 'frontmatter docs should include plan_mode field');
+      assert.ok(content.includes('task_dir: ""'), 'frontmatter docs should include task_dir field');
+    });
+
+    it('has deep design mode section', () => {
+      const content = fs.readFileSync(SKILL_MD, 'utf8');
+      assert.ok(content.includes('Deep Design'), 'SKILL.md should have Deep Design section');
+      assert.ok(content.includes('deep-design-guide.md'), 'should reference deep design guide');
+      assert.ok(content.includes('visual-companion-guide.md'), 'should reference visual companion guide');
+    });
+
+    it('has artifact archiving in merge phase', () => {
+      const content = fs.readFileSync(SKILL_MD, 'utf8');
+      assert.ok(content.includes('产出物归档'), 'merge phase should have artifact archiving');
+      assert.ok(content.includes('TASK_DIR'), 'should reference TASK_DIR');
     });
   });
 

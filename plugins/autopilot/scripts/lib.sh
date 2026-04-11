@@ -8,6 +8,7 @@
 
 PROJECT_ROOT=""
 STATE_FILE=""
+TASK_DIR=""
 
 init_paths() {
     local target_cwd="${1:-}"
@@ -15,7 +16,19 @@ init_paths() {
         cd "$target_cwd" || return
     fi
     PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-    STATE_FILE="${PROJECT_ROOT}/.autopilot/autopilot.local.md"
+
+    # 读取 active 指针定位状态文件
+    local active_file="$PROJECT_ROOT/.autopilot/active"
+    if [[ -f "$active_file" ]]; then
+        local slug
+        slug=$(cat "$active_file")
+        TASK_DIR="$PROJECT_ROOT/.autopilot/requirements/$slug"
+        STATE_FILE="$TASK_DIR/state.md"
+    else
+        # 向后兼容：无 active 指针时使用旧路径
+        STATE_FILE="$PROJECT_ROOT/.autopilot/autopilot.local.md"
+        TASK_DIR=""
+    fi
 }
 
 parse_frontmatter() {
@@ -45,6 +58,37 @@ append_changelog() {
 
 now_iso() {
     date -u +%Y-%m-%dT%H:%M:%SZ
+}
+
+# ── Task Slug 生成 ──────────────────────────────────────────────
+
+# 生成需求管理文件夹的 slug。格式: YYYYMMDD-<目标前30字符清洗>
+# 参数: goal (目标描述文本)
+generate_task_slug() {
+    local goal="$1"
+    local date_prefix
+    date_prefix=$(date +%Y%m%d)
+    # 取前 30 字符，替换空格和特殊字符为连字符，去除尾部连字符
+    local slug
+    slug=$(printf '%.30s' "$goal" | tr ' /:*?"<>|\\' '-' | sed 's/-*$//' | sed 's/^-*//')
+    # 空 slug 时使用时间戳
+    if [[ -z "$slug" ]]; then
+        slug="task-$(date +%H%M%S)"
+    fi
+    echo "${date_prefix}-${slug}"
+}
+
+# ── 需求管理路径设置 ────────────────────────────────────────────
+
+# 创建 requirements 文件夹并设置 active 指针和路径变量。
+# 参数: slug
+# 副作用: 更新 TASK_DIR, STATE_FILE 全局变量；写入 active 指针
+setup_requirement_dir() {
+    local slug="$1"
+    TASK_DIR="$PROJECT_ROOT/.autopilot/requirements/$slug"
+    mkdir -p "$TASK_DIR"
+    echo "$slug" > "$PROJECT_ROOT/.autopilot/active"
+    STATE_FILE="$TASK_DIR/state.md"
 }
 
 # ── DAG 解析函数 ──────────────────────────────────────────────
@@ -105,6 +149,7 @@ get_first_ready_task() {
 
 # 为项目 DAG 中的任务创建 brief 模式状态文件。
 # 参数: task_file session_id max_iterations max_retries auto_approve
+# 注意: 调用前必须先通过 setup_requirement_dir 设置 STATE_FILE 和 TASK_DIR
 create_brief_state_file() {
     local brief_file="$1"
     local session_id="${2:-}"
@@ -149,7 +194,7 @@ $(head -60 "$design_file")"
 > 📚 项目知识库已存在: .autopilot/。design 阶段请先加载相关知识上下文。"
     fi
 
-    mkdir -p "$PROJECT_ROOT/.autopilot"
+    mkdir -p "$(dirname "$STATE_FILE")"
 
     cat > "$STATE_FILE" <<EOF
 ---
@@ -161,9 +206,11 @@ max_iterations: $max_iterations
 max_retries: $max_retries
 retry_count: 0
 mode: "single"
+plan_mode: ""
 brief_file: "$brief_file"
 next_task: ""
 auto_approve: $auto_approve
+task_dir: "$TASK_DIR"
 session_id: $session_id
 started_at: "$(now_iso)"
 ---
@@ -195,6 +242,7 @@ EOF
 
 # 所有 DAG 任务完成后，创建全项目 QA 验证状态文件。
 # 参数: session_id
+# 注意: 调用前必须先通过 setup_requirement_dir 设置 STATE_FILE 和 TASK_DIR
 create_project_qa_state_file() {
     local session_id="${1:-}"
 
@@ -219,7 +267,7 @@ $(head -30 "$hf")
         design_content=$(head -100 "$design_file")
     fi
 
-    mkdir -p "$PROJECT_ROOT/.autopilot"
+    mkdir -p "$(dirname "$STATE_FILE")"
 
     cat > "$STATE_FILE" <<EOF
 ---
@@ -231,9 +279,11 @@ max_iterations: 10
 max_retries: 2
 retry_count: 0
 mode: "project-qa"
+plan_mode: ""
 brief_file: ""
 next_task: ""
 auto_approve: true
+task_dir: "$TASK_DIR"
 session_id: $session_id
 started_at: "$(now_iso)"
 ---

@@ -18,15 +18,24 @@ set -uo pipefail
 source "$(dirname "$0")/lib.sh"
 init_paths
 
-# ── 早期迁移：.claude/autopilot.local.md → .autopilot/autopilot.local.md ──
-# 此迁移必须在所有子命令路由之前执行，确保状态文件可被读取
-if [[ -f "$PROJECT_ROOT/.claude/autopilot.local.md" ]] && [[ ! -f "$PROJECT_ROOT/.autopilot/autopilot.local.md" ]]; then
-    mkdir -p "$PROJECT_ROOT/.autopilot"
-    if mv "$PROJECT_ROOT/.claude/autopilot.local.md" "$PROJECT_ROOT/.autopilot/autopilot.local.md"; then
-        echo "📦 状态文件迁移: .claude/autopilot.local.md → .autopilot/autopilot.local.md"
+# ── 早期迁移：.claude/autopilot.local.md → .autopilot/ 旧格式检测 ──
+# 旧版状态文件在 .autopilot/autopilot.local.md（无 active 指针），需要检测处理
+if [[ -f "$PROJECT_ROOT/.autopilot/autopilot.local.md" ]] && [[ ! -f "$PROJECT_ROOT/.autopilot/active" ]]; then
+    OLD_PHASE=$(get_field "phase" 2>/dev/null || true)
+    if [[ "$OLD_PHASE" == "done" || -z "$OLD_PHASE" ]]; then
+        rm -f "$PROJECT_ROOT/.autopilot/autopilot.local.md"
+        echo "🧹 清理了旧格式的 autopilot 状态文件。"
     else
-        echo "⚠️ 状态文件迁移失败，将创建新文件"
+        echo "⚠️ 检测到旧格式活跃状态文件 .autopilot/autopilot.local.md（阶段: ${OLD_PHASE}）"
+        echo "   请先手动处理（删除或完成），再启动新的 autopilot。"
+        exit 0
     fi
+fi
+# 从 .claude/ 迁移的旧逻辑保留兼容
+if [[ -f "$PROJECT_ROOT/.claude/autopilot.local.md" ]] && [[ ! -f "$PROJECT_ROOT/.autopilot/active" ]]; then
+    mkdir -p "$PROJECT_ROOT/.autopilot"
+    rm -f "$PROJECT_ROOT/.claude/autopilot.local.md"
+    echo "🧹 清理了 .claude/ 下的旧状态文件。"
 fi
 
 # ── 早期迁移：.claude/worktree-links → .autopilot/worktree-links ──
@@ -66,6 +75,7 @@ autopilot — AI 自动驾驶工程套件
   /autopilot cancel                      取消并清理
 
 选项:
+  --deep                    深度设计模式（交互式 Q&A + 方案对比 + 规格审查）
   --project                 强制项目模式（跳过复杂度检测）
   --single                  强制单任务模式（跳过复杂度检测）
   --max-iterations <n>      最大迭代次数 (默认: 30)
@@ -73,6 +83,7 @@ autopilot — AI 自动驾驶工程套件
 
 示例:
   /autopilot 实现用户头像上传功能，支持裁剪和压缩
+  /autopilot --deep 设计新的推荐算法架构
   /autopilot --project 复刻 Happy 到 Raven 生态
   /autopilot 001-wire-schema
   /autopilot next
@@ -283,8 +294,10 @@ HELP_EOF
             echo "📋 没有活跃的 autopilot。"
             exit 0
         fi
-        rm "$STATE_FILE"
-        echo "🛑 autopilot 已取消，状态文件已清理。"
+        # 仅移除 active 指针，requirements 文件夹保留作为历史归档
+        rm -f "$PROJECT_ROOT/.autopilot/active"
+        echo "🛑 autopilot 已取消，active 指针已清理。"
+        [[ -n "$TASK_DIR" ]] && echo "   需求文件夹保留在: $TASK_DIR"
         echo "   代码改动仍保留在工作目录中，可通过 git 查看。"
         exit 0
         ;;
@@ -296,9 +309,9 @@ esac
 if [[ -f "$STATE_FILE" ]]; then
     EXISTING_PHASE=$(get_field "phase" || true)
     if [[ "$EXISTING_PHASE" == "done" ]]; then
-        # phase=done 的状态文件是残留（stop hook 未及时清理），直接清理
-        rm "$STATE_FILE"
-        echo "🧹 清理了上一次已完成的 autopilot 状态文件。"
+        # phase=done 的状态文件是残留（stop hook 未及时清理），清理 active 指针
+        rm -f "$PROJECT_ROOT/.autopilot/active"
+        echo "🧹 清理了上一次已完成的 autopilot active 指针。"
     else
         echo "❌ 已有活跃的 autopilot 在运行（阶段: ${EXISTING_PHASE:-unknown}）。"
         echo "   使用 /autopilot status 查看状态"
@@ -318,6 +331,7 @@ PROMPT_PARTS=()
 MAX_ITERATIONS=30
 MAX_RETRIES=3
 MODE_OVERRIDE=""
+PLAN_MODE_OVERRIDE=""
 BRIEF_FILE=""
 
 while [[ $# -gt 0 ]]; do
@@ -344,6 +358,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --single)
             MODE_OVERRIDE="single"
+            shift
+            ;;
+        --deep)
+            PLAN_MODE_OVERRIDE="deep"
             shift
             ;;
         *)
@@ -374,7 +392,7 @@ if [[ -d "$TASKS_DIR" ]] && [[ -f "$PROJECT_ROOT/.autopilot/project/dag.yaml" ]]
     fi
 fi
 
-# 创建状态文件
+# 创建需求管理文件夹
 mkdir -p "$PROJECT_ROOT/.autopilot"
 
 # session_id：与 ralph 一致，直接使用环境变量（可能为空）。
@@ -400,6 +418,10 @@ elif [[ -d "$PROJECT_ROOT/.claude/knowledge" ]]; then
 > bash $(dirname "$0")/migrate-knowledge.sh"
 fi
 
+# 生成 task slug 并创建 requirements 文件夹
+TASK_SLUG=$(generate_task_slug "$GOAL")
+setup_requirement_dir "$TASK_SLUG"
+
 # Brief 模式：从任务简报文件启动
 if [[ -n "$BRIEF_FILE" ]]; then
     create_brief_state_file "$BRIEF_FILE" "$SESSION_ID" "$MAX_ITERATIONS" "$MAX_RETRIES" "false"
@@ -416,9 +438,11 @@ max_iterations: $MAX_ITERATIONS
 max_retries: $MAX_RETRIES
 retry_count: 0
 mode: "${MODE_OVERRIDE}"
+plan_mode: "${PLAN_MODE_OVERRIDE}"
 brief_file: ""
 next_task: ""
 auto_approve: false
+task_dir: "$TASK_DIR"
 session_id: $SESSION_ID
 started_at: "$(now_iso)"
 ---
@@ -457,6 +481,9 @@ if [[ -n "$BRIEF_FILE" ]]; then
 elif [[ "$MODE_OVERRIDE" == "project" ]]; then
     DISPLAY_GOAL="$GOAL"
     PHASE_FLOW="design → 复杂度检测 → 架构设计 → DAG 创建 → done"
+elif [[ "$PLAN_MODE_OVERRIDE" == "deep" ]]; then
+    DISPLAY_GOAL="$GOAL"
+    PHASE_FLOW="deep design（Q&A → 方案对比 → 规格审查）→ 审批 → implement → qa → 审批 → merge"
 else
     DISPLAY_GOAL="$GOAL"
     PHASE_FLOW="design → 审批 → implement → qa → 审批 → merge"
@@ -469,6 +496,7 @@ cat <<EOF
 最大迭代: $MAX_ITERATIONS
 最大重试: $MAX_RETRIES
 状态文件: $STATE_FILE ${IS_WORKTREE}
+需求文件夹: $TASK_DIR
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   阶段流程: $PHASE_FLOW

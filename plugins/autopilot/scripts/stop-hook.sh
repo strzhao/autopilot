@@ -96,10 +96,10 @@ SKIP_INCREMENT=0
 if [[ "$PHASE" == "done" ]]; then
     MODE=$(get_field "mode" || true)
 
-    # Case 0: project-qa 完成 → 项目完成通知 + 清理
+    # Case 0: project-qa 完成 → 项目完成通知 + 清理 active 指针
     if [[ "$MODE" == "project-qa" ]]; then
         bash "$SCRIPT_DIR/notify.sh" project-complete 2>/dev/null || true
-        rm "$STATE_FILE"
+        rm -f "$PROJECT_ROOT/.autopilot/active"
         exit 0
     fi
 
@@ -111,7 +111,10 @@ if [[ "$PHASE" == "done" ]]; then
     if [[ -n "$NEXT_TASK" ]] && [[ -f "$DAG_FILE" ]]; then
         TASK_FILE="$PROJECT_ROOT/.autopilot/project/tasks/${NEXT_TASK}.md"
         if [[ -f "$TASK_FILE" ]]; then
-            rm "$STATE_FILE"
+            # 为新任务创建新的 requirements 文件夹
+            local new_slug
+            new_slug=$(generate_task_slug "$NEXT_TASK")
+            setup_requirement_dir "$new_slug"
             TASK_FILE_ABS=$(cd "$(dirname "$TASK_FILE")" && pwd)/$(basename "$TASK_FILE")
             create_brief_state_file "$TASK_FILE_ABS" "$HOOK_SESSION" "30" "3" "true"
             bash "$SCRIPT_DIR/notify.sh" auto-chain 2>/dev/null || true
@@ -125,15 +128,17 @@ if [[ "$PHASE" == "done" ]]; then
         else
             echo "⚠️  autopilot: next_task file not found: ${TASK_FILE}" >&2
             bash "$SCRIPT_DIR/notify.sh" complete 2>/dev/null || true
-            rm "$STATE_FILE"
+            rm -f "$PROJECT_ROOT/.autopilot/active"
             exit 0
         fi
     # Case 2: 项目子任务完成 + 无 next_task → 检查是否全部完成
     elif [[ -n "$BRIEF_FILE" ]] && [[ -f "$DAG_FILE" ]]; then
-        rm "$STATE_FILE"
         RESULT=$(get_first_ready_task "$DAG_FILE")
         if [[ "$RESULT" == "ALL_DONE" ]]; then
-            # 全部完成 → 启动全项目 QA
+            # 全部完成 → 启动全项目 QA，创建新的 requirements 文件夹
+            local qa_slug
+            qa_slug=$(generate_task_slug "全项目集成QA验证")
+            setup_requirement_dir "$qa_slug"
             create_project_qa_state_file "$HOOK_SESSION"
             bash "$SCRIPT_DIR/notify.sh" project-qa 2>/dev/null || true
             echo "🏁 所有任务已完成，启动全项目 QA" >&2
@@ -145,12 +150,13 @@ if [[ "$PHASE" == "done" ]]; then
         else
             # 还有任务但 AI 未信号高信心 → 释放，等用户操作
             bash "$SCRIPT_DIR/notify.sh" complete 2>/dev/null || true
+            rm -f "$PROJECT_ROOT/.autopilot/active"
             exit 0
         fi
-    # Case 3: 单任务模式 → 正常清理
+    # Case 3: 单任务模式 → 正常清理（保留 requirements 文件夹，移除 active 指针）
     else
         bash "$SCRIPT_DIR/notify.sh" complete 2>/dev/null || true
-        rm "$STATE_FILE"
+        rm -f "$PROJECT_ROOT/.autopilot/active"
         exit 0
     fi
 fi
@@ -168,7 +174,7 @@ fi
 if [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
     echo "🛑 autopilot: 达到最大迭代次数 ($MAX_ITERATIONS)。" >&2
     bash "$SCRIPT_DIR/notify.sh" error 2>/dev/null || true
-    rm "$STATE_FILE"
+    rm -f "$PROJECT_ROOT/.autopilot/active"
     exit 0
 fi
 
@@ -187,9 +193,12 @@ fi
 
 # design 阶段使用 Plan Mode（auto_approve 时跳过 Plan Mode）
 AUTO_APPROVE=$(get_field "auto_approve" || true)
+PLAN_MODE=$(get_field "plan_mode" || true)
 if [[ "$PHASE" == "design" ]]; then
     if [[ "$AUTO_APPROVE" == "true" ]]; then
         PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. auto_approve=true: 跳过 Plan Mode, 直接写设计文档到状态文件. 运行 plan-reviewer agent 审查, 通过则直接推进到 implement; 失败则回退到正常 Plan Mode (设置 auto_approve: false). 按照 autopilot skill 的 Phase: design 指引执行."
+    elif [[ "$PLAN_MODE" == "deep" ]]; then
+        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. plan_mode=deep: 先执行 Deep Design 交互探索流程（参见 references/deep-design-guide.md），包括项目上下文探索、视觉伴侣征求、逐个澄清问题(AskUserQuestion)、提出 2-3 种方案. 交互探索完成后再调用 EnterPlanMode 写正式设计文档. 产出物写入 task_dir: $(get_field 'task_dir'). 按照 autopilot skill 的 Phase: design 指引执行."
     else
         PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述, 然后立即调用 EnterPlanMode 工具进入 Plan Mode. 不要在调用 EnterPlanMode 之前做任何代码探索. 所有探索和设计工作必须在 Plan Mode 内完成. 按照 autopilot skill 的 Phase: design 指引执行."
     fi
