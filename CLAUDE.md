@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.10.0)
+### 3. autopilot (v3.11.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + 智能提交 + 工程诊断 + 性能保障 + Worktree 自动初始化）
 
@@ -61,7 +61,10 @@
 **核心能力**:
 - 从目标描述到代码合并的全程自动化
 - 阶段状态机驱动：design → implement → qa → auto-fix → merge
-- 仅在两个审批门需要人工介入（设计审批 + 验收审批）
+- 仅在两个审批门需要人工介入（设计审批 + 验收审批），auto-approve 模式下可全自动
+- 项目模式 Auto-Chain：任务完成后 AI 评估信心，高信心时自动链接下一个 DAG 就绪任务（auto_approve=true）
+- 全项目 QA：所有 DAG 任务完成后自动触发跨任务集成质量验证（mode: "project-qa"）
+- `/autopilot next` 自动选择第一个就绪任务并启动（而非仅展示列表）
 - 设计方案审查：design 阶段 ExitPlanMode 前启动 plan-reviewer sub-agent，6 维度审查（需求完整性、技术可行性、任务分解、验证覆盖、风险评估、范围控制），置信度 ≥90 为 BLOCKER，最多 2 轮审查
 - 设计阶段验收场景独立生成 + Plan Reviewer 双向覆盖校验（三层信息隔离验证链）
 - 红蓝对抗：蓝队按计划编码 + 红队仅看设计文档写验收测试，并行执行、信息隔离
@@ -288,6 +291,18 @@
 ---
 
 ## 更新日志
+
+### 2026-04-11
+- autopilot 升级至 v3.11.0：项目模式 Auto-Chain 自动链式执行 + 全项目 QA + SKILL.md Token 优化
+  - `/autopilot next` 从打印就绪列表改为自动选择第一个就绪任务并启动 brief 模式
+  - Auto-Chain 机制：merge 阶段 AI 评估信心 → 设置 next_task frontmatter → stop-hook 自动创建下一个任务状态文件
+  - Auto-Approve 机制：auto-chain 设 auto_approve=true，跳过 Plan Mode 审批和 QA review-accept 门；失败自动回退
+  - 全项目 QA：所有 DAG 任务完成后 stop-hook 自动创建 mode=project-qa 状态，跨任务集成验证
+  - lib.sh 新增 3 个共享函数（get_first_ready_task、create_brief_state_file、create_project_qa_state_file）
+  - notify.sh 新增 auto-chain / project-qa / project-complete 通知场景
+  - SKILL.md Token 优化：676 行 → 330 行（-51%），四阶段详细流程外置到 references/（Progressive Disclosure）
+  - 新增 6 个 reference 文件：implement-phase.md / qa-phase.md / auto-fix-phase.md / merge-phase.md / auto-chain-guide.md / project-qa-guide.md
+  - autopilot-project SKILL.md 更新：核心原则从"人工编排"改为"自动编排 + 人工兜底"
 
 ### 2026-04-10
 - autopilot 升级至 v3.10.0：运行时文件从 .claude/ 迁移到 .autopilot/，消除受保护目录权限弹窗

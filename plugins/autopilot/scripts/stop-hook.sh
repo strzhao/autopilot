@@ -89,12 +89,70 @@ max_iterations: 30' "$STATE_FILE" && rm -f "${STATE_FILE}.bak"
     fi
 fi
 
-# ── 5. phase=done → 完成清理 ──
+# ── 5. phase=done → 完成清理 / 自动链接 ──
+
+SKIP_INCREMENT=0
 
 if [[ "$PHASE" == "done" ]]; then
-    bash "$SCRIPT_DIR/notify.sh" complete 2>/dev/null || true
-    rm "$STATE_FILE"
-    exit 0
+    MODE=$(get_field "mode" || true)
+
+    # Case 0: project-qa 完成 → 项目完成通知 + 清理
+    if [[ "$MODE" == "project-qa" ]]; then
+        bash "$SCRIPT_DIR/notify.sh" project-complete 2>/dev/null || true
+        rm "$STATE_FILE"
+        exit 0
+    fi
+
+    NEXT_TASK=$(get_field "next_task" || true)
+    BRIEF_FILE=$(get_field "brief_file" || true)
+    DAG_FILE="$PROJECT_ROOT/.autopilot/project/dag.yaml"
+
+    # Case 1: AI 信号了下一个任务 → 自动链接
+    if [[ -n "$NEXT_TASK" ]] && [[ -f "$DAG_FILE" ]]; then
+        TASK_FILE="$PROJECT_ROOT/.autopilot/project/tasks/${NEXT_TASK}.md"
+        if [[ -f "$TASK_FILE" ]]; then
+            rm "$STATE_FILE"
+            TASK_FILE_ABS=$(cd "$(dirname "$TASK_FILE")" && pwd)/$(basename "$TASK_FILE")
+            create_brief_state_file "$TASK_FILE_ABS" "$HOOK_SESSION" "30" "3" "true"
+            bash "$SCRIPT_DIR/notify.sh" auto-chain 2>/dev/null || true
+            echo "🔗 auto-chain: ${NEXT_TASK}" >&2
+            # 重新读取新状态文件的字段
+            PHASE=$(get_field "phase" || true)
+            ITERATION=$(get_field "iteration" || true)
+            MAX_ITERATIONS=$(get_field "max_iterations" || true)
+            SKIP_INCREMENT=1
+            # 落入下方 block JSON 构造
+        else
+            echo "⚠️  autopilot: next_task file not found: ${TASK_FILE}" >&2
+            bash "$SCRIPT_DIR/notify.sh" complete 2>/dev/null || true
+            rm "$STATE_FILE"
+            exit 0
+        fi
+    # Case 2: 项目子任务完成 + 无 next_task → 检查是否全部完成
+    elif [[ -n "$BRIEF_FILE" ]] && [[ -f "$DAG_FILE" ]]; then
+        rm "$STATE_FILE"
+        RESULT=$(get_first_ready_task "$DAG_FILE")
+        if [[ "$RESULT" == "ALL_DONE" ]]; then
+            # 全部完成 → 启动全项目 QA
+            create_project_qa_state_file "$HOOK_SESSION"
+            bash "$SCRIPT_DIR/notify.sh" project-qa 2>/dev/null || true
+            echo "🏁 所有任务已完成，启动全项目 QA" >&2
+            PHASE=$(get_field "phase" || true)
+            ITERATION=$(get_field "iteration" || true)
+            MAX_ITERATIONS=$(get_field "max_iterations" || true)
+            SKIP_INCREMENT=1
+            # 落入下方 block JSON 构造
+        else
+            # 还有任务但 AI 未信号高信心 → 释放，等用户操作
+            bash "$SCRIPT_DIR/notify.sh" complete 2>/dev/null || true
+            exit 0
+        fi
+    # Case 3: 单任务模式 → 正常清理
+    else
+        bash "$SCRIPT_DIR/notify.sh" complete 2>/dev/null || true
+        rm "$STATE_FILE"
+        exit 0
+    fi
 fi
 
 # ── 6. 审批门检查 ──
@@ -114,18 +172,27 @@ if [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
     exit 0
 fi
 
-# ── 8. 递增 iteration ──
+# ── 8. 递增 iteration（自动链接创建的新状态文件跳过递增） ──
 
-NEXT_ITERATION=$((ITERATION + 1))
-set_field "iteration" "$NEXT_ITERATION"
+if [[ "$SKIP_INCREMENT" -eq 0 ]]; then
+    NEXT_ITERATION=$((ITERATION + 1))
+    set_field "iteration" "$NEXT_ITERATION"
+else
+    NEXT_ITERATION="$ITERATION"
+fi
 
 # ── 9. 构造 block JSON ──
 # 注意：macOS bash 3.2 有 multibyte bug，$VAR 后紧跟全角标点会吞掉变量值。
 # 所有变量必须用 ${VAR} 花括号界定。
 
-# design 阶段使用 Plan Mode
+# design 阶段使用 Plan Mode（auto_approve 时跳过 Plan Mode）
+AUTO_APPROVE=$(get_field "auto_approve" || true)
 if [[ "$PHASE" == "design" ]]; then
-    PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述, 然后立即调用 EnterPlanMode 工具进入 Plan Mode. 不要在调用 EnterPlanMode 之前做任何代码探索. 所有探索和设计工作必须在 Plan Mode 内完成. 按照 autopilot skill 的 Phase: design 指引执行."
+    if [[ "$AUTO_APPROVE" == "true" ]]; then
+        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. auto_approve=true: 跳过 Plan Mode, 直接写设计文档到状态文件. 运行 plan-reviewer agent 审查, 通过则直接推进到 implement; 失败则回退到正常 Plan Mode (设置 auto_approve: false). 按照 autopilot skill 的 Phase: design 指引执行."
+    else
+        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述, 然后立即调用 EnterPlanMode 工具进入 Plan Mode. 不要在调用 EnterPlanMode 之前做任何代码探索. 所有探索和设计工作必须在 Plan Mode 内完成. 按照 autopilot skill 的 Phase: design 指引执行."
+    fi
 elif [[ "$PHASE" == "qa" ]]; then
     PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: qa, 迭代: ${NEXT_ITERATION}. ⚠️ Tier 1.5 铁律: (1) 必须执行设计文档中的每一个真实测试场景, 不允许跳过任何场景; (2) 结果判定前先做场景计数匹配——统计报告中执行:标记数量 E 与设计文档场景总数 N, E<N 则有场景被跳过, 必须补做. 按照 autopilot skill 的指引执行当前阶段的工作流."
 elif [[ "$PHASE" == "merge" ]]; then

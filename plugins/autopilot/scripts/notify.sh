@@ -16,6 +16,18 @@ case "$SCENE" in
         TITLE="autopilot: 任务完成"
         MSG="代码已成功合并，autopilot 闭环完成。"
         ;;
+    auto-chain)
+        TITLE="autopilot: 自动链接"
+        MSG="任务已完成，自动启动下一个任务。"
+        ;;
+    project-qa)
+        TITLE="autopilot: 全项目 QA"
+        MSG="所有任务已完成，正在执行全项目质量检查。"
+        ;;
+    project-complete)
+        TITLE="autopilot: 项目完成"
+        MSG="全项目 QA 通过，项目已完成！"
+        ;;
     error)
         TITLE="autopilot: 需要人工介入"
         MSG="自动修复达到上限，部分问题需要人工处理。"

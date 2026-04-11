@@ -243,69 +243,39 @@ HELP_EOF
             echo "❌ 没有项目 DAG。使用 /autopilot --project <目标> 创建项目。"
             exit 0
         fi
-        # 用 awk 解析 DAG 并找就绪任务（兼容 bash 3.2，不用 declare -A）
-        awk '
-        /^[[:space:]]*-[[:space:]]*id:/ {
-            gsub(/.*id:[[:space:]]*"?/, ""); gsub(/".*/, ""); id=$0
-            title=""; status=""; deps=""
-        }
-        /^[[:space:]]*title:/ {
-            gsub(/.*title:[[:space:]]*"?/, ""); gsub(/".*/, ""); title=$0
-        }
-        /^[[:space:]]*status:/ {
-            gsub(/.*status:[[:space:]]*"?/, ""); gsub(/".*/, ""); status=$0
-        }
-        /^[[:space:]]*depends_on:/ {
-            gsub(/.*depends_on:[[:space:]]*/, ""); deps=$0
-        }
-        # 当读到下一个 id 或 EOF 前，处理完整任务
-        /^[[:space:]]*-[[:space:]]*id:/ && NR > 1 {
-            # 保存上一个任务
-        }
-        {
-            if (id != "" && title != "" && status != "") {
-                ids[++n] = id
-                titles[id] = title
-                statuses[id] = status
-                dep_lists[id] = deps
-                id=""; title=""; status=""; deps=""
+        # 自动选择第一个就绪任务并启动
+        NEXT_TASK=$(get_first_ready_task "$DAG_FILE")
+        if [[ "$NEXT_TASK" == "ALL_DONE" ]]; then
+            echo "🎉 所有任务已完成！"
+            echo ""
+            echo "💡 提示: 全项目 QA 会在最后一个任务的 auto-chain 中自动触发。"
+            echo "   如需手动重跑: /autopilot --single 全项目集成QA验证"
+            exit 0
+        elif [[ -n "$NEXT_TASK" ]]; then
+            echo "🚀 自动选择就绪任务: $NEXT_TASK"
+            echo ""
+            # 重新调用自身走 brief 模式初始化流程
+            exec bash "$0" "$NEXT_TASK"
+        else
+            echo "⏳ 没有就绪任务。以下任务正在阻塞："
+            awk '
+            /^[[:space:]]*-[[:space:]]*id:/ {
+                gsub(/.*id:[[:space:]]*"?/, ""); gsub(/".*/, ""); id=$0
+                title=""; status=""
             }
-        }
-        END {
-            all_done = 1; has_ready = 0
-            for (i = 1; i <= n; i++) {
-                tid = ids[i]
-                if (statuses[tid] != "done" && statuses[tid] != "skipped") all_done = 0
-                if (statuses[tid] != "pending") continue
-                # 检查依赖是否全部 done
-                d = dep_lists[tid]
-                gsub(/[\[\]" ]/, "", d)
-                ready = 1
-                if (d != "") {
-                    split(d, darr, ",")
-                    for (j in darr) {
-                        if (darr[j] != "" && statuses[darr[j]] != "done") {
-                            ready = 0; break
-                        }
-                    }
-                }
-                if (ready) {
-                    if (!has_ready) printf "📋 就绪任务（可立即执行）：\n"
-                    has_ready = 1
-                    printf "   → /autopilot %s\n     %s\n", tid, titles[tid]
-                }
+            /^[[:space:]]*title:/ {
+                gsub(/.*title:[[:space:]]*"?/, ""); gsub(/".*/, ""); title=$0
             }
-            if (all_done && !has_ready) printf "🎉 所有任务已完成！\n"
-            else if (!has_ready) {
-                printf "⏳ 没有就绪任务。以下任务正在阻塞：\n"
-                for (i = 1; i <= n; i++) {
-                    tid = ids[i]
-                    if (statuses[tid] == "pending") printf "   ⏳ %s: %s\n", tid, titles[tid]
+            /^[[:space:]]*status:/ {
+                gsub(/.*status:[[:space:]]*"?/, ""); gsub(/".*/, ""); status=$0
+                if (id != "" && title != "" && status == "pending") {
+                    printf "   ⏳ %s: %s\n", id, title
                 }
+                id=""; title=""; status=""
             }
-        }
-        ' "$DAG_FILE"
-        exit 0
+            ' "$DAG_FILE"
+            exit 0
+        fi
         ;;
 
     cancel)
@@ -432,70 +402,7 @@ fi
 
 # Brief 模式：从任务简报文件启动
 if [[ -n "$BRIEF_FILE" ]]; then
-    # 读取 brief 内容（限制前 100 行）
-    BRIEF_CONTENT=$(head -100 "$BRIEF_FILE")
-
-    # 解析 brief 的 depends_on 字段，收集 handoff 文件
-    HANDOFF_CONTENT=""
-    BRIEF_DIR=$(dirname "$BRIEF_FILE")
-    # macOS 兼容：不用 grep -P，用 sed 提取 depends_on 数组中的引号内容
-    DEPS=$(sed -n 's/.*depends_on:.*\[//p' "$BRIEF_FILE" 2>/dev/null | sed 's/\].*//;s/[",]/ /g' || true)
-    for dep in $DEPS; do
-        dep="${dep//\"/}"
-        HANDOFF="$BRIEF_DIR/${dep}.handoff.md"
-        if [[ -f "$HANDOFF" ]]; then
-            HANDOFF_CONTENT="${HANDOFF_CONTENT}
---- handoff: ${dep} ---
-$(head -50 "$HANDOFF")
-"
-        fi
-    done
-
-    # 读取架构设计摘要（前 60 行）
-    DESIGN_SUMMARY=""
-    DESIGN_FILE="$PROJECT_ROOT/.autopilot/project/design.md"
-    if [[ -f "$DESIGN_FILE" ]]; then
-        DESIGN_SUMMARY="
---- 架构设计摘要 ---
-$(head -60 "$DESIGN_FILE")"
-    fi
-
-    cat > "$STATE_FILE" <<EOF
----
-active: true
-phase: "design"
-gate: ""
-iteration: 1
-max_iterations: $MAX_ITERATIONS
-max_retries: $MAX_RETRIES
-retry_count: 0
-mode: "single"
-brief_file: "$BRIEF_FILE"
-session_id: $SESSION_ID
-started_at: "$(now_iso)"
----
-
-## 目标
-$BRIEF_CONTENT
-$HANDOFF_CONTENT
-$DESIGN_SUMMARY
-$KNOWLEDGE_HINT
-
-## 设计文档
-(待 design 阶段填充)
-
-## 实现计划
-(待 design 阶段填充)
-
-## 红队验收测试
-(待 implement 阶段填充)
-
-## QA 报告
-(待 qa 阶段填充)
-
-## 变更日志
-- [$(now_iso)] autopilot 初始化（brief 模式），任务: $(basename "$BRIEF_FILE")
-EOF
+    create_brief_state_file "$BRIEF_FILE" "$SESSION_ID" "$MAX_ITERATIONS" "$MAX_RETRIES" "false"
 
 else
     # 正常模式状态文件
@@ -510,6 +417,8 @@ max_retries: $MAX_RETRIES
 retry_count: 0
 mode: "${MODE_OVERRIDE}"
 brief_file: ""
+next_task: ""
+auto_approve: false
 session_id: $SESSION_ID
 started_at: "$(now_iso)"
 ---

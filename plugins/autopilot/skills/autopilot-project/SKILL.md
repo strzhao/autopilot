@@ -80,15 +80,23 @@ depends_on: ["XXX", "YYY"]
 3. **上下文预算 <10KB**: L0 DAG 概览 + L1 任务简报 + L2 依赖 handoff + L3 架构摘要
 4. **Handoff 链**: 每个任务完成后写 ≤500 字 handoff，只有直接下游读取
 5. **失败隔离**: 一个任务失败不影响无依赖关系的其他任务
-6. **人工编排**: 用户决定何时启动哪个任务，系统只建议就绪任务
+6. **自动编排 + 人工兜底**: 高信心时自动链接下一任务；低信心或失败时释放循环等待用户
 7. **AI Native**: 任务粒度、DAG 结构、handoff 内容由 AI 运行时判断，不硬编码规则
+
+## Auto-Chain 机制
+
+任务完成时（phase=done），如果 AI 在 merge 阶段评估为高信心，stop-hook 自动启动下一个就绪任务：
+- AI 通过设置 frontmatter `next_task` 字段信号高信心
+- stop-hook 读取该字段并创建新状态文件（`auto_approve: true`）
+- `auto_approve` 使下一个任务在高信心时跳过人工审批门（design 审批 + QA 审批）
+- 所有任务完成后自动触发全项目 QA（`mode: "project-qa"`）
 
 ## 用户命令
 
 | 命令 | 行为 |
 |------|------|
 | `/autopilot status` | 无活跃 autopilot 时自动显示项目 DAG 概览 |
-| `/autopilot next` | 找就绪任务（deps 全部 done），输出 `/autopilot NNN-name` 建议 |
+| `/autopilot next` | 自动选择第一个就绪任务并启动 brief 模式 autopilot |
 | `/autopilot NNN-name` | 自动匹配 tasks/ 下的任务文件，brief 模式启动标准 autopilot |
 | `/autopilot --project <goal>` | 强制项目模式（跳过复杂度检测） |
 | `/autopilot --single <goal>` | 强制单任务模式 |
