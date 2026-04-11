@@ -1,0 +1,35 @@
+plugins/autopilot/scripts/lib.sh
+  a941ce84fa1f8c6a 106-107,144
+plugins/autopilot/.claude-plugin/plugin.json
+  a941ce84fa1f8c6a 3
+.claude-plugin/marketplace.json
+  a941ce84fa1f8c6a 32
+CLAUDE.md
+  a941ce84fa1f8c6a 51,295-301
+plugins/autopilot/scripts/setup.sh
+  a941ce84fa1f8c6a 223-224,277-278
+plugins/autopilot/scripts/stop-hook.sh
+  a941ce84fa1f8c6a 110-116
+plugins/autopilot/scripts/notify.sh
+  a941ce84fa1f8c6a 31-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "6dc1493f8c00fcffef00806d8de986dab8967544",
+  "prompts": {
+    "a941ce84fa1f8c6a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ef3d038d-1550-489d-a35d-e1dd75f94a01",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 30,
+      "total_deletions": 12,
+      "accepted_lines": 28,
+      "overriden_lines": 0
+    }
+  }
+}
