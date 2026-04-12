@@ -94,6 +94,18 @@ fi
 SKIP_INCREMENT=0
 
 if [[ "$PHASE" == "done" ]]; then
+    # 知识提取守卫：AI 跳过知识提取直接设 done → 回滚到 merge
+    KNOWLEDGE_EXTRACTED=$(get_field "knowledge_extracted" || true)
+    if [[ "$KNOWLEDGE_EXTRACTED" != "true" ]] && [[ "$KNOWLEDGE_EXTRACTED" != "skipped" ]]; then
+        set_field "phase" '"merge"'
+        NEXT_ITERATION=$((ITERATION + 1))
+        set_field "iteration" "$NEXT_ITERATION"
+        PROMPT="你跳过了知识提取步骤。读取 ${STATE_FILE}，按照 autopilot skill Phase: merge 的知识提取与沉淀步骤执行。完成后用 Edit 设置 knowledge_extracted 为 true（有新增）或 skipped（无新增），然后再设 phase: done。"
+        jq -n --arg prompt "$PROMPT" --arg msg "autopilot iteration ${NEXT_ITERATION} | phase: merge | 知识提取回滚" \
+            '{"decision":"block","reason":$prompt,"systemMessage":$msg}'
+        exit 0
+    fi
+
     MODE=$(get_field "mode" || true)
 
     # Case 0: project-qa 完成 → 项目完成通知 + 清理 active 指针
@@ -212,7 +224,7 @@ if [[ "$PHASE" == "design" ]]; then
 elif [[ "$PHASE" == "qa" ]]; then
     PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: qa, 迭代: ${NEXT_ITERATION}. ⚠️ Tier 1.5 铁律: (1) 必须执行设计文档中的每一个真实测试场景, 不允许跳过任何场景; (2) 结果判定前先做场景计数匹配——统计报告中执行:标记数量 E 与设计文档场景总数 N, E<N 则有场景被跳过, 必须补做. 按照 autopilot skill 的指引执行当前阶段的工作流."
 elif [[ "$PHASE" == "merge" ]]; then
-    PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: merge, 迭代: ${NEXT_ITERATION}. ⚠️ merge 阶段必须使用 Agent 工具启动 commit-agent (model: sonnet), 参见 references/commit-agent-prompt.md 模板. 不要使用 Skill: autopilot-commit. 按照 autopilot skill 的 Phase: merge 指引执行."
+    PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: merge, 迭代: ${NEXT_ITERATION}. ⚠️ merge 阶段必须使用 Agent 工具启动 commit-agent (model: sonnet), 参见 references/commit-agent-prompt.md 模板. 不要使用 Skill: autopilot-commit. 完成知识提取后, 用 Edit 设置 knowledge_extracted 为 true 或 skipped, 再设 phase: done. 按照 autopilot skill 的 Phase: merge 指引执行."
 else
     PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: ${PHASE}, 迭代: ${NEXT_ITERATION}. 按照 autopilot skill 的指引执行当前阶段的工作流."
 fi

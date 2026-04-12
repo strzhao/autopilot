@@ -442,6 +442,7 @@ plan_mode: "${PLAN_MODE_OVERRIDE}"
 brief_file: ""
 next_task: ""
 auto_approve: false
+knowledge_extracted: ""
 task_dir: "$TASK_DIR"
 session_id: $SESSION_ID
 started_at: "$(now_iso)"

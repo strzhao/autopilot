@@ -210,6 +210,7 @@ plan_mode: ""
 brief_file: "$brief_file"
 next_task: ""
 auto_approve: $auto_approve
+knowledge_extracted: ""
 task_dir: "$TASK_DIR"
 session_id: $session_id
 started_at: "$(now_iso)"
@@ -283,6 +284,7 @@ plan_mode: ""
 brief_file: ""
 next_task: ""
 auto_approve: true
+knowledge_extracted: ""
 task_dir: "$TASK_DIR"
 session_id: $session_id
 started_at: "$(now_iso)"

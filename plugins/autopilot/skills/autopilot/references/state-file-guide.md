@@ -9,6 +9,7 @@
 - `max_iterations`: 最大迭代次数，AI 不修改
 - `retry_count`: auto-fix 重试计数，AI 更新
 - `qa_scope`: 选择性重跑标记，AI 更新
+- `knowledge_extracted`: 知识提取完成标记，AI 在 merge 阶段设为 `"true"`（有新增）或 `"skipped"`（无新增）。stop-hook 的 phase=done 守卫检查此字段，缺失或空值会回滚到 merge。
 - `session_id`: 会话 ID，AI 不修改
 
 ## 更新原则
