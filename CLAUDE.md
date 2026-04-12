@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.12.1)
+### 3. autopilot (v3.12.2)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + Deep Design 交互式设计 + 需求管理 + 智能提交 + 工程诊断 + 性能保障 + Worktree 自动初始化）
 
@@ -293,6 +293,11 @@
 ## 更新日志
 
 ### 2026-04-12
+- autopilot 升级至 v3.12.2：恢复知识提取强制执行守卫（v2.8.0 被 v2.13.0 缓存同步意外回退）
+  - stop-hook.sh: phase=done 新增 knowledge_extracted 回滚守卫（非 true/skipped → 回滚到 merge）
+  - stop-hook.sh: merge prompt 追加知识提取提醒
+  - setup.sh/lib.sh: 所有状态文件模板新增 knowledge_extracted 字段
+  - SKILL.md + state-file-guide.md: 字段文档同步
 - autopilot 升级至 v3.12.1：修复项目模式 `/autopilot next` 误判"所有任务已完成"的 bug
   - get_first_ready_task awk 兼容 `name:` 和 `title:` 两种 dag.yaml 字段名（AI 常写 `name:` 而非规范的 `title:`）
   - 修复空 DAG 解析时 vacuous truth 导致 ALL_DONE 误判（n==0 时 all_done 为 true）
