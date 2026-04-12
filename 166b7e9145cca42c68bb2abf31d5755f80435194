@@ -1,0 +1,31 @@
+plugins/autopilot/skills/autopilot/references/state-file-guide.md
+  3f2c50a6e17b4496 12
+plugins/autopilot/skills/autopilot/SKILL.md
+  3f2c50a6e17b4496 343
+plugins/autopilot/scripts/setup.sh
+  3f2c50a6e17b4496 445
+plugins/autopilot/scripts/lib.sh
+  3f2c50a6e17b4496 213,287
+plugins/autopilot/scripts/stop-hook.sh
+  3f2c50a6e17b4496 97-108,227
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "166b7e9145cca42c68bb2abf31d5755f80435194",
+  "prompts": {
+    "3f2c50a6e17b4496": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4a30f798-12e8-4d2b-9411-c0e8d8fb9ed9",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 18,
+      "total_deletions": 1,
+      "accepted_lines": 18,
+      "overriden_lines": 0
+    }
+  }
+}
