@@ -1,0 +1,52 @@
+plugins/code-doctor/skills/code-doctor/SKILL.md
+  e796c894b0e8d35f 1-464
+.claude-plugin/marketplace.json
+  e796c894b0e8d35f 57-66
+plugins/code-doctor/skills/code-doctor/references/android-checks.md
+  e796c894b0e8d35f 1-140
+CLAUDE.md
+  e796c894b0e8d35f 109-124,154-156,314-324
+plugins/code-doctor/skills/code-doctor/references/rn-checks.md
+  e796c894b0e8d35f 1-127
+plugins/code-doctor/skills/code-doctor/references/performance-testing.md
+  e796c894b0e8d35f 1-69
+plugins/code-doctor/.claude-plugin/plugin.json
+  e796c894b0e8d35f 1-11
+plugins/code-doctor/skills/code-doctor/references/ios-checks.md
+  e796c894b0e8d35f 1-128
+plugins/code-doctor/README.md
+  e796c894b0e8d35f 1-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "702f02c493767312aca72d24d219fd6c84d4a15e",
+  "prompts": {
+    "dbbbd47493e9e999": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "278a4453-fcea-435a-835f-b8627d647661",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "e796c894b0e8d35f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4be13fc3-a3d6-4037-a3cd-b0ebffd6d285",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 1091,
+      "total_deletions": 5,
+      "accepted_lines": 1089,
+      "overriden_lines": 0
+    }
+  }
+}
