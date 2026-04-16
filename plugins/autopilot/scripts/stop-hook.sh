@@ -119,11 +119,33 @@ if [[ "$PHASE" == "done" ]]; then
     BRIEF_FILE=$(get_field "brief_file" || true)
     DAG_FILE="$PROJECT_ROOT/.autopilot/project/dag.yaml"
 
-    # Case 0.5: 项目模式设计完成（非子任务）→ 通知 + 清理 active 指针
+    # Case 0.5: 项目模式设计完成（非子任务）→ 自动启动首个就绪任务
     if [[ "$MODE" == "project" ]] && [[ -z "$BRIEF_FILE" ]] && [[ -f "$DAG_FILE" ]]; then
-        bash "$SCRIPT_DIR/notify.sh" project-design-complete 2>/dev/null || true
-        rm -f "$PROJECT_ROOT/.autopilot/active"
-        exit 0
+        FIRST_READY=$(get_first_ready_task "$DAG_FILE")
+        if [[ -n "$FIRST_READY" ]] && [[ "$FIRST_READY" != "ALL_DONE" ]]; then
+            TASK_FILE="$PROJECT_ROOT/.autopilot/project/tasks/${FIRST_READY}.md"
+            if [[ -f "$TASK_FILE" ]]; then
+                new_slug=$(generate_task_slug "$FIRST_READY")
+                setup_requirement_dir "$new_slug"
+                TASK_FILE_ABS=$(cd "$(dirname "$TASK_FILE")" && pwd)/$(basename "$TASK_FILE")
+                create_brief_state_file "$TASK_FILE_ABS" "$HOOK_SESSION" "30" "3" "true"
+                bash "$SCRIPT_DIR/notify.sh" auto-chain 2>/dev/null || true
+                echo "🔗 project-design → ${FIRST_READY}" >&2
+                PHASE=$(get_field "phase" || true)
+                ITERATION=$(get_field "iteration" || true)
+                MAX_ITERATIONS=$(get_field "max_iterations" || true)
+                SKIP_INCREMENT=1
+                # 落入下方 block JSON 构造
+            else
+                bash "$SCRIPT_DIR/notify.sh" project-design-complete 2>/dev/null || true
+                rm -f "$PROJECT_ROOT/.autopilot/active"
+                exit 0
+            fi
+        else
+            bash "$SCRIPT_DIR/notify.sh" project-design-complete 2>/dev/null || true
+            rm -f "$PROJECT_ROOT/.autopilot/active"
+            exit 0
+        fi
     fi
 
     # Case 1: AI 信号了下一个任务 → 自动链接
@@ -131,7 +153,6 @@ if [[ "$PHASE" == "done" ]]; then
         TASK_FILE="$PROJECT_ROOT/.autopilot/project/tasks/${NEXT_TASK}.md"
         if [[ -f "$TASK_FILE" ]]; then
             # 为新任务创建新的 requirements 文件夹
-            local new_slug
             new_slug=$(generate_task_slug "$NEXT_TASK")
             setup_requirement_dir "$new_slug"
             TASK_FILE_ABS=$(cd "$(dirname "$TASK_FILE")" && pwd)/$(basename "$TASK_FILE")
@@ -155,7 +176,6 @@ if [[ "$PHASE" == "done" ]]; then
         RESULT=$(get_first_ready_task "$DAG_FILE")
         if [[ "$RESULT" == "ALL_DONE" ]]; then
             # 全部完成 → 启动全项目 QA，创建新的 requirements 文件夹
-            local qa_slug
             qa_slug=$(generate_task_slug "全项目集成QA验证")
             setup_requirement_dir "$qa_slug"
             create_project_qa_state_file "$HOOK_SESSION"
