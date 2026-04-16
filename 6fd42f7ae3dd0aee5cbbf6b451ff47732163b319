@@ -1,0 +1,25 @@
+plugins/autopilot/scripts/visual-companion/start-server.sh
+  24250f88f3069039 100,125
+plugins/autopilot/scripts/visual-companion/stop-server.sh
+  24250f88f3069039 26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "6fd42f7ae3dd0aee5cbbf6b451ff47732163b319",
+  "prompts": {
+    "24250f88f3069039": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "da36dec8-c9bb-4c12-8b82-19098dd1de17",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 3,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    }
+  }
+}
