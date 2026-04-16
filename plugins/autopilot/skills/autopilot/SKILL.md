@@ -236,7 +236,7 @@ ExitPlanMode + 用户审批通过后，创建项目文件结构：
 2. 写 `.autopilot/project/design.md` — 从计划文件复制完整架构设计
 3. 写 `.autopilot/project/dag.yaml` — 机器可读的任务 DAG（格式参见 autopilot-project skill）
 4. 为 DAG 中的每个任务写 `.autopilot/project/tasks/NNN-name.md` — 任务简报（含 frontmatter: id/depends_on + 目标/架构上下文/输入输出契约/验收标准）
-5. 更新状态文件 frontmatter：`mode: "project"`、`phase: "done"`
+5. 更新状态文件 frontmatter：`mode: "project"`、`knowledge_extracted: "skipped"`、`phase: "done"`
 6. 追加变更日志：项目文件创建完成
 7. 输出下一步指引：`使用 /autopilot next 自动启动第一个就绪任务`
 

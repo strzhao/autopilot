@@ -97,13 +97,20 @@ if [[ "$PHASE" == "done" ]]; then
     # 知识提取守卫：AI 跳过知识提取直接设 done → 回滚到 merge
     KNOWLEDGE_EXTRACTED=$(get_field "knowledge_extracted" || true)
     if [[ "$KNOWLEDGE_EXTRACTED" != "true" ]] && [[ "$KNOWLEDGE_EXTRACTED" != "skipped" ]]; then
-        set_field "phase" '"merge"'
-        NEXT_ITERATION=$((ITERATION + 1))
-        set_field "iteration" "$NEXT_ITERATION"
-        PROMPT="你跳过了知识提取步骤。读取 ${STATE_FILE}，按照 autopilot skill Phase: merge 的知识提取与沉淀步骤执行。完成后用 Edit 设置 knowledge_extracted 为 true（有新增）或 skipped（无新增），然后再设 phase: done。"
-        jq -n --arg prompt "$PROMPT" --arg msg "autopilot iteration ${NEXT_ITERATION} | phase: merge | 知识提取回滚" \
-            '{"decision":"block","reason":$prompt,"systemMessage":$msg}'
-        exit 0
+        # 豁免：无代码变更的阶段不需要知识提取
+        MODE_CHECK=$(get_field "mode" || true)
+        BRIEF_CHECK=$(get_field "brief_file" || true)
+        if { [[ "$MODE_CHECK" == "project" ]] && [[ -z "$BRIEF_CHECK" ]]; } || [[ "$MODE_CHECK" == "project-qa" ]]; then
+            set_field "knowledge_extracted" '"skipped"'
+        else
+            set_field "phase" '"merge"'
+            NEXT_ITERATION=$((ITERATION + 1))
+            set_field "iteration" "$NEXT_ITERATION"
+            PROMPT="你跳过了知识提取步骤。读取 ${STATE_FILE}，按照 autopilot skill Phase: merge 的知识提取与沉淀步骤执行。完成后用 Edit 设置 knowledge_extracted 为 true（有新增）或 skipped（无新增），然后再设 phase: done。"
+            jq -n --arg prompt "$PROMPT" --arg msg "autopilot iteration ${NEXT_ITERATION} | phase: merge | 知识提取回滚" \
+                '{"decision":"block","reason":$prompt,"systemMessage":$msg}'
+            exit 0
+        fi
     fi
 
     MODE=$(get_field "mode" || true)

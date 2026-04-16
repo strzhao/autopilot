@@ -424,6 +424,7 @@ plan_mode: ""
 brief_file: "/some/path/001-wire-schema.md"
 next_task: "002-db-models"
 auto_approve: false
+knowledge_extracted: "skipped"
 task_dir: ""
 session_id: test-session
 started_at: "2026-01-01T00:00:00Z"
@@ -482,6 +483,7 @@ plan_mode: ""
 brief_file: ""
 next_task: ""
 auto_approve: false
+knowledge_extracted: "skipped"
 task_dir: ""
 session_id: test-session
 started_at: "2026-01-01T00:00:00Z"
@@ -514,6 +516,7 @@ plan_mode: ""
 brief_file: ""
 next_task: ""
 auto_approve: true
+knowledge_extracted: "skipped"
 task_dir: ""
 session_id: test-session
 started_at: "2026-01-01T00:00:00Z"
@@ -562,6 +565,7 @@ plan_mode: ""
 brief_file: "/some/path/002-db-models.md"
 next_task: ""
 auto_approve: true
+knowledge_extracted: "skipped"
 task_dir: ""
 session_id: test-session
 started_at: "2026-01-01T00:00:00Z"
