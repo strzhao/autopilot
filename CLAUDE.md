@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.12.3)
+### 3. autopilot (v3.12.4)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + Deep Design 交互式设计 + 需求管理 + 智能提交 + 工程诊断 + 性能保障 + Worktree 自动初始化）
 
@@ -291,6 +291,11 @@
 ---
 
 ## 更新日志
+
+### 2026-04-17
+- autopilot 升级至 v3.12.4：修复 auto-chain 子任务误入 Plan Mode 的 bug
+  - 根因：SKILL.md "⚠️ 关键规则" 决策树只检查 plan_mode，未将 auto_approve 作为最高优先级
+  - 修复：关键规则改为三级优先级（auto_approve → deep → 标准），auto_approve=true 时直接走快速路径
 
 ### 2026-04-16
 - autopilot 升级至 v3.12.3：项目模式设计完成后自动启动首个就绪任务
