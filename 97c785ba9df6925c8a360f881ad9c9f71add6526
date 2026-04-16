@@ -1,0 +1,27 @@
+plugins/autopilot/scripts/stop-hook.sh
+  c315f445daa27719 100-113
+plugins/autopilot/skills/autopilot/project-mode.acceptance.test.mjs
+  c315f445daa27719 427,486,519,568
+plugins/autopilot/skills/autopilot/SKILL.md
+  c315f445daa27719 239
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "97c785ba9df6925c8a360f881ad9c9f71add6526",
+  "prompts": {
+    "c315f445daa27719": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "59c4affa-8b5c-45ad-81f1-b8548a291e7b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 19,
+      "total_deletions": 8,
+      "accepted_lines": 19,
+      "overriden_lines": 0
+    }
+  }
+}
