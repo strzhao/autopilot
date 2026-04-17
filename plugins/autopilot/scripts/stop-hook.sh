@@ -153,10 +153,9 @@ if [[ "$PHASE" == "done" ]]; then
             rm -f "$PROJECT_ROOT/.autopilot/active"
             exit 0
         fi
-    fi
 
     # Case 1: AI 信号了下一个任务 → 自动链接
-    if [[ -n "$NEXT_TASK" ]] && [[ -f "$DAG_FILE" ]]; then
+    elif [[ -n "$NEXT_TASK" ]] && [[ -f "$DAG_FILE" ]]; then
         TASK_FILE="$PROJECT_ROOT/.autopilot/project/tasks/${NEXT_TASK}.md"
         if [[ -f "$TASK_FILE" ]]; then
             # 为新任务创建新的 requirements 文件夹
