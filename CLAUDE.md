@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.12.4)
+### 3. autopilot (v3.12.5)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + Deep Design 交互式设计 + 需求管理 + 智能提交 + 工程诊断 + 性能保障 + Worktree 自动初始化）
 
@@ -293,6 +293,11 @@
 ## 更新日志
 
 ### 2026-04-17
+- autopilot 升级至 v3.12.5：修复项目模式 design 完成后 knowledge_extracted 守卫误触发的 bug
+  - 根因：mode=project 且 brief_file="" 时不涉及代码变更，不需要知识提取，但守卫未豁免此场景，阻断了 Case 0.5（自动启动首个 DAG 任务）
+  - 修复：stop-hook.sh 新增豁免条件（mode=project+brief_file="" 或 mode=project-qa 时自动设 knowledge_extracted=skipped）
+  - SKILL.md 步骤 6b 新增 knowledge_extracted 字段要求（mode+knowledge_extracted+phase 三字段）
+  - 4 个 phase=done 测试状态文件补全 knowledge_extracted: "skipped"
 - autopilot 升级至 v3.12.4：修复 auto-chain 子任务误入 Plan Mode 的 bug
   - 根因：SKILL.md "⚠️ 关键规则" 决策树只检查 plan_mode，未将 auto_approve 作为最高优先级
   - 修复：关键规则改为三级优先级（auto_approve → deep → 标准），auto_approve=true 时直接走快速路径
