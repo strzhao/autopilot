@@ -21,3 +21,4 @@
 - [2026-03-30] SKILL.md 文档文本中的标识符会干扰红队正则测试 | tags: autopilot, red-team, testing, indexOf, text-proximity, regex | → patterns.md
 - [2026-04-12] "从缓存同步源码"操作会连带回退不相关的文件改动 | tags: autopilot, cache-sync, regression, stop-hook, source-of-truth | → patterns.md
 - [2026-04-17] SKILL.md 决策树中后置章节会被 AI 跳过 | tags: autopilot, skill, decision-tree, priority, plan-mode, auto-approve | → patterns.md
+- [2026-04-17] Early-exit 守卫阻断后续添加的合法代码路径 | tags: autopilot, stop-hook, guard, early-exit, ordering, knowledge-extracted | → patterns.md
