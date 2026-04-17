@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.12.5)
+### 3. autopilot (v3.12.6)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + Deep Design 交互式设计 + 需求管理 + 智能提交 + 工程诊断 + 性能保障 + Worktree 自动初始化）
 
@@ -293,6 +293,9 @@
 ## 更新日志
 
 ### 2026-04-17
+- autopilot 升级至 v3.12.6：修复 Case 0.5 auto-chain 因控制流结构 bug 导致 block JSON 不输出
+  - 根因：Case 0.5 是独立 `if` 块，执行后 fallthrough 到 Case 1/2/3 的 `if/elif/else` 链，Case 3 (`else`) 总是命中 → 删除 active 指针 + `exit 0`
+  - 修复：将 Case 0.5 并入 `if/elif/else` 链（`fi` + `if` → `elif`），互斥执行
 - autopilot 升级至 v3.12.5：修复项目模式 design 完成后 knowledge_extracted 守卫误触发的 bug
   - 根因：mode=project 且 brief_file="" 时不涉及代码变更，不需要知识提取，但守卫未豁免此场景，阻断了 Case 0.5（自动启动首个 DAG 任务）
   - 修复：stop-hook.sh 新增豁免条件（mode=project+brief_file="" 或 mode=project-qa 时自动设 knowledge_extracted=skipped）
