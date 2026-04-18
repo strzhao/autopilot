@@ -1,0 +1,29 @@
+.claude-plugin/marketplace.json
+  16f965fc5f19d441 32
+plugins/autopilot/.claude-plugin/plugin.json
+  16f965fc5f19d441 3
+plugins/autopilot/scripts/stop-hook.sh
+  16f965fc5f19d441 122,124-148
+CLAUDE.md
+  16f965fc5f19d441 51,295-300
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "7ee8074bf8ab560003f3f2f7862f87ef45933b60",
+  "prompts": {
+    "16f965fc5f19d441": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4227ba42-fc5e-451f-9bc5-c8f97f86f8c5",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 36,
+      "total_deletions": 10,
+      "accepted_lines": 35,
+      "overriden_lines": 0
+    }
+  }
+}

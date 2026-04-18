@@ -1,0 +1,27 @@
+.claude-plugin/marketplace.json
+  c315f445daa27719 32
+CLAUDE.md
+  c315f445daa27719 51,296-300
+plugins/autopilot/.claude-plugin/plugin.json
+  c315f445daa27719 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "49e15be285859060e284d4ac1ba85927b7dbc0d4",
+  "prompts": {
+    "c315f445daa27719": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "59c4affa-8b5c-45ad-81f1-b8548a291e7b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 3,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    }
+  }
+}

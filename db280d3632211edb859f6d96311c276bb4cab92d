@@ -1,0 +1,29 @@
+CLAUDE.md
+  c315f445daa27719 51,296-298
+.autopilot/requirements/20260417-@~-Downloads-autopilot.case/state.md
+  c315f445daa27719 3,14
+plugins/autopilot/.claude-plugin/plugin.json
+  c315f445daa27719 3
+.claude-plugin/marketplace.json
+  c315f445daa27719 32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "db280d3632211edb859f6d96311c276bb4cab92d",
+  "prompts": {
+    "c315f445daa27719": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "59c4affa-8b5c-45ad-81f1-b8548a291e7b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 3,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    }
+  }
+}

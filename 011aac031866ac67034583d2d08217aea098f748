@@ -1,0 +1,29 @@
+plugins/autopilot/.claude-plugin/plugin.json
+  fdca0da3e4bd4443 3
+plugins/autopilot/skills/autopilot/SKILL.md
+  fdca0da3e4bd4443 74-77
+.claude-plugin/marketplace.json
+  fdca0da3e4bd4443 32
+CLAUDE.md
+  fdca0da3e4bd4443 51,295-299
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "011aac031866ac67034583d2d08217aea098f748",
+  "prompts": {
+    "fdca0da3e4bd4443": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f889855-7f67-4edd-8cbc-f66825c0375d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 12,
+      "total_deletions": 6,
+      "accepted_lines": 12,
+      "overriden_lines": 0
+    }
+  }
+}
