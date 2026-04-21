@@ -38,8 +38,8 @@
         {
             "name": "writer-skill",
             "source": "./plugins/writer-skill",
-            "description": "写作技能包。包含博客向、技术文档向、专业技术博客向三种写作风格",
-            "version": "1.10.0",
+            "description": "写作技能包。包含博客向、技术文档向、专业技术博客向三种写作风格，以及专业技术文章评价工具",
+            "version": "1.11.0",
             "author": {
                 "name": "stringzhao",
                 "email": "zhaoguixiong@corp.netease.com"

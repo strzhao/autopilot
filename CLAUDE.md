@@ -276,21 +276,31 @@
 - 使用标准 POSIX 命令
 - 提供降级方案（如 notify-send 不存在时回退到终端响铃）
 
-### 5. writer-skill (v1.10.0)
+### 5. writer-skill (v1.11.0)
 **类型**: Skill 插件
-**功能**: 写作技能包（博客向 + 技术文档向 + 专业技术博客向）
+**功能**: 写作技能包（博客向 + 技术文档向 + 专业技术博客向 + 专业文章评价）
 
 **包含 Skill**:
 - `writer-blog-skill`：科技博客向，叙事驱动、口语化、类比落地
 - `writer-tech-skill`：技术文档向，面向 RFC/Design Doc，语气精确、克制、直接
 - `writer-profession-skill`：专业技术博客向，面向企业级产品公告/行业分析/技术深度解析，数据驱动、结构精密、信息密度高
+- `profession-evaluate-skill`：专业技术文章评价工具，6 维度量化评分（钩力/信息架构/证据密度/阅读节奏/语言精度/价值密度），具体到段落级别的改进建议
 
 **使用方式**:
-安装插件后，根据场景调用 `/writer-blog-skill`、`/writer-tech-skill` 或 `/writer-profession-skill`。
+安装插件后，根据场景调用 `/writer-blog-skill`、`/writer-tech-skill`、`/writer-profession-skill` 或 `/profession-evaluate-skill`。
 
 ---
 
 ## 更新日志
+
+### 2026-04-21
+- writer-skill 升级至 v1.11.0：新增 profession-evaluate-skill，专业技术文章评价工具
+  - 6 维度量化评分体系：钩力（15%）、信息架构（20%）、证据密度（25%）、阅读节奏（15%）、语言精度（10%）、价值密度（15%）
+  - 每维度 1-10 分，配评分锚点和检查项，确保评分一致性
+  - 建议格式：定位（原文引用）→ 问题 → 建议写法 → 理由，具体到段落/句子级别
+  - 评分校准：基于 10 篇 Anthropic 官方博客提炼的写作标准
+  - 新增 references/language-checklist.md（完整禁止词库 + 替代建议）
+  - 新增 references/scoring-examples.md（9/7/4 分三档校准示例）
 
 ### 2026-04-17
 - autopilot 升级至 v3.12.6：修复 Case 0.5 auto-chain 因控制流结构 bug 导致 block JSON 不输出
