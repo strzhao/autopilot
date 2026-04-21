@@ -1,0 +1,104 @@
+plugins/writer-skill/skills/profession-evaluate-skill/references/language-checklist.md
+  18daf3a47c9cc66f 1-118
+plugins/writer-skill/.claude-plugin/plugin.json
+  18daf3a47c9cc66f 3-4
+plugins/writer-skill/skills/profession-evaluate-skill/references/scoring-examples.md
+  18daf3a47c9cc66f 1-120
+plugins/writer-skill/skills/profession-evaluate-skill/SKILL.md
+  18daf3a47c9cc66f 2-3
+CLAUDE.md
+  18daf3a47c9cc66f 279,281,287,290,296-304
+.claude-plugin/marketplace.json
+  18daf3a47c9cc66f 41-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.6",
+  "base_commit_sha": "073fb2aa725fee0b1098bba8e51c8892be6e88ae",
+  "prompts": {
+    "18daf3a47c9cc66f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fd1387ef-b372-4336-9c09-bcb995ad9e03",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 772,
+      "total_deletions": 9,
+      "accepted_lines": 257,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "plugins/writer-skill/.claude-plugin/plugin.json": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 2
+        },
+        "plugins/writer-skill/skills/writer-evaluate-skill/references/scoring-examples.md": {
+          "additions": 120
+        },
+        "plugins/writer-skill/skills/writer-evaluate-skill/SKILL.md": {
+          "additions": 277
+        },
+        "plugins/writer-skill/skills/profession-evaluate-skill/SKILL.md": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 2
+        },
+        "plugins/writer-skill/skills/writer-evaluate-skill/references/language-checklist.md": {
+          "additions": 118
+        },
+        "plugins/writer-skill/skills/profession-evaluate-skill/references/scoring-examples.md": {
+          "additions": 120,
+          "accepted_lines": 120
+        },
+        "plugins/writer-skill/skills/profession-evaluate-skill/references/language-checklist.md": {
+          "additions": 118,
+          "accepted_lines": 118
+        },
+        ".claude-plugin/marketplace.json": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 2
+        },
+        "CLAUDE.md": {
+          "additions": 13,
+          "deletions": 3,
+          "accepted_lines": 13
+        }
+      }
+    },
+    "4a5782a3010b2972": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5fa5d820-9849-49f9-8276-43bbcd3505b4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 2015,
+      "total_deletions": 951,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "e796c894b0e8d35f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4be13fc3-a3d6-4037-a3cd-b0ebffd6d285",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": null,
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 534,
+      "overriden_lines": 18,
+      "per_file_stats": {
+        "claude.md": {
+          "accepted_lines": 534,
+          "overriden_lines": 18
+        }
+      }
+    }
+  }
+}
