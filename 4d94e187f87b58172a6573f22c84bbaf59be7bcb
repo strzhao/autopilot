@@ -1,0 +1,69 @@
+plugins/autopilot/scripts/stop-hook.sh
+  faab370c5162d9f6 250-251
+CLAUDE.md
+  faab370c5162d9f6 51,296-301
+.claude-plugin/marketplace.json
+  faab370c5162d9f6 32
+plugins/autopilot/.claude-plugin/plugin.json
+  faab370c5162d9f6 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.6",
+  "base_commit_sha": "4d94e187f87b58172a6573f22c84bbaf59be7bcb",
+  "prompts": {
+    "e796c894b0e8d35f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4be13fc3-a3d6-4037-a3cd-b0ebffd6d285",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": null,
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 551,
+      "overriden_lines": 1,
+      "per_file_stats": {
+        "claude.md": {
+          "accepted_lines": 551,
+          "overriden_lines": 1
+        }
+      }
+    },
+    "faab370c5162d9f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d36a02a7-da3f-4217-95b1-149f789f5675",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 11,
+      "total_deletions": 3,
+      "accepted_lines": 11,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "plugins/autopilot/.claude-plugin/plugin.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/scripts/stop-hook.sh": {
+          "additions": 2,
+          "accepted_lines": 2
+        },
+        ".claude-plugin/marketplace.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "CLAUDE.md": {
+          "additions": 7,
+          "deletions": 1,
+          "accepted_lines": 7
+        }
+      }
+    }
+  }
+}
