@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.12.6)
+### 3. autopilot (v3.12.7)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + Deep Design 交互式设计 + 需求管理 + 智能提交 + 工程诊断 + 性能保障 + Worktree 自动初始化）
 
@@ -292,6 +292,12 @@
 ---
 
 ## 更新日志
+
+### 2026-04-23
+- autopilot 升级至 v3.12.7：修复 implement 阶段红蓝对抗被静默跳过的 bug
+  - 根因：stop-hook.sh implement 阶段落入 generic else 分支，只给一句"按 skill 指引执行"，AI 在 auto-approve 快速模式下不会主动读 references/implement-phase.md → 跳过红蓝对抗直接编码
+  - 修复：新增 implement 专用 prompt 分支，硬注入红蓝对抗 4 条核心指令（Skill 委托检查、并行双 Agent 启动、信息隔离铁律、合流步骤）
+  - 与 design/qa/merge 同等待遇，关键行为通过 stop-hook prompt 强制注入
 
 ### 2026-04-21
 - writer-skill 升级至 v1.11.0：新增 profession-evaluate-skill，专业技术文章评价工具
