@@ -1,0 +1,83 @@
+plugins/autopilot/.claude-plugin/plugin.json
+  faab370c5162d9f6 3
+CLAUDE.md
+  faab370c5162d9f6 51,297-303
+.claude-plugin/marketplace.json
+  faab370c5162d9f6 32
+plugins/autopilot/skills/autopilot/SKILL.md
+  faab370c5162d9f6 104
+plugins/autopilot/scripts/stop-hook.sh
+  faab370c5162d9f6 244,246,248
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.6",
+  "base_commit_sha": "d64aa0e05e05c2d46ac09bacc35915c07c112f50",
+  "prompts": {
+    "e796c894b0e8d35f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4be13fc3-a3d6-4037-a3cd-b0ebffd6d285",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": null,
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 551,
+      "overriden_lines": 1,
+      "per_file_stats": {
+        "claude.md": {
+          "accepted_lines": 551,
+          "overriden_lines": 1
+        }
+      }
+    },
+    "faab370c5162d9f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d36a02a7-da3f-4217-95b1-149f789f5675",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 45,
+      "total_deletions": 38,
+      "accepted_lines": 32,
+      "overriden_lines": 2,
+      "per_file_stats": {
+        "CLAUDE.md": {
+          "additions": 8,
+          "deletions": 1,
+          "accepted_lines": 8
+        },
+        ".claude-plugin/marketplace.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/skills/autopilot/SKILL.md": {
+          "additions": 22,
+          "deletions": 24,
+          "accepted_lines": 17
+        },
+        "plugins/autopilot/skills/autopilot/references/deep-design-guide.md": {
+          "additions": 8,
+          "deletions": 6,
+          "accepted_lines": 2,
+          "overriden_lines": 2
+        },
+        "plugins/autopilot/.claude-plugin/plugin.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/scripts/stop-hook.sh": {
+          "additions": 5,
+          "deletions": 5,
+          "accepted_lines": 3
+        }
+      }
+    }
+  }
+}
