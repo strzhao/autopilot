@@ -241,11 +241,11 @@ AUTO_APPROVE=$(get_field "auto_approve" || true)
 PLAN_MODE=$(get_field "plan_mode" || true)
 if [[ "$PHASE" == "design" ]]; then
     if [[ "$AUTO_APPROVE" == "true" ]]; then
-        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. auto_approve=true: 跳过 Plan Mode, 直接写设计文档到状态文件. 运行 plan-reviewer agent 审查, 通过则直接推进到 implement; 失败则回退到正常 Plan Mode (设置 auto_approve: false). 按照 autopilot skill 的 Phase: design 指引执行."
+        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. auto_approve=true: 跳过 Plan Mode, 直接写设计文档到状态文件. ⚠️ 必须使用 Agent 工具启动 plan-reviewer sub-agent (model: sonnet) 审查设计方案, 参见 references/plan-reviewer-prompt.md. 审查通过则推进到 implement; 失败则回退到正常 Plan Mode (设置 auto_approve: false). 按照 autopilot skill 的 Phase: design 指引执行."
     elif [[ "$PLAN_MODE" == "deep" ]]; then
-        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. plan_mode=deep: 先执行 Deep Design 交互探索流程（参见 references/deep-design-guide.md），包括项目上下文探索、视觉伴侣征求、逐个澄清问题(AskUserQuestion)、提出 2-3 种方案. 交互探索完成后再调用 EnterPlanMode 写正式设计文档. 产出物写入 task_dir: $(get_field 'task_dir'). 按照 autopilot skill 的 Phase: design 指引执行."
+        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. plan_mode=deep: 先执行 Deep Design 交互探索流程（参见 references/deep-design-guide.md），包括项目上下文探索、视觉伴侣征求、逐个澄清问题(AskUserQuestion)、提出 2-3 种方案. 交互探索完成后再调用 EnterPlanMode 写正式设计文档. ⚠️ 在 ExitPlanMode 之前, 必须使用 Agent 工具启动 plan-reviewer sub-agent (model: sonnet) 审查设计方案, 参见 references/plan-reviewer-prompt.md. 审查通过再 ExitPlanMode. 产出物写入 task_dir: $(get_field 'task_dir'). 按照 autopilot skill 的 Phase: design 指引执行."
     else
-        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述, 然后立即调用 EnterPlanMode 工具进入 Plan Mode. 不要在调用 EnterPlanMode 之前做任何代码探索. 所有探索和设计工作必须在 Plan Mode 内完成. 按照 autopilot skill 的 Phase: design 指引执行."
+        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述, 然后立即调用 EnterPlanMode 工具进入 Plan Mode. 不要在调用 EnterPlanMode 之前做任何代码探索. 所有探索和设计工作必须在 Plan Mode 内完成. ⚠️ 在 ExitPlanMode 之前, 必须使用 Agent 工具启动 plan-reviewer sub-agent (model: sonnet) 审查设计方案, 参见 references/plan-reviewer-prompt.md. 审查通过再 ExitPlanMode. 按照 autopilot skill 的 Phase: design 指引执行."
     fi
 elif [[ "$PHASE" == "implement" ]]; then
     PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: implement, 迭代: ${NEXT_ITERATION}. ⚠️ 红蓝对抗铁律: (1) 从状态文件读取设计文档, 检查是否有领域 Skill 委托; (2) 无委托时必须使用 Agent 工具在同一轮响应中同时启动蓝队和红队两个并行 sub-agent (model: sonnet), prompt 模板参见 references/blue-team-prompt.md 和 references/red-team-prompt.md; (3) 红队绝对不能读取蓝队新写的实现代码——红队只看设计文档; (4) 两个 Agent 都完成后合流: 收集产出、写入红队测试文件、更新状态文件. 详细工作流参见 references/implement-phase.md. 按照 autopilot skill 的 Phase: implement 指引执行."

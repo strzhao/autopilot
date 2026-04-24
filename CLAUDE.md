@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.12.7)
+### 3. autopilot (v3.12.8)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + Deep Design 交互式设计 + 需求管理 + 智能提交 + 工程诊断 + 性能保障 + Worktree 自动初始化）
 
@@ -294,6 +294,13 @@
 ## 更新日志
 
 ### 2026-04-23
+- autopilot 升级至 v3.12.8：修复 design 阶段 plan-reviewer 被静默跳过的 bug
+  - 根因：stop-hook.sh 三条 design 路径（标准/deep/auto_approve）中，标准和 deep 完全不提 plan-reviewer，auto_approve 仅弱提醒 → AI 不执行审查直接推进
+  - 修复：三条 design 路径全部注入 plan-reviewer 强制提醒（⚠️ 必须使用 Agent 工具启动 plan-reviewer sub-agent）
+  - 标准/deep 路径：明确"在 ExitPlanMode 之前"启动 plan-reviewer
+  - auto_approve 路径：从弱提醒升级为 ⚠️ 强制指令
+  - SKILL.md Auto-Approve 快速路径：plan-reviewer 步骤标注"⚠️ 必须执行"
+  - SKILL.md step 3 删除"降级：Agent 不可用"（Plan Mode 内 Agent 工具可用，无需降级）
 - autopilot 升级至 v3.12.7：修复 implement 阶段红蓝对抗被静默跳过的 bug
   - 根因：stop-hook.sh implement 阶段落入 generic else 分支，只给一句"按 skill 指引执行"，AI 在 auto-approve 快速模式下不会主动读 references/implement-phase.md → 跳过红蓝对抗直接编码
   - 修复：新增 implement 专用 prompt 分支，硬注入红蓝对抗 4 条核心指令（Skill 委托检查、并行双 Agent 启动、信息隔离铁律、合流步骤）
