@@ -1,0 +1,122 @@
+plugins/autopilot/.claude-plugin/plugin.json
+  a44b215e914d6d09 3
+plugins/autopilot/skills/autopilot/references/state-file-guide.md
+  a44b215e914d6d09 5
+.claude-plugin/marketplace.json
+  a44b215e914d6d09 32
+plugins/autopilot/scripts/worktree.mjs
+  a44b215e914d6d09 88,92,116,281
+plugins/autopilot/scripts/lib.sh
+  a44b215e914d6d09 18
+plugins/autopilot/scripts/stop-hook.sh
+  a44b215e914d6d09 92,95-97,117,119-120,126,128,132,136
+plugins/autopilot/scripts/setup.sh
+  a44b215e914d6d09 44,48-49,152-153,156-173,181-182,194-196,250-251,258,275,317,323
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.6",
+  "base_commit_sha": "518362c9e55245ff5b21c946016e3bb4a319a156",
+  "prompts": {
+    "a44b215e914d6d09": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "02440ece-460f-41c7-b34a-521adbf39e53",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 1511,
+      "total_deletions": 637,
+      "accepted_lines": 1510,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "plugins/autopilot/scripts/notify.sh": {
+          "deletions": 16
+        },
+        "plugins/autopilot/scripts/stop-hook.sh": {
+          "additions": 11,
+          "deletions": 133,
+          "accepted_lines": 11
+        },
+        "plugins/autopilot/scripts/lib.sh": {
+          "additions": 1,
+          "deletions": 264,
+          "accepted_lines": 1
+        },
+        ".claude-plugin/marketplace.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/scripts/worktree.mjs": {
+          "additions": 4,
+          "deletions": 4,
+          "accepted_lines": 4
+        },
+        "plugins/autopilot/skills/autopilot/references/state-file-guide.md": {
+          "additions": 1,
+          "deletions": 2,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/skills/autopilot-commit/skill.md": {
+          "additions": 179,
+          "accepted_lines": 179
+        },
+        "plugins/autopilot/readme.md": {
+          "additions": 117,
+          "accepted_lines": 117
+        },
+        "plugins/autopilot/scripts/setup.sh": {
+          "additions": 34,
+          "deletions": 215,
+          "accepted_lines": 34
+        },
+        "plugins/autopilot/skills/autopilot/skill.md": {
+          "additions": 601,
+          "accepted_lines": 601
+        },
+        "plugins/autopilot/skills/autopilot-doctor/skill.md": {
+          "additions": 560,
+          "accepted_lines": 560
+        },
+        "plugins/autopilot/.claude-plugin/plugin.json": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 1
+        }
+      }
+    },
+    "e796c894b0e8d35f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4be13fc3-a3d6-4037-a3cd-b0ebffd6d285",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": null,
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 552,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "claude.md": {
+          "accepted_lines": 552
+        }
+      }
+    },
+    "faab370c5162d9f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d36a02a7-da3f-4217-95b1-149f789f5675",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  }
+}
