@@ -1,0 +1,112 @@
+plugins/autopilot/scripts/stop-hook.sh
+  a44b215e914d6d09 92,94,97-206,222,226,228-233,239-241,243-251,255,259-260
+.claude-plugin/marketplace.json
+  a44b215e914d6d09 32
+plugins/autopilot/scripts/lib.sh
+  a44b215e914d6d09 11,19-31,62-310
+plugins/autopilot/scripts/worktree.mjs
+  a44b215e914d6d09 88,92,116,281
+plugins/autopilot/.claude-plugin/plugin.json
+  a44b215e914d6d09 3-4
+plugins/autopilot/scripts/notify.sh
+  a44b215e914d6d09 19-34
+plugins/autopilot/scripts/setup.sh
+  a44b215e914d6d09 21-48,68,73-74,78-82,86-89,189-208,210-246,251-289,297-300,312-314,333-335,355-361,363-366,383-392,395-396,403-404,421-431,440-446,470,478-490,496,500,503,511
+plugins/autopilot/skills/autopilot/references/state-file-guide.md
+  a44b215e914d6d09 5,12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.6",
+  "base_commit_sha": "9100903a6aa0d1a68f53cd245eaf191de2dfdc1e",
+  "prompts": {
+    "a44b215e914d6d09": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "02440ece-460f-41c7-b34a-521adbf39e53",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 1859,
+      "total_deletions": 59,
+      "accepted_lines": 1855,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "plugins/autopilot/skills/autopilot-commit/skill.md": {
+          "additions": 179,
+          "accepted_lines": 179
+        },
+        "plugins/autopilot/scripts/stop-hook.sh": {
+          "additions": 136,
+          "deletions": 12,
+          "accepted_lines": 136
+        },
+        "plugins/autopilot/readme.md": {
+          "additions": 117,
+          "accepted_lines": 117
+        },
+        "plugins/autopilot/skills/autopilot/references/state-file-guide.md": {
+          "additions": 2,
+          "deletions": 1,
+          "accepted_lines": 2
+        },
+        "plugins/autopilot/skills/autopilot/skill.md": {
+          "additions": 359,
+          "accepted_lines": 359
+        },
+        "plugins/autopilot/skills/autopilot-doctor/skill.md": {
+          "additions": 560,
+          "accepted_lines": 560
+        },
+        "plugins/autopilot/scripts/lib.sh": {
+          "additions": 266,
+          "deletions": 3,
+          "accepted_lines": 264
+        },
+        ".claude-plugin/marketplace.json": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/.claude-plugin/plugin.json": {
+          "additions": 3,
+          "deletions": 3,
+          "accepted_lines": 2
+        },
+        "plugins/autopilot/scripts/setup.sh": {
+          "additions": 215,
+          "deletions": 34,
+          "accepted_lines": 215
+        },
+        "plugins/autopilot/scripts/notify.sh": {
+          "additions": 16,
+          "accepted_lines": 16
+        },
+        "plugins/autopilot/scripts/worktree.mjs": {
+          "additions": 4,
+          "deletions": 4,
+          "accepted_lines": 4
+        }
+      }
+    },
+    "e796c894b0e8d35f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4be13fc3-a3d6-4037-a3cd-b0ebffd6d285",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": null,
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 552,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "claude.md": {
+          "accepted_lines": 552
+        }
+      }
+    }
+  }
+}
