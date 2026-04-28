@@ -1,0 +1,41 @@
+plugins/autopilot/skills/autopilot/SKILL.md
+  a44b215e914d6d09 101-109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.6",
+  "base_commit_sha": "62fe36dffe8d836c5db8f2befb3a006fb9dd55a5",
+  "prompts": {
+    "a44b215e914d6d09": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "02440ece-460f-41c7-b34a-521adbf39e53",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 22,
+      "total_deletions": 63,
+      "accepted_lines": 1363,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "claude.md": {
+          "accepted_lines": 579
+        },
+        "plugins/autopilot/skills/autopilot/SKILL.md": {
+          "additions": 9,
+          "deletions": 1,
+          "accepted_lines": 9
+        },
+        "plugins/autopilot/skills/autopilot/skill.md": {
+          "additions": 13,
+          "deletions": 62,
+          "accepted_lines": 673
+        },
+        "plugins/autopilot/skills/autopilot-project/skill.md": {
+          "accepted_lines": 102
+        }
+      }
+    }
+  }
+}
