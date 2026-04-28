@@ -1,0 +1,44 @@
+.claude-plugin/marketplace.json
+  a44b215e914d6d09 32
+plugins/autopilot/.claude-plugin/plugin.json
+  a44b215e914d6d09 3
+plugins/autopilot/scripts/stop-hook.sh
+  a44b215e914d6d09 92,94,97-180,200,202-207,213-215,217-225,229,233-236
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.6",
+  "base_commit_sha": "5f638b65d4c65884d4a396a9751d1a497fdfa910",
+  "prompts": {
+    "a44b215e914d6d09": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "02440ece-460f-41c7-b34a-521adbf39e53",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 115,
+      "total_deletions": 15,
+      "accepted_lines": 113,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "plugins/autopilot/.claude-plugin/plugin.json": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/scripts/stop-hook.sh": {
+          "additions": 111,
+          "deletions": 11,
+          "accepted_lines": 111
+        },
+        ".claude-plugin/marketplace.json": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 1
+        }
+      }
+    }
+  }
+}
