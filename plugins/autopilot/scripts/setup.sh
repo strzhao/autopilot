@@ -16,7 +16,10 @@ set -uo pipefail
 # 非零退出码会阻止整个 skill 加载。所有错误通过 stdout 输出让 AI 处理。
 
 source "$(dirname "$0")/lib.sh"
-init_paths
+init_paths "" "$PPID"
+
+# 启动时清理过期的 active 文件（PID 不存在的）
+cleanup_stale_actives
 
 # ── 早期迁移：.claude/autopilot.local.md → .autopilot/ 旧格式检测 ──
 # 旧版状态文件在 .autopilot/autopilot.local.md（无 active 指针），需要检测处理
@@ -295,7 +298,7 @@ HELP_EOF
             exit 0
         fi
         # 仅移除 active 指针，requirements 文件夹保留作为历史归档
-        rm -f "$PROJECT_ROOT/.autopilot/active"
+        cleanup_active "$PPID"
         echo "🛑 autopilot 已取消，active 指针已清理。"
         [[ -n "$TASK_DIR" ]] && echo "   需求文件夹保留在: $TASK_DIR"
         echo "   代码改动仍保留在工作目录中，可通过 git 查看。"
@@ -305,15 +308,14 @@ esac
 
 # ── 初始化新的 autopilot ────────────────────────────────────
 
-# 检查冲突
+# 检查冲突（仅检查当前 PID 是否已有活跃 autopilot）
 if [[ -f "$STATE_FILE" ]]; then
     EXISTING_PHASE=$(get_field "phase" || true)
     if [[ "$EXISTING_PHASE" == "done" ]]; then
-        # phase=done 的状态文件是残留（stop hook 未及时清理），清理 active 指针
-        rm -f "$PROJECT_ROOT/.autopilot/active"
+        cleanup_active "$PPID"
         echo "🧹 清理了上一次已完成的 autopilot active 指针。"
     else
-        echo "❌ 已有活跃的 autopilot 在运行（阶段: ${EXISTING_PHASE:-unknown}）。"
+        echo "❌ 当前会话已有活跃的 autopilot 在运行（阶段: ${EXISTING_PHASE:-unknown}）。"
         echo "   使用 /autopilot status 查看状态"
         echo "   使用 /autopilot cancel 取消后重新开始"
         exit 0
@@ -420,7 +422,7 @@ fi
 
 # 生成 task slug 并创建 requirements 文件夹
 TASK_SLUG=$(generate_task_slug "$GOAL")
-setup_requirement_dir "$TASK_SLUG"
+setup_requirement_dir "$TASK_SLUG" "$PPID"
 
 # Brief 模式：从任务简报文件启动
 if [[ -n "$BRIEF_FILE" ]]; then

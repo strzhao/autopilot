@@ -12,12 +12,23 @@ TASK_DIR=""
 
 init_paths() {
     local target_cwd="${1:-}"
+    local caller_pid="${2:-$PPID}"
     if [[ -n "$target_cwd" ]] && [[ -d "$target_cwd" ]]; then
         cd "$target_cwd" || return
     fi
     PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
-    # 读取 active 指针定位状态文件
+    # PID-based 路由（优先）
+    local pid_active="$PROJECT_ROOT/.autopilot/active.$caller_pid"
+    if [[ -f "$pid_active" ]]; then
+        local slug
+        slug=$(cat "$pid_active")
+        TASK_DIR="$PROJECT_ROOT/.autopilot/requirements/$slug"
+        STATE_FILE="$TASK_DIR/state.md"
+        return
+    fi
+
+    # 向后兼容：旧格式单例 active
     local active_file="$PROJECT_ROOT/.autopilot/active"
     if [[ -f "$active_file" ]]; then
         local slug
@@ -25,7 +36,6 @@ init_paths() {
         TASK_DIR="$PROJECT_ROOT/.autopilot/requirements/$slug"
         STATE_FILE="$TASK_DIR/state.md"
     else
-        # 向后兼容：无 active 指针时使用旧路径
         STATE_FILE="$PROJECT_ROOT/.autopilot/autopilot.local.md"
         TASK_DIR=""
     fi
@@ -85,8 +95,10 @@ generate_task_slug() {
 # 副作用: 更新 TASK_DIR, STATE_FILE 全局变量；写入 active 指针
 setup_requirement_dir() {
     local slug="$1"
+    local caller_pid="${2:-$PPID}"
     TASK_DIR="$PROJECT_ROOT/.autopilot/requirements/$slug"
     mkdir -p "$TASK_DIR"
+    echo "$slug" > "$PROJECT_ROOT/.autopilot/active.$caller_pid"
     echo "$slug" > "$PROJECT_ROOT/.autopilot/active"
     STATE_FILE="$TASK_DIR/state.md"
 }
@@ -308,4 +320,30 @@ $handoff_summary
 ## 变更日志
 - [$(now_iso)] 全项目 QA 启动
 EOF
+}
+
+# ── Active 指针清理 ──────────────────────────────────────────────
+
+# 清理当前 session 的 active 指针
+# 参数: pid (可选，默认 $PPID)
+cleanup_active() {
+    local pid="${1:-$PPID}"
+    rm -f "$PROJECT_ROOT/.autopilot/active.$pid"
+    local current_slug
+    current_slug=$(basename "$TASK_DIR" 2>/dev/null || true)
+    if [[ -n "$current_slug" ]] && [[ -f "$PROJECT_ROOT/.autopilot/active" ]]; then
+        local active_slug
+        active_slug=$(cat "$PROJECT_ROOT/.autopilot/active")
+        [[ "$active_slug" == "$current_slug" ]] && rm -f "$PROJECT_ROOT/.autopilot/active"
+    fi
+}
+
+# 清理过期的 active 文件（PID 不存在的）
+cleanup_stale_actives() {
+    for f in "$PROJECT_ROOT/.autopilot"/active.*; do
+        [[ -f "$f" ]] || continue
+        local pid="${f##*.}"
+        [[ "$pid" =~ ^[0-9]+$ ]] || continue
+        kill -0 "$pid" 2>/dev/null || rm -f "$f"
+    done
 }
