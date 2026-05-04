@@ -9,6 +9,28 @@
 PROJECT_ROOT=""
 STATE_FILE=""
 TASK_DIR=""
+WORKTREE_NAME=""
+
+# 检测当前是否在 git worktree 中，返回 worktree 名称（目录名）
+# 不在 worktree 中时返回空字符串
+get_worktree_name() {
+    if [[ -f "$PROJECT_ROOT/.git" ]]; then
+        basename "$PROJECT_ROOT"
+    fi
+}
+
+# 返回 active 指针文件路径（worktree 感知）
+# 在 worktree 中：.autopilot/sessions/<name>/active
+# 非 worktree：.autopilot/active
+get_active_file() {
+    local wt_name
+    wt_name=$(get_worktree_name)
+    if [[ -n "$wt_name" ]]; then
+        echo "$PROJECT_ROOT/.autopilot/sessions/$wt_name/active"
+    else
+        echo "$PROJECT_ROOT/.autopilot/active"
+    fi
+}
 
 init_paths() {
     local target_cwd="${1:-}"
@@ -16,17 +38,28 @@ init_paths() {
         cd "$target_cwd" || return
     fi
     PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+    WORKTREE_NAME=$(get_worktree_name)
 
-    # 读取 active 指针定位状态文件
-    local active_file="$PROJECT_ROOT/.autopilot/active"
+    # 读取 active 指针定位状态文件（worktree 感知）
+    local active_file
+    active_file=$(get_active_file)
     if [[ -f "$active_file" ]]; then
         local slug
         slug=$(cat "$active_file")
-        TASK_DIR="$PROJECT_ROOT/.autopilot/requirements/$slug"
+        if [[ -n "$WORKTREE_NAME" ]]; then
+            TASK_DIR="$PROJECT_ROOT/.autopilot/sessions/$WORKTREE_NAME/requirements/$slug"
+        else
+            TASK_DIR="$PROJECT_ROOT/.autopilot/requirements/$slug"
+        fi
         STATE_FILE="$TASK_DIR/state.md"
     else
-        # 向后兼容：无 active 指针时使用旧路径
-        STATE_FILE="$PROJECT_ROOT/.autopilot/autopilot.local.md"
+        # 向后兼容：无 active 指针时使用旧路径（仅非 worktree）
+        # worktree 中不落到共享的 autopilot.local.md，避免跨 worktree 泄漏
+        if [[ -z "$WORKTREE_NAME" ]]; then
+            STATE_FILE="$PROJECT_ROOT/.autopilot/autopilot.local.md"
+        else
+            STATE_FILE=""
+        fi
         TASK_DIR=""
     fi
 }
@@ -80,14 +113,21 @@ generate_task_slug() {
 
 # ── 需求管理路径设置 ────────────────────────────────────────────
 
-# 创建 requirements 文件夹并设置 active 指针和路径变量。
+# 创建 requirements 文件夹并设置 active 指针和路径变量（worktree 感知）。
 # 参数: slug
 # 副作用: 更新 TASK_DIR, STATE_FILE 全局变量；写入 active 指针
 setup_requirement_dir() {
     local slug="$1"
-    TASK_DIR="$PROJECT_ROOT/.autopilot/requirements/$slug"
+    local active_file
+    active_file=$(get_active_file)
+    if [[ -n "$WORKTREE_NAME" ]]; then
+        TASK_DIR="$PROJECT_ROOT/.autopilot/sessions/$WORKTREE_NAME/requirements/$slug"
+    else
+        TASK_DIR="$PROJECT_ROOT/.autopilot/requirements/$slug"
+    fi
     mkdir -p "$TASK_DIR"
-    echo "$slug" > "$PROJECT_ROOT/.autopilot/active"
+    mkdir -p "$(dirname "$active_file")"
+    echo "$slug" > "$active_file"
     STATE_FILE="$TASK_DIR/state.md"
 }
 

@@ -20,7 +20,7 @@ init_paths
 
 # ── 早期迁移：.claude/autopilot.local.md → .autopilot/ 旧格式检测 ──
 # 旧版状态文件在 .autopilot/autopilot.local.md（无 active 指针），需要检测处理
-if [[ -f "$PROJECT_ROOT/.autopilot/autopilot.local.md" ]] && [[ ! -f "$PROJECT_ROOT/.autopilot/active" ]]; then
+if [[ -f "$PROJECT_ROOT/.autopilot/autopilot.local.md" ]] && [[ ! -f "$(get_active_file)" ]]; then
     OLD_PHASE=$(get_field "phase" 2>/dev/null || true)
     if [[ "$OLD_PHASE" == "done" || -z "$OLD_PHASE" ]]; then
         rm -f "$PROJECT_ROOT/.autopilot/autopilot.local.md"
@@ -32,7 +32,7 @@ if [[ -f "$PROJECT_ROOT/.autopilot/autopilot.local.md" ]] && [[ ! -f "$PROJECT_R
     fi
 fi
 # 从 .claude/ 迁移的旧逻辑保留兼容
-if [[ -f "$PROJECT_ROOT/.claude/autopilot.local.md" ]] && [[ ! -f "$PROJECT_ROOT/.autopilot/active" ]]; then
+if [[ -f "$PROJECT_ROOT/.claude/autopilot.local.md" ]] && [[ ! -f "$(get_active_file)" ]]; then
     mkdir -p "$PROJECT_ROOT/.autopilot"
     rm -f "$PROJECT_ROOT/.claude/autopilot.local.md"
     echo "🧹 清理了 .claude/ 下的旧状态文件。"
@@ -295,7 +295,7 @@ HELP_EOF
             exit 0
         fi
         # 仅移除 active 指针，requirements 文件夹保留作为历史归档
-        rm -f "$PROJECT_ROOT/.autopilot/active"
+        rm -f "$(get_active_file)"
         echo "🛑 autopilot 已取消，active 指针已清理。"
         [[ -n "$TASK_DIR" ]] && echo "   需求文件夹保留在: $TASK_DIR"
         echo "   代码改动仍保留在工作目录中，可通过 git 查看。"
@@ -310,7 +310,7 @@ if [[ -f "$STATE_FILE" ]]; then
     EXISTING_PHASE=$(get_field "phase" || true)
     if [[ "$EXISTING_PHASE" == "done" ]]; then
         # phase=done 的状态文件是残留（stop hook 未及时清理），清理 active 指针
-        rm -f "$PROJECT_ROOT/.autopilot/active"
+        rm -f "$(get_active_file)"
         echo "🧹 清理了上一次已完成的 autopilot active 指针。"
     else
         echo "❌ 已有活跃的 autopilot 在运行（阶段: ${EXISTING_PHASE:-unknown}）。"

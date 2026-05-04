@@ -118,7 +118,7 @@ if [[ "$PHASE" == "done" ]]; then
     # Case 0: project-qa 完成 → 项目完成通知 + 清理 active 指针
     if [[ "$MODE" == "project-qa" ]]; then
         bash "$SCRIPT_DIR/notify.sh" project-complete 2>/dev/null || true
-        rm -f "$PROJECT_ROOT/.autopilot/active"
+        rm -f "$(get_active_file)"
         exit 0
     fi
 
@@ -145,12 +145,12 @@ if [[ "$PHASE" == "done" ]]; then
                 # 落入下方 block JSON 构造
             else
                 bash "$SCRIPT_DIR/notify.sh" project-design-complete 2>/dev/null || true
-                rm -f "$PROJECT_ROOT/.autopilot/active"
+                rm -f "$(get_active_file)"
                 exit 0
             fi
         else
             bash "$SCRIPT_DIR/notify.sh" project-design-complete 2>/dev/null || true
-            rm -f "$PROJECT_ROOT/.autopilot/active"
+            rm -f "$(get_active_file)"
             exit 0
         fi
 
@@ -174,7 +174,7 @@ if [[ "$PHASE" == "done" ]]; then
         else
             echo "⚠️  autopilot: next_task file not found: ${TASK_FILE}" >&2
             bash "$SCRIPT_DIR/notify.sh" complete 2>/dev/null || true
-            rm -f "$PROJECT_ROOT/.autopilot/active"
+            rm -f "$(get_active_file)"
             exit 0
         fi
     # Case 2: 项目子任务完成 + 无 next_task → 检查是否全部完成
@@ -195,13 +195,13 @@ if [[ "$PHASE" == "done" ]]; then
         else
             # 还有任务但 AI 未信号高信心 → 释放，等用户操作
             bash "$SCRIPT_DIR/notify.sh" complete 2>/dev/null || true
-            rm -f "$PROJECT_ROOT/.autopilot/active"
+            rm -f "$(get_active_file)"
             exit 0
         fi
     # Case 3: 单任务模式 → 正常清理（保留 requirements 文件夹，移除 active 指针）
     else
         bash "$SCRIPT_DIR/notify.sh" complete 2>/dev/null || true
-        rm -f "$PROJECT_ROOT/.autopilot/active"
+        rm -f "$(get_active_file)"
         exit 0
     fi
 fi
@@ -219,7 +219,7 @@ fi
 if [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
     echo "🛑 autopilot: 达到最大迭代次数 ($MAX_ITERATIONS)。" >&2
     bash "$SCRIPT_DIR/notify.sh" error 2>/dev/null || true
-    rm -f "$PROJECT_ROOT/.autopilot/active"
+    rm -f "$(get_active_file)"
     exit 0
 fi
 

@@ -316,6 +316,18 @@ function remove() {
     }
   } catch { /* not a symlink or doesn't exist */ }
 
+  // Clean up worktree session directory (.autopilot/sessions/<name>/)
+  const worktreeName = basename(worktreePath);
+  const sessionDir = join(root, '.autopilot', 'sessions', worktreeName);
+  if (existsSync(sessionDir)) {
+    try {
+      rmSync(sessionDir, { recursive: true, force: true });
+      log(`   ✓ 清理 worktree session: sessions/${worktreeName}`);
+    } catch (e) {
+      log(`   ⚠ 无法清理 session 目录: ${e.message}`);
+    }
+  }
+
   // Remove local-config.json
   const configPath = join(worktreePath, 'local-config.json');
   if (existsSync(configPath)) unlinkSync(configPath);

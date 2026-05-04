@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.12.8)
+### 3. autopilot (v3.13.1)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + Deep Design 交互式设计 + 需求管理 + 智能提交 + 工程诊断 + 性能保障 + Worktree 自动初始化）
 
@@ -292,6 +292,16 @@
 ---
 
 ## 更新日志
+
+### 2026-05-04
+- autopilot 升级至 v3.13.1：修复 `claude -w` 创建新 worktree 时 autopilot 任务被旧任务干扰的问题
+  - 根因：active 指针和状态文件路径硬编码为 `.autopilot/active` 和 `.autopilot/requirements/<slug>/`，所有 worktree 共享同一 active 指针 → 新 worktree 读到旧 worktree 的任务
+  - 修复：新增 worktree 感知的 active 指针隔离机制，每个 worktree 使用独立路径 `.autopilot/sessions/<worktree-name>/`
+  - lib.sh 新增 `get_worktree_name`/`get_active_file` 函数，`init_paths()` 和 `setup_requirement_dir()` 按 worktree 路由到 `sessions/<name>/` 子目录
+  - setup.sh/stop-hook.sh 所有硬编码 `.autopilot/active` 路径替换为 `get_active_file()` 调用（共 11 处）
+  - worktree.mjs `remove()` 新增 session 目录清理逻辑
+  - SKILL.md 更新 worktree 隔离文档说明
+- autopilot 升级至 v3.13.0：扩展 todo-write 任务列表覆盖全部 5 个阶段 + design 阶段并行标注
 
 ### 2026-04-23
 - autopilot 升级至 v3.12.8：修复 design 阶段 plan-reviewer 被静默跳过的 bug
