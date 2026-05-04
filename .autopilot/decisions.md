@@ -1,3 +1,9 @@
+### [2026-05-04] Per-worktree 会话隔离通过 sessions/<name>/ 子目录实现
+<!-- tags: autopilot, worktree, session-isolation, architecture -->
+**Background**: worktree.mjs 将整个 `.autopilot/` 符号链接共享到所有 worktree，导致 active 指针和 requirements 全局共享，旧任务状态干扰新 worktree。
+**Choice**: active 指针和 requirements 目录改 per-worktree 隔离，知识文件（decisions/patterns/index）保持共享。非 worktree 沿用 `.autopilot/active`，worktree 使用 `.autopilot/sessions/<name>/active`。worktree.mjs remove() 自动清理 session 目录。
+**Alternatives rejected**: (1) active 文件编码 worktree 名称 — 需额外解析，增加复杂度；(2) 完全隔离 `.autopilot/` — 知识文件无法共享
+
 ### [2026-03-21] 知识工程采用三层 Progressive Disclosure 而非单层扩展
 <!-- tags: knowledge, architecture, progressive-disclosure -->
 **Background**: 知识工程 v2.6.0 使用两个平面文件（decisions.md + patterns.md），随着知识积累会导致全量加载效率下降。需要升级架构。

@@ -1,6 +1,7 @@
 # Knowledge Index
 
 ## Decisions
+- [2026-05-04] Per-worktree 会话隔离通过 sessions/<name>/ 子目录实现 | tags: autopilot, worktree, session-isolation, architecture | → decisions.md
 - [2026-03-21] 知识工程采用三层 Progressive Disclosure 而非单层扩展 | tags: knowledge, architecture, progressive-disclosure | → decisions.md
 - [2026-03-26] doctor Dim 1 测试金字塔分层评估优于文件计数 | tags: autopilot, doctor, testing, test-pyramid, scoring | → decisions.md
 - [2026-03-27] SKILL.md Phase 分片优于状态文件索引 | tags: autopilot, skill, progressive-disclosure, token-optimization | → decisions.md
@@ -8,6 +9,7 @@
 - [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → decisions.md
 
 ## Patterns
+- [2026-05-04] Worktree 检测使用 .git 文件/目录区分法 | tags: autopilot, worktree, shell, detection | → patterns.md
 - [2026-03-21] Skill 插件 Progressive Disclosure 重构模式 | tags: skill, progressive-disclosure, plugin, refactoring | → patterns.md
 - [2026-03-22] 通用编排器不应替代领域专业 Skill | tags: autopilot, skill-delegation, implement, domain-workflow | → patterns.md
 - [2026-03-22] 外部审查后的修改必须重新验证 | tags: autopilot, qa, post-review, validation, framer-motion | → patterns.md
