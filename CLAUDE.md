@@ -48,14 +48,14 @@
 
 ---
 
-### 3. autopilot (v3.13.1)
+### 3. autopilot (v3.14.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + Deep Design 交互式设计 + 需求管理 + 智能提交 + 工程诊断 + 性能保障 + Worktree 自动初始化）
 
 **包含 Skill**:
 - `autopilot`：全流程闭环编排器（红蓝对抗 + 五层 QA + 性能保障 + 知识工程 + 自动修复）
 - `autopilot-commit`：智能提交工具（React 检测、最佳实践优化、代码理解测验、任务同步）
-- `autopilot-doctor`：工程健康度诊断（11 维度评分 + 测试金字塔三层检测 + 性能保障检测 + autopilot 兼容性矩阵 + 自动修复）
+- `autopilot-doctor`：工程健康度诊断（12 维度评分 + 测试金字塔三层检测 + 性能保障检测 + 知识库健康度 AI 语义判断 + autopilot 兼容性矩阵 + 自动修复）
 - `worktree-repair`：手动修复已有 worktree 的配置缺失（符号链接 + 依赖安装）
 
 **核心能力**:
@@ -73,10 +73,10 @@
 - 两阶段代码审查：设计符合性 + 代码质量，并行 Sub-Agent 执行（置信度 ≥80 过滤）
 - 防合理化表格：对抗 AI 跳过测试/修改红队测试的借口
 - 铁律：不允许修改红队测试来通过 QA，成功需要证据，假设需要证据
-- 知识工程：design 阶段消费历史决策和模式提升设计质量，merge 阶段反馈驱动提取知识持续积累（.claude/knowledge/）
+- 知识工程：design 阶段消费历史决策和模式提升设计质量，merge 阶段反馈驱动提取知识持续积累（.autopilot/），含抗过拟合 Principle-Evidence 分离 + Integrate-not-Append 整合提取流程
 - 智能提交：三阶段并行执行模型，React 优化、Bugfix 双模式验证（自动化测试 + 运行时验证）、代码测验、CLAUDE.md 更新、版本升级、ai-todo 同步
 - 生成高质量中文提交信息（业务描述 + 技术说明）
-- 工程诊断：11 维度加权评分（测试/类型/lint/构建/CI/结构/文档/Git/依赖/AI就绪度/性能保障），S-F 等级，autopilot 兼容性矩阵，`--fix` 自动修复
+- 工程诊断：12 维度加权评分（测试/类型/lint/构建/CI/结构/文档/Git/依赖/AI就绪度/性能保障/知识库健康度），S-F 等级，autopilot 兼容性矩阵，`--fix` 自动修复
 - 性能保障：Lighthouse CI（Core Web Vitals 预算）、Playwright 性能断言（page.metrics / Web Vitals）、Bundle Size 监控（size-limit）
 - Worktree 自动初始化：`WorktreeCreate` hook 自动链接 .env 等配置文件、安装依赖、分配独立端口；`WorktreeRemove` hook 自动清理；`/worktree-repair` 手动修复
 
@@ -292,6 +292,15 @@
 ---
 
 ## 更新日志
+
+### 2026-05-05
+- autopilot 升级至 v3.14.0：知识工程升级（抗过拟合 + 智能合并 + 健康度诊断）
+  - 新增 Anti-Overfitting Principles 章节：Principle-Evidence 分离表 + 写入后 5 问自检清单 + 反例/正例对照（knowledge-engineering.md）
+  - 新增 Integration over Append 章节：写新条目前先搜 index.md 候选，优先合并而非新建；Extraction Steps 前置步骤 0（搜索→决策合并/新建/跳过）
+  - SKILL.md merge 阶段步骤 2 引导写入前后使用两个新章节（Integration over Append + Anti-Overfitting 5 问自检）
+  - autopilot-doctor 新增 Dim 12 知识库健康度（AI 语义判断，Wave 2）：5 个检查项（过拟合密度/重复主题/文件大小/索引一致性/元信息完整性）
+  - 权重重分配：Dim 1 0.17→0.15、Dim 7 0.07→0.06、Dim 11 0.08→0.06，让出 0.05 给 Dim 12；总和保持 1.00
+  - 兼容性矩阵新增「知识工程提取（merge 阶段）」行；--fix 表格新增「知识库健康度」行（输出建议清单，不自动改 entry）
 
 ### 2026-05-04
 - autopilot 升级至 v3.13.1：修复 `claude -w` 创建新 worktree 时 autopilot 任务被旧任务干扰的问题

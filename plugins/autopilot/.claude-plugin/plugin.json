@@ -1,6 +1,6 @@
 {
     "name": "autopilot",
-    "version": "3.13.1",
+    "version": "3.14.0",
     "description": "AI 自动驾驶工程套件。包含全流程闭环（红蓝对抗 + 五层 QA + 知识工程）、Deep Design 交互式设计、需求管理、智能提交（React 优化 + 代码测验 + 任务同步）、工程健康度诊断和 Worktree 自动初始化。",
     "author": {
         "name": "String Zhao",

@@ -67,6 +67,95 @@ All content files use append-only Markdown, tracked in git. Each file stays ≤1
 
 Tags 使用 `<!-- tags: ... -->` HTML comment 格式；每个条目 2-5 个标签，逗号分隔。
 
+## Anti-Overfitting Principles
+
+知识库的最大敌人是"过拟合"——把一次特定运行的具体细节（版本号、路径、计数）混入应该是通用原则的字段。这导致知识在 6 个月后或在另一个项目中完全失效。
+
+### Principle-Evidence 分离
+
+每个字段有其允许的抽象层级：
+
+| 字段 | 允许 | 禁止 |
+|------|------|------|
+| `Lesson` / `Choice` | 可迁移的 principle（无具体值） | 版本号、文件路径、行号、计数、日期 |
+| `Evidence` | 具体证据（命令输出、版本号、文件名、错误信息） | 抽象原则（已在 Lesson 表达） |
+| `Background` / `Scenario` | 触发条件描述 | 运行时临时状态 |
+
+**核心判断标准**：删掉 Evidence 字段后，Lesson/Choice 字段必须仍然独立成立、语义完整。
+
+### 写入后 5 问自检清单
+
+写完 `Lesson` / `Choice` 字段后，逐项回答：
+
+1. **这条 lesson 在 6 个月后还成立吗？**（检查是否依赖当时的版本/环境）
+2. **这条 lesson 在另一个项目还有效吗？**（检查是否过于项目特定）
+3. **把版本号换成"某个版本"后 lesson 还成立吗？**（检查是否包含版本号）
+4. **删掉 Evidence 后 Lesson 还独立成立吗？**（检查是否需要 Evidence 才能理解）
+5. **Lesson 行有具体数值/版本号/路径/计数吗？**（有则移到 Evidence）
+
+如任意一问回答为"否"，需要修改 Lesson/Choice 字段，将具体内容下移到 Evidence。
+
+### 反例 vs 正例
+
+**❌ 反例**（过拟合 — Lesson 含具体值）：
+```markdown
+### [2026-03-27] Skill 规范中 40px 间距不兼容 Claude Code v2.1.3
+<!-- tags: skill, spacing, claude-code -->
+**Scenario**: 在 Claude Code v2.1.3 中使用 skill 文档时
+**Lesson**: 间距需要精确设置为 40px，否则在 v2.1.3 中会崩溃（见 line 347 报错）
+**Evidence**: line 347: "spacing must be exactly 40px", claude-code@2.1.3 npm error log
+```
+
+**✅ 正例**（抽象 — Lesson 是可迁移 principle，Evidence 保留具体值）：
+```markdown
+### [2026-03-27] Skill 文档中禁止硬编码工具版本相关的数值
+<!-- tags: skill, compatibility, hardcoded-values -->
+**Scenario**: 编写 Skill 规范文档时涉及布局参数
+**Lesson**: 避免在 Skill 规范中硬编码与工具版本耦合的具体数值；改为描述约束条件和语义意图
+**Evidence**: Claude Code v2.1.3 因 Skill.md 中的 "spacing: 40px" 硬编码报错（line 347），升级到 v2.2.0 后默认值变化导致原值失效
+```
+
+## Integration over Append
+
+写新条目前，先搜索已有条目是否有相似主题。如果有，**优先合并**（升级抽象层级）而非新建——这避免知识库膨胀和碎片化，让相关教训集中在一条 entry 中形成更强的信号。
+
+### 决策规则
+
+| 情形 | 行动 |
+|------|------|
+| index.md 中 tags 重叠 ≥2 且语义相似 | **合并**：修订 Lesson（抽象层级升级）+ 在 Evidence 字段并列多个案例 |
+| index.md 中 tags 重叠 ≥2 但 principle 明显不同 | **新建**：两条 entry 分别保留 |
+| 完全没有 tags 重叠 | **新建** |
+| Lesson 已完全被已有条目覆盖 | **跳过**（在 index.md 条目旁标注 "evidence updated [date]" 即可） |
+
+### 合并示例
+
+**合并前**（两条分散条目）：
+```
+- [2026-03-15] worktree 中 git 路径解析失败 | tags: git, worktree, path | → patterns.md
+- [2026-03-27] worktree 符号链接 .autopilot 解析报错 | tags: worktree, symlink, path | → patterns.md
+```
+
+**合并后**（一条聚合条目，Evidence 并列多案例）：
+```markdown
+### [2026-03-27] Git Worktree 中路径解析的统一处理策略
+<!-- tags: git, worktree, path, symlink -->
+**Scenario**: 在 git worktree 环境中访问共享路径（知识库、配置文件）时
+**Lesson**: 在 worktree 中不能假设相对路径和符号链接与主仓库一致；应使用 `git rev-parse --git-common-dir` 解析主仓库路径，并检测 `.git` 是文件（worktree）还是目录（主仓库）
+**Evidence**: (案例 1: 2026-03-15) `git rev-parse --show-toplevel` 在 worktree 中返回 worktree 根而非主仓库 | (案例 2: 2026-03-27) `.autopilot` 符号链接在 `worktree-repair` 未运行时不存在，`realpath` 报错
+```
+
+### 步骤 0：搜索已有条目（Execution Steps 前置步骤）
+
+在执行提取写入前，先：
+
+1. 从本次工作主题提取 2-3 个关键 tag（如 `worktree`, `testing`, `api-routes`）
+2. 读取 `index.md`，找 tags 重叠 ≥2 的候选条目（最多 top 3）
+3. 决策：
+   - 相似主题 → **合并**：修订 Lesson + 在 Evidence 字段扩充新案例
+   - 不同 principle → **新建**：继续正常写入流程
+   - 完全覆盖 → **跳过**：不写入，仅在 index.md 标注证据日期
+
 ## Consumption Rules (Design Phase) — Two-Phase Retrieval
 
 Before entering Plan Mode, scan `.autopilot/` if it exists. 分两阶段执行，控制加载量：
@@ -99,12 +188,13 @@ After autopilot-commit completes, review the full autopilot run to extract knowl
 
 ### Execution Steps
 
+0. **搜索已有条目**（Integration over Append）：按「步骤 0：搜索已有条目」执行——提取 2-3 个 tag → 检索 index.md → 决策合并/新建/跳过
 1. 分析状态文件（设计文档、QA 报告、变更日志、auto-fix 历程）中的候选条目
 2. 有值得记录的条目：
    a. `mkdir -p .autopilot/`
    b. 从设计文档和代码变更中自动生成 tags
    c. 确定目标文件：通用决策 → `decisions.md`；通用模式 → `patterns.md`；领域特定 → `domains/{domain}.md`
-   d. 追加条目（含 `<!-- tags: ... -->`）到目标文件
+   d. 追加条目（含 `<!-- tags: ... -->`）到目标文件，**写入后执行 Anti-Overfitting 5 问自检**（Lesson/Choice 字段无具体值）
    e. 更新 `index.md`（不存在则创建）
    f. 全局文件 >100 行时建议用户迁移领域条目到 `domains/`
    g. 确定知识库 git 提交上下文（见下方 Worktree-Aware Extraction）
@@ -148,3 +238,5 @@ When running in a git worktree, `.autopilot` should be a symlink to the main rep
 - 全局文件（decisions.md / patterns.md）超 100 行 → 追加警告注释并通知用户建议迁移
 - 领域文件（domains/*.md）超 150 行 → 追加警告注释并通知用户建议拆分或裁剪旧条目
 - 不要自动迁移——知识整理需要人工判断
+
+运行 `/autopilot doctor` 可获得知识库健康度评估（Dim 12），包括过拟合密度扫描、重复主题检测、文件大小健康度分析和索引一致性检查。

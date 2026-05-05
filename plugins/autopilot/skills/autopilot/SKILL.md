@@ -615,7 +615,7 @@ Wave 1 完成后统计 Tier 0+1 ❌ 数量：≥3 → 跳过 Wave 1.5/2 直接 a
 
 commit Agent 完成后，回顾本次全流程产出，提取值得持久化的知识。
 
-1. 读取 `references/knowledge-engineering.md` 获取完整提取规则和格式模板
+1. 读取 `references/knowledge-engineering.md` 获取完整提取规则和格式模板。**写入前**先按 Integration over Append 流程搜索 index.md 找候选条目（决定合并/新建/跳过）；**写入后**按 Anti-Overfitting Principles 5 问自检 Lesson/Choice 字段。
 2. 分析状态文件中的设计文档、QA 报告、变更日志、auto-fix 修复历程
 3. 反馈驱动判断：仅记录有真实学习价值的条目（设计权衡、调试教训、项目特有约定）
 4. 有值得记录的条目：
