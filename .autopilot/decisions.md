@@ -1,3 +1,10 @@
+### [2026-05-05] Lint / 健康检查能力优先 AI 语义判断而非正则脚本
+<!-- tags: autopilot, doctor, lint, ai-judgment, knowledge-engineering, design-principle -->
+**Background**: 知识库 Lint 设计需要识别"过拟合条目"（如硬编码 UI 高度的具体数值而非"动态读取 UI 高度"原则）。最初方案是写独立脚本用正则匹配版本号 / 行号 / 文件名列表等模式做检测。
+**Choice**: Lint 能力通过 AI Agent 阅读知识库文件做语义评估，集成到 autopilot-doctor 作为 Wave 2 串行 AI 判断维度，不写脚本。
+**Alternatives rejected**: (1) 独立 Lint 脚本（Node.js / Shell）—— 正则无法识别"硬编码具体数值是过拟合"vs"抽象原则是 principle"的语义差异，会大量误报或漏报；(2) 独立 Skill 入口（如 `/autopilot:knowledge-lint`）—— 增加用户认知面，集成既有维度入口更聚合。
+**Trade-offs**: AI 判断比脚本慢且消耗更多 token，但能识别脚本无法捕获的语义模式。原则推广：所有"评分 / 审查 / 质量判断 / 模糊匹配"类功能默认选 AI Agent，只有"格式校验 / 性能敏感 / 输出可被 AI 后处理的纯数据收集"才选代码。
+
 ### [2026-05-04] Per-worktree 会话隔离通过 sessions/<name>/ 子目录实现
 <!-- tags: autopilot, worktree, session-isolation, architecture -->
 **Background**: worktree.mjs 将整个 `.autopilot/` 符号链接共享到所有 worktree，导致 active 指针和 requirements 全局共享，旧任务状态干扰新 worktree。

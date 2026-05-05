@@ -6,10 +6,13 @@
 **Lesson**: `[[ -f "$PROJECT_ROOT/.git" ]]` → worktree（.git 是文件指向主仓库），`[[ -d "$PROJECT_ROOT/.git" ]]` → 主仓库（.git 是目录）。此方法比 `git worktree list | grep` 更快且无外部命令依赖
 **Evidence**: `git worktree` 约定 .git 在 worktree 中为文件（内容 `gitdir: ../.git/worktrees/<name>`），在非 worktree 中为目录。lib.sh 中 get_worktree_name() 已验证
 
-### [2026-03-21] README.md 版本号与 CLAUDE.md 长期不同步
-**Scenario**: 插件版本在 CLAUDE.md 更新日志中迭代（v2.0.0 → v2.9.0），但 README.md 标题行版本号从未同步更新
-**Lesson**: autopilot-commit 的版本升级步骤只检查 `.claude-plugin/plugin.json` 和 `package.json`，不会自动同步 README.md 中的版本号。多处记录版本号时，升级流程应覆盖所有版本出现位置，或在 autopilot-commit 中增加 README 版本同步检查
-**Evidence**: README.md L54 `autopilot (v2.0.0)` 停留了 9 个版本未更新，CLAUDE.md 已记录到 v2.9.0。`grep "autopilot.*v2" README.md CLAUDE.md` 可复现不一致
+### [2026-03-21] 多处引用同一数据（版本号 / 计数 / 路径）容易长期不同步
+<!-- tags: autopilot, doctor, consistency, version, dimension, lint -->
+**Scenario**: 文档中多处引用同一数据（版本号、维度计数、模块数量、特定路径等）时，单一升级流程或人工记忆无法保证全部位置同步更新
+**Lesson**: 同一数据散布在多处时，应优先选择以下机制之一：(1) 集中化为单一来源（如 CLAUDE.md 项目元数据中央仓库）+ 派生引用 (2) 自动化 lint / 健康检查工具发现不一致 (3) 升级脚本主动搜索全部出现位置而非硬编码文件清单。仅靠"提醒人工同步"会反复失败
+**Evidence**:
+- 案例 1: README.md autopilot 标题版本号停留了多个版本未与 CLAUDE.md 更新日志同步，autopilot-commit 升级流程仅覆盖 plugin.json/package.json
+- 案例 2: v3.14.0 升级 doctor Dim 11→12，但 CLAUDE.md L58 "11 维度评分" 和 L79 "11 维度加权评分（11 项枚举）" 同步遗漏，由 Tier 2b code-quality-reviewer Agent 在 QA 阶段发现并 auto-fix 修复——此即 Dim 12 知识库健康度维度本身需要解决的问题
 
 ### [2026-03-21] Skill 插件 Progressive Disclosure 重构模式
 <!-- tags: skill, progressive-disclosure, plugin, refactoring -->
@@ -75,7 +78,10 @@
 <!-- tags: autopilot, red-team, testing, indexOf, text-proximity, regex -->
 **Scenario**: (1) 成本优化章节表格包含 agent 名称（plan-reviewer、红队、design-reviewer），红队验收测试用 `indexOf('agent-name')` + 2000 字符窗口查找 `model: "sonnet"`，首次匹配命中文档文本而非 Agent 调用行。(2) v3.8.0 步骤 2 文本"供步骤 3 的 Plan 审查使用"包含"步骤 3"，红队测试用 `/步骤\s*3/` 提取步骤 2 内容时正则提前截断，导致步骤 2 中的降级/隔离关键词无法被检测到。
 **Lesson**: SKILL.md 中文档描述引用其他步骤编号或 agent 标识符时，会被红队测试的正则/indexOf 匹配机制误命中。两类缓解：(1) agent 名称用中文泛称，精确标识符只出现在技术定义处 (2) 跨步骤引用避免使用"步骤 N"格式，改用"后续 Plan 审查"等无编号泛称。核心原则：文档描述中的任何标识符都可能成为正则锚点。
-**Evidence**: v3.5.2 红队 17 测试 2→3→1→0 失败修复 3 轮；v3.8.0 红队 36 测试因"步骤 3"引用导致 step2Match 仅捕获 294 字符（预期 ~800），修复改为"后续 Plan 审查"后通过
+**Evidence**:
+- 案例 1: v3.5.2 红队 17 测试 2→3→1→0 失败修复 3 轮（成本优化表格中的 agent 名称触发 indexOf 误匹配）
+- 案例 2: v3.8.0 红队 36 测试因"步骤 3"引用导致 step2Match 仅捕获 294 字符（预期 ~800），修复改为"后续 Plan 审查"
+- 案例 3: v3.14.0 doctor Dim 12 章节内 inline code `### [日期]` 含 `## ` 子串触发红队 regex lookahead `##\s` 提前截断，章节抽取丢失第 5 项关键词「元信息」；修复改为"H3 三级标题（[日期] 开头）"文字描述。揭示 Markdown 章节标识符（`### `/`## `）在 inline code 中也是正则锚点
 
 ### [2026-04-12] "从缓存同步源码" 操作会连带回退不相关的文件改动
 <!-- tags: autopilot, cache-sync, regression, stop-hook, source-of-truth -->
