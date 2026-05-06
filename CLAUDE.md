@@ -48,7 +48,7 @@
 
 ---
 
-### 3. autopilot (v3.14.0)
+### 3. autopilot (v3.15.0)
 **类型**: Skill + Hook 插件
 **功能**: AI 自动驾驶工程套件（全流程闭环 + Deep Design 交互式设计 + 需求管理 + 智能提交 + 工程诊断 + 性能保障 + Worktree 自动初始化）
 
@@ -292,6 +292,12 @@
 ---
 
 ## 更新日志
+
+### 2026-05-06
+- autopilot 升级至 v3.15.0：新增 `SessionStart` hook 兜底 worktree 初始化（issue #36205）
+  - 新增 `scripts/worktree-bootstrap.sh` 脚本，每次 session 启动检测 cwd 是否为未配置 worktree，是则自动调 `worktree.mjs repair`
+  - 复用现有 repair 逻辑，对主仓库/已配置 worktree silent exit 保证幂等
+  - `package.json` test 脚本同步追加新测试文件 `worktree-bootstrap.acceptance.test.mjs`
 
 ### 2026-05-05
 - autopilot 升级至 v3.14.0：知识工程升级（抗过拟合 + 智能合并 + 健康度诊断）

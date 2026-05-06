@@ -111,6 +111,14 @@ QA 发现问题时，按系统化调试方法论（观察 → 假设 → 验证 
 - 每轮 QA 报告（完整保留历史）
 - 变更日志（时间戳 + 每个关键事件）
 
+## Worktree 自动初始化机制
+
+autopilot plugin 通过 `WorktreeCreate` hook 在 worktree 创建时配置环境（symlink、依赖安装、`local-config.json`）。但 Claude Code 当前版本（≤ 2.1.128）有一个已知 gap，详见 [issue #36205](https://github.com/anthropics/claude-code/issues/36205)：**`claude -w` 触发的 `WorktreeCreate` hook 只派发给 user/project `settings.json`，不派发给 plugin 的 `hooks.json`**。
+
+为此 plugin 同时注册了 `SessionStart` hook 作为兜底：每次 session 启动时检测 cwd 是否为未配置的 worktree，是就自动 repair。代价是 worktree 首次启动 session 时会卡几十秒（pnpm install）。
+
+如想跳过兜底延迟、在 worktree 创建瞬间就完成初始化，可在 `~/.claude/settings.json` 直接注册 `WorktreeCreate` hook 调 `worktree.mjs create`，但需硬编码 plugin 缓存路径（plugin 升级后需更新）。
+
 ## 与其他插件的配合
 
 - **worktree（内置）**: 建议在 worktree 中运行，隔离代码改动
