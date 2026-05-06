@@ -11,6 +11,7 @@
 - [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → decisions.md
 
 ## Patterns
+- [2026-05-06] 新增兜底路径暴露 create / repair 功能不对称 | tags: autopilot, worktree, repair, create, asymmetry, fallback, idempotent, bootstrap | → patterns.md
 - [2026-05-04] Worktree 检测使用 .git 文件/目录区分法 | tags: autopilot, worktree, shell, detection | → patterns.md
 - [2026-03-21] 多处引用同一数据（版本号 / 计数 / 路径）容易长期不同步 | tags: autopilot, doctor, consistency, version, dimension, lint | → patterns.md
 - [2026-03-21] Skill 插件 Progressive Disclosure 重构模式 | tags: skill, progressive-disclosure, plugin, refactoring | → patterns.md

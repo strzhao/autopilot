@@ -1,5 +1,11 @@
 # Patterns & Lessons
 
+### [2026-05-06] 新增兜底路径暴露 create / repair 功能不对称
+<!-- tags: autopilot, worktree, repair, create, asymmetry, fallback, idempotent, bootstrap -->
+**Scenario**: v3.15.0 新增 SessionStart hook 兜底初始化 worktree，调用 `worktree.mjs::repair()`。实测发现 worktree 缺 `local-config.json`（dev 端口配置），导致 dev server 抢占默认端口
+**Lesson**: 新增"兜底/恢复"路径调用既有 secondary 函数（如 repair）时，必须确认该函数 feature-complete——独立完成全部初始化。原 create() 流程是「create() → 内部调 repair() + 末尾写额外文件」，create() 在 repair 之外做的副作用都是隐式 gap，任何只走 repair 的新路径都会漏。同时，bootstrap "已配好" silent-exit 的检查项必须是 "已配置态" 完整指纹，否则受影响的存量安装永远不会被 SessionStart 自愈。诊断口径：列出 create() 调 repair 后做的所有副作用 → 逐项确认 repair 是否做 → 是否进入 silent-exit 检查
+**Evidence**: v3.15.1 修复：抽 `writeLocalConfig(worktreePath)` 到 repair() 末尾（幂等：仅当 .git 是文件且 local-config.json 不存在时写），create() 删重复逻辑；同步更新 worktree-bootstrap.sh 的"已配好"检查链补 `[ -f local-config.json ]`，让存量受影响 worktree 在下次 SessionStart 自动 repair
+
 ### [2026-05-04] Worktree 检测使用 .git 文件/目录区分法
 <!-- tags: autopilot, worktree, shell, detection -->
 **Scenario**: 需要在 shell 脚本中判断当前是否在 git worktree 中，以决定 active 指针存储路径
