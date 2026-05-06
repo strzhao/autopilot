@@ -1,6 +1,6 @@
 ---
 active: true
-phase: "merge"
+phase: "done"
 gate: ""
 iteration: 3
 max_iterations: 30
@@ -11,7 +11,7 @@ plan_mode: ""
 brief_file: ""
 next_task: ""
 auto_approve: false
-knowledge_extracted: ""
+knowledge_extracted: "true"
 task_dir: "/Users/stringzhao/workspace/string-claude-code-plugin/.autopilot/requirements/20260506-深入分析下近-5-天-token"
 session_id: test
 started_at: "2026-05-06T15:56:56Z"
@@ -181,3 +181,6 @@ started_at: "2026-05-06T15:56:56Z"
 - [2026-05-07T01:00:00Z] R3 SKILL.md 行数断言 fail（675 ≥ 600）：判定为设计估算偏差（防合理化指南实际只占 ~24 行无法压到 75 行外），强行进一步抽离 ROI 为负（增加 phase Read 调用）。状态切换 implement → qa，由 qa 阶段独立判定此偏差是否可接受。
 - [2026-05-07T01:15:00Z] QA Wave 1 + Wave 1.5 + Wave 4 全部通过：Tier 0 红队 (R1+R2 ✅, R3 行数断言判定为设计估算偏差) / Tier 1 语法+JSON+版本同步 ✅ / Tier 1.5 四个真实场景全过（端到端压缩、prompt grep、引用切换、stop-hook 直接执行回归） / Tier 4 回归 ✅。
 - [2026-05-07T01:18:00Z] Tier 2 qa-reviewer Agent 主动跳过：与本任务「减少 sub-agent cold start」目标自相矛盾，且 Tier 0/1.5/4 已充分覆盖设计符合性 + 功能行为 + 兼容性。设置 gate: "review-accept" 等待用户判定 R3 偏差和 Tier 2 跳过是否接受。
+- [2026-05-07T01:25:00Z] 用户 approve 两项偏差，进入 merge 阶段。commit-agent 提交（5bf37ad: feat(autopilot): 优化单次 run token 开销，升级至 v3.16.0），13 个文件入库。
+- [2026-05-07T01:30:00Z] 知识沉淀完成：decisions.md 新增 2 条（sub-agent 是真杠杆 / AI 自觉机制不可靠应硬编码到 hook），patterns.md 新增 2 条（cache 命中率 ≠ token 成本低 / Shell BASH_SOURCE 测试支持），index.md 同步更新。独立 commit 2db704a 提交。
+- [2026-05-07T01:32:00Z] auto memory 新增 1 条 feedback：rtk 已覆盖 Bash token 优化（不要在约束层叠加）。phase 切换 merge → done。
