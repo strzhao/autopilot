@@ -15,9 +15,133 @@
 # 只有明确需要 block 时才输出 JSON。避免 set -e 导致意外非零退出。
 trap 'exit 0' ERR
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./lib.sh
 source "$SCRIPT_DIR/lib.sh"
+
+# compress_qa_report — 压缩状态文件 ## QA 报告 区域的历史轮次
+#
+# 行为：保留最新一轮（### 轮次 N）完整内容，将之前所有轮次压缩为单行摘要：
+#   ### 轮次 N (时间) — ✅/❌ 简要
+# 状态符号从该块首行（紧跟标题之后第一个非空行）的 ✅/❌ emoji 推断，
+# 摘要文本截取该首行剩余内容前 60 个字符。
+#
+# 不影响 ## QA 报告 之外的 section（## 设计文档 / ## 变更日志 等保持不变）。
+# 失败不阻断 stop-hook（调用方使用 || true 兜底）。
+# 函数幂等：对已经只剩单轮 + N 行摘要的文件再次调用结果不变。
+compress_qa_report() {
+    local state_file="$1"
+    [ -f "$state_file" ] || return 0
+
+    local tmp="${state_file}.compressed.$$"
+
+    awk '
+        BEGIN {
+            in_qa = 0          # 当前是否在 ## QA 报告 section
+            round_count = 0    # 已遇到的 ### 轮次 N 总数
+            buffered = 0       # 当前 round 缓冲区是否已积累内容
+        }
+
+        # 刷新缓冲：如果是最后一轮（last_round=1）保留完整；否则压缩为一行摘要
+        function flush_buffer(last_round,    i, status, summary, line, header) {
+            if (!buffered) return
+            if (last_round) {
+                print round_header
+                for (i = 1; i <= buf_n; i++) print buf_lines[i]
+            } else {
+                status = "✅"
+                summary = ""
+                for (i = 1; i <= buf_n; i++) {
+                    line = buf_lines[i]
+                    # 跳过空行寻找首个有内容的行
+                    if (line ~ /^[[:space:]]*$/) continue
+                    if (index(line, "❌") > 0) status = "❌"
+                    else if (index(line, "✅") > 0) status = "✅"
+                    summary = line
+                    break
+                }
+                # 摘要截断到 60 字符（按字节，足够中文 ~20 字）
+                if (length(summary) > 60) summary = substr(summary, 1, 60)
+                # 若 round_header 已包含 — 状态 简要 形式（之前压缩过），保留原样
+                if (round_header ~ /— [✅❌]/) {
+                    print round_header
+                } else {
+                    if (summary == "") {
+                        print round_header " — " status " 简要"
+                    } else {
+                        # 清理 summary 中的 markdown 标记前缀（- / ### / **）
+                        gsub(/^[[:space:]]*[-*#]+[[:space:]]*/, "", summary)
+                        gsub(/\*\*/, "", summary)
+                        # 去掉 summary 中重复的状态 emoji（避免 — ❌ ❌ ... 形式）
+                        gsub(/[✅❌][[:space:]]*/, "", summary)
+                        gsub(/^[[:space:]]+/, "", summary)
+                        print round_header " — " status " " summary
+                    }
+                }
+            }
+            buffered = 0
+            buf_n = 0
+        }
+
+        {
+            line = $0
+
+            # 检测 ## QA 报告 section 起始
+            if (line ~ /^## QA 报告[[:space:]]*$/) {
+                in_qa = 1
+                print line
+                next
+            }
+
+            # 不在 QA 报告区：照常输出
+            if (!in_qa) {
+                print line
+                next
+            }
+
+            # 在 QA 报告区遇到下一个 ## section（不是 ###）→ 结束 QA 区
+            if (line ~ /^## / && line !~ /^## QA 报告/) {
+                # 刷出最后一轮（保留完整）
+                flush_buffer(1)
+                in_qa = 0
+                print line
+                next
+            }
+
+            # 在 QA 报告区遇到 ### 轮次 N
+            if (line ~ /^### 轮次/) {
+                # 先把上一轮按"非最后一轮"处理（压缩）
+                if (buffered) flush_buffer(0)
+                round_header = line
+                round_count++
+                buffered = 1
+                buf_n = 0
+                next
+            }
+
+            # 在 QA 报告区累积当前轮次内容
+            if (buffered) {
+                buf_n++
+                buf_lines[buf_n] = line
+            } else {
+                # ## QA 报告 标题与首个 ### 轮次 之间的内容（说明文字等）原样输出
+                print line
+            }
+        }
+
+        END {
+            # 文件结束时如还在 QA 区且有缓冲，flush 为最后一轮（保留完整）
+            if (in_qa && buffered) flush_buffer(1)
+        }
+    ' "$state_file" > "$tmp" 2>/dev/null && mv "$tmp" "$state_file" || rm -f "$tmp"
+}
+
+# 支持 source 加载模式：被 source 时只导出函数定义（compress_qa_report 等），
+# 不执行 main 逻辑。这让外部测试可以单独验证函数行为。
+# 直接执行（bash stop-hook.sh）时 BASH_SOURCE[0] == $0，正常往下走。
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    return 0 2>/dev/null || exit 0
+fi
 
 # ── 0. 先读 stdin，提取 cwd 后再初始化路径 ──
 # Stop hook 的 stdin JSON 包含 cwd 字段，是 Claude Code 的实际工作目录。
@@ -230,6 +354,13 @@ if [[ "$SKIP_INCREMENT" -eq 0 ]]; then
     set_field "iteration" "$NEXT_ITERATION"
 else
     NEXT_ITERATION="$ITERATION"
+fi
+
+# ── 8.5 在 phase 转入 qa/auto-fix 时压缩 QA 报告历史轮次 ──
+# 失败不阻断 stop-hook，使用 || true 兜底
+NEW_PHASE=$(get_field "phase" || true)
+if [[ "$NEW_PHASE" == "qa" ]] || [[ "$NEW_PHASE" == "auto-fix" ]]; then
+    compress_qa_report "$STATE_FILE" || true
 fi
 
 # ── 9. 构造 block JSON ──

@@ -270,10 +270,7 @@ ExitPlanMode + 用户审批通过后，创建项目文件结构：
 
 ### 防合理化指南
 
-| 借口 | 现实 |
-|------|------|
-| 太简单 / 先实现再补 | 简单改动也出 bug；后补测试不验证需求 |
-| 时间紧跳过TDD / 红队没必要 | TDD 比 debug 快；自测 = 偏差验偏差 |
+> 防合理化指南见 references/anti-rationalization.md（仅在你想跳过测试/重做时阅读）。
 
 ### 工作流程
 
@@ -422,51 +419,32 @@ Wave 1 完成后统计 Tier 0+1 ❌ 数量：≥3 → 跳过 Wave 1.5/2 直接 a
 
 ##### 防合理化指南（Tier 1.5 专用）
 
-| 借口 | 现实 |
-|------|------|
-| dev server 太重 / 已通过 tsc+jest | `npm run dev &` 等 5 秒即可；单测验证代码结构，真实测试验证用户场景 |
-| 设计文档没写 / 后续手动验证 | 没有就自行设计 1 个；QA 阶段就是验证阶段，"后面再验"= 跳过验证 |
-| 蓝队已冒烟 / 场景 1 已验核心 | QA 必须独立执行；little-bee-cli 48 测全过但 4 bug 靠手动发现，只跑了 --help |
+> 防合理化指南见 references/anti-rationalization.md（仅在你想跳过测试/重做时阅读）。
 
-#### Wave 2 — AI 审查（并行 Agent，基于 Wave 1 + Wave 1.5 结果）
+#### Wave 2 — qa-reviewer Agent 审查（单 Agent，合并两类审查）
 
-**在同一轮响应中使用 Agent 工具启动两个并行审查 Agent。** 两个 Agent 独立运行、互不依赖，完成后合流。
+**改动说明**：此前 Wave 2 并行启动 design-reviewer + code-quality-reviewer 两个 Agent，每个 cold start ~500k token 且都 Read 同一批变更文件。合并为 1 个 qa-reviewer Agent 后节省 ~1M token / run。
 
-##### Tier 2a: design-reviewer Agent（设计符合性）
-
-使用 Agent 工具启动 design-reviewer（model: "sonnet"），prompt 参考 `references/design-reviewer-prompt.md` 模板，填入：
+使用 Agent 工具启动 qa-reviewer（model: "sonnet"），prompt 参考 `references/qa-reviewer-prompt.md` 模板，填入：
 - 设计文档（从状态文件 `## 设计文档` 复制）
 - Wave 1 + Wave 1.5 各 Tier 通过/失败状态摘要
 - 项目根目录路径
+- CLAUDE.md 内容或关键项目约定
 
-**核心原则**：不信任，独立验证 — Agent 必须读取实际代码逐项比对设计要求。
-如果 Wave 1 有大量 ❌，仍然启动审查——可能揭示根本原因。
-
-##### Tier 2b: code-quality-reviewer Agent（代码质量）
-
-使用 Agent 工具启动 code-quality-reviewer（model: "sonnet"），prompt 参考 `references/code-quality-reviewer-prompt.md` 模板，填入：
-- 项目根目录路径
-- CLAUDE.md 内容或关键项目约定（如果存在）
-- Wave 1 + Wave 1.5 各 Tier 通过/失败状态摘要
-
-**核心原则**：置信度评分过滤 — Agent 按 `references/code-quality-reviewer-prompt.md` 中的审查清单审查，只报告置信度 ≥80 的问题。
+**核心原则**：
+- Section A: 不信任，独立验证 — 必须读取实际代码逐项比对设计要求
+- Section B: 置信度评分过滤 — 只报告置信度 ≥80 的问题
 
 ##### 合流
-
-两个 Agent 都完成后：
-1. 收集 design-reviewer 产出：设计符合状态 + 问题列表
-2. 收集 code-quality-reviewer 产出：Issues（Critical/Important/Minor）+ Assessment
-3. 合并为 QA 报告的 Tier 2a/2b 部分
+qa-reviewer 完成后：收集 Section A（设计符合性）+ Section B（代码质量与安全）合并为 QA 报告的 Tier 2 部分。
 
 ##### 降级策略
-
-- **单个 Agent 失败** → 在变更日志记录警告，使用另一个 Agent 的结果继续（不阻塞流程）
-- **两个 Agent 都失败** → 编排器自行执行简化版审查（仅检查最关键项：设计覆盖率 + OWASP Top 10）
-- **红队未生成测试** → 设计审查 Agent 额外承担验收检查清单的逐项人工验证
+- qa-reviewer Agent 失败 → 编排器自行执行简化版审查（仅检查最关键项：设计覆盖率 + OWASP Top 10）
+- 红队未生成测试 → qa-reviewer Section A 额外承担验收检查清单的逐项人工验证
 
 #### 产出报告
 
-将 QA 报告写入状态文件的 `## QA 报告` 区域。**写入前先将所有历史轮次报告压缩为一行摘要**（格式：`### 轮次 N (时间) — ✅/❌ 简要结果`），只保留最新一轮完整报告。报告格式和示例参见 `references/qa-report-template.md`。
+将 QA 报告写入状态文件的 `## QA 报告` 区域。stop-hook 在 phase 转入 qa/auto-fix 时已自动压缩历史轮次为单行摘要（格式：`### 轮次 N (时间) — ✅/❌ 简要结果`），AI 只需追加新一轮完整报告即可。报告格式和示例参见 `references/qa-report-template.md`。
 
 #### 结果判定
 
@@ -494,9 +472,7 @@ Wave 1 完成后统计 Tier 0+1 ❌ 数量：≥3 → 跳过 Wave 1.5/2 直接 a
 ### ⚠️ 红队测试铁律
 **绝对不允许修改红队验收测试。** 问题在实现，不在测试——无例外。
 
-| 借口 | 现实 |
-|------|------|
-| 改断言值就过了 / 我知道问题直接修 | 这就是修改红队测试，铁律无例外；70% shotgun fix 引入新 bug，先验证假设再修 |
+> 防合理化指南见 references/anti-rationalization.md（仅在你想跳过测试/重做时阅读）。
 
 ### 工作流程
 
