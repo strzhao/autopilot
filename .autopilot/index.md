@@ -1,6 +1,7 @@
 # Knowledge Index
 
 ## Decisions
+- [2026-05-06] Plugin hooks.json 不接收 `claude -w` 的 WorktreeCreate 事件，用 SessionStart 兜底 | tags: claude-code, plugin, hooks, worktree, event-dispatch, sessionstart, fallback | → decisions.md
 - [2026-05-05] Lint / 健康检查能力优先 AI 语义判断而非正则脚本 | tags: autopilot, doctor, lint, ai-judgment, knowledge-engineering, design-principle | → decisions.md
 - [2026-05-04] Per-worktree 会话隔离通过 sessions/<name>/ 子目录实现 | tags: autopilot, worktree, session-isolation, architecture | → decisions.md
 - [2026-03-21] 知识工程采用三层 Progressive Disclosure 而非单层扩展 | tags: knowledge, architecture, progressive-disclosure | → decisions.md

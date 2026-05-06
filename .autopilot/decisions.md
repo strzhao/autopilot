@@ -1,3 +1,12 @@
+### [2026-05-06] Plugin hooks.json 不接收 `claude -w` 派发的 WorktreeCreate 事件
+<!-- tags: claude-code, plugin, hooks, worktree, event-dispatch, sessionstart, fallback -->
+**Background**: autopilot plugin 在 `plugins/autopilot/hooks/hooks.json` 注册了 WorktreeCreate hook 做 worktree 初始化（symlink + pnpm install + local-config.json）。用户跑 `claude code -w <name>` 创建 worktree 时，hook 完全没触发——worktree 是裸的，缺 node_modules / .env / local-config.json，`.autopilot` 是 git 检出实仓而非符号链接。
+**Choice**: 在 plugin hooks.json **同时**注册 `SessionStart` hook 作为兜底。每次 session 启动检测 cwd 是否为未配置 worktree（`.git` 是文件 + `.autopilot` 不是 symlink 或缺 node_modules），是就调 `worktree.mjs repair`；主仓库 / 已配好 worktree silent exit 保证幂等。
+**Alternatives rejected**: (1) 让用户在 `~/.claude/settings.json` 注册 WorktreeCreate hook —— 需硬编码 plugin 缓存路径，每次 plugin 升级需更新；(2) 修改 worktree.mjs 让脚本主动轮询 —— 与 hook 模型背离，复杂度高。
+**Trade-offs**: SessionStart 每次 session 都触发 → 每次启动多几毫秒（已配好场景 silent exit）；裸 worktree 首次 session 卡几十秒装依赖 vs 用户拿到不可用 worktree，前者可接受。
+**Evidence**: hook wrapper + log 对照实证（详见 commit 27289dc 的 HANDOFF 文档）—— plugin hooks.json 的 wrapper 0 字节日志，user-settings 的同 wrapper 收到完整 stdin payload。GitHub issue [#36205](https://github.com/anthropics/claude-code/issues/36205) 已报但只覆盖 settings.json 场景，未提到 plugin hooks.json gap。
+**Lesson**: Plugin hook 事件派发**不是覆盖所有 events**——写 plugin hook 时不能假设 hooks.json 注册的 event 都会被触发，必须用实证验证（wrapper + log）。已知 SessionStart 在 plugin hooks.json **会**派发，可作为高频兜底事件。
+
 ### [2026-05-05] Lint / 健康检查能力优先 AI 语义判断而非正则脚本
 <!-- tags: autopilot, doctor, lint, ai-judgment, knowledge-engineering, design-principle -->
 **Background**: 知识库 Lint 设计需要识别"过拟合条目"（如硬编码 UI 高度的具体数值而非"动态读取 UI 高度"原则）。最初方案是写独立脚本用正则匹配版本号 / 行号 / 文件名列表等模式做检测。
