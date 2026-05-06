@@ -54,3 +54,19 @@
 **Choice**: merge 阶段改用 Agent 工具启动 commit-agent（model: sonnet），Agent 获得独立的新鲜上下文窗口，只包含显式传入的 git diff + 设计目标 + commit 规则。同时新增 stop-hook merge 分支注入 Agent 路径提醒。QA 报告压缩：历史轮次压缩为一行摘要，只保留最新完整报告。
 **Alternatives rejected**: SKILL.md 路由器瘦身（572→85 行）——之前尝试过出过问题，不再重复。
 **Trade-offs**: Agent 无法执行需要用户交互的操作（代码测验、ai-todo 同步），但主链路模式下这些步骤已跳过。独立 /autopilot commit 仍走 Skill 路径不受影响。预估综合日总成本降低 ~40-60%。
+
+### [2026-05-07] Sub-agent 数量是 token 优化的真正杠杆，不是 SKILL.md 加载
+<!-- tags: autopilot, token-optimization, sub-agent, cold-start, qa-reviewer -->
+**Background**: 第三轮 token 优化分析近 5 天 Top 5 autopilot session（共 430.2M token，最高单 session 116.8M / 1119 turns）。数据显示 cache_read 占 95-99%，意味着 SKILL.md 重复加载已被 prompt cache 充分覆盖。前两轮优化（2026-03-27 SKILL.md Phase 分片、2026-04-03 merge Agent 化）方向收敛，但 token 仍快速消耗。
+**Choice**: 把 qa 阶段的两个并行 reviewer Agent（design-reviewer + code-quality-reviewer）合并为一个 qa-reviewer Agent，新建 `references/qa-reviewer-prompt.md` 同时承担 Section A 设计符合性 + Section B 代码质量与安全。每 run 节省 ~500K-1M token（一次 Agent cold start + 重复 Read 同一批变更文件）。
+**Alternatives rejected**: (1) 继续抽离 SKILL.md 内容到 references — 已被 prompt cache 覆盖收益小；(2) 删除 plan-reviewer 或验收场景生成器 — 关乎设计质量，激进改动风险高；(3) 强制 turn 数量上限 — 用户主动 revise 是正当行为不应技术性阻断。
+**Trade-offs**: 失去两个独立视角的"双盲交叉验证"（设计 vs 代码质量），但实际两个 Agent 都在审查同一批代码，关注点互补不重叠。
+**Lesson**: 优化 token 不能只看「文件大小 / 加载频次」这种容易测量的指标——prompt cache 已经把这些重复成本拍平。真正的杠杆是「无法被 cache 共享的 fresh context」——每个 sub-agent 都是一次独立的 cold start，且都要 Read 同一批变更文件。优化的优先级应该是「减少 sub-agent 调用次数」 ＞「减少单 Agent prompt 大小」 ＞「减少 SKILL.md 文件大小」。
+
+### [2026-05-07] AI 自觉的优化机制不可靠，结构性优化必须由 hook 硬编码兜底
+<!-- tags: autopilot, hook, automation, ai-discipline, stop-hook, hard-coded -->
+**Background**: SKILL.md 第 469 行（旧版）声明「写入前先将所有历史轮次报告压缩为一行摘要」，依赖 AI 在每次写 QA 报告前自觉执行。实际审查 stop-hook.sh 发现 `grep -n "压缩\|历史轮次" stop-hook.sh` 0 matches——完全没有自动化机制。多轮 QA 后状态文件膨胀至 7-15K tokens，30 轮迭代每次 phase 入口 Read 都付出此成本（累计 450K 浪费）。
+**Choice**: 在 `plugins/autopilot/scripts/stop-hook.sh` 新增 `compress_qa_report` 函数（awk 状态机识别 `## QA 报告` 区域 + `### 轮次 N` 块），在 phase 转入 qa 或 auto-fix 时自动调用，幂等可重入。SKILL.md 措辞同步从「AI 写入前先压缩」改为「stop-hook 已自动压缩，AI 仅追加新轮次」。
+**Alternatives rejected**: 加更强的 SKILL.md 警告语 + 防合理化提醒——本质还是依赖 AI 自觉，已被实践证伪。
+**Trade-offs**: shell + awk 解析 markdown 不如 AI 智能（边缘格式可能漏处理），但「确定执行 + 简单逻辑」比「依赖自觉 + 复杂逻辑」可靠得多；幂等设计让边缘 case 失败也不会导致状态破坏。
+**Lesson**: 凡是「依赖 AI 在每个循环正确执行」的优化机制，都应当评估是否能下沉到 hook / 工具层硬编码。AI 在长 session / 多任务交错 / 注意力分散时会遗忘软约束；而 hook 是确定性执行。这条原则适用于：状态压缩、文件清理、版本同步、变更日志追加等机械性操作。

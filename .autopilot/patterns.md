@@ -106,3 +106,15 @@
 **Scenario**: stop-hook.sh 的 knowledge_extracted 守卫（v2.8.0）在 phase=done 时检查并 exit 0 回滚到 merge。v3.12.1 在守卫之后添加了 Case 0.5（项目 design auto-chain），但 Case 0.5 永远无法执行——守卫先触发 exit，后续代码全部不可达
 **Lesson**: Shell 脚本中带 `exit 0` 的守卫会创建隐式的顺序依赖：守卫之后添加的任何新路径都需要先通过守卫。新增 phase=done 的合法路径时，必须同步审查所有前置守卫是否需要豁免。检查方法：搜索 `exit 0` 前的条件判断，确认新路径是否被覆盖
 **Evidence**: autopilot.case 行 494 "知识提取回滚" — 项目 design 完成后守卫误触发，Case 0.5 auto-chain 被短路，首个 DAG 任务未自动启动。修复：守卫内增加 mode=project+brief_file="" 和 mode=project-qa 豁免
+
+### [2026-05-07] Cache 命中率高不等于 token 成本低
+<!-- tags: token-analysis, prompt-cache, methodology, autopilot -->
+**Scenario**: autopilot 优化分析时直觉认为「session 总 token = SKILL.md 加载 × N 轮 + 工具调用」，倾向于优化 SKILL.md 大小。但 5 天 Top 5 session 数据显示：cache_read 占 95-99%（最高 session 116.8M token / 1119 turns，cache_create 几乎为 0）。这意味着 prompt cache 已经把 SKILL.md / references 重复加载这部分压平了。真实成本驱动是：(1) sub-agent cold start（每次 ~500K，无法被 parent cache 共享）；(2) Bash 大输出 / 文件全量 Read 进入累积上下文（每个后续 turn 都要 cache_read 这些累积内容）；(3) 状态文件膨胀（同上）。
+**Lesson**: 用「绝对 token 数据 per-session」而非「cache 命中率 %」作为优化决策依据。命中率高反而说明该路径的 token 已经被有效平摊，对该路径继续做小优化 ROI 极低；应转向 cache 无法覆盖的成本源。具体方法：`jq` 解析 ~/.claude/projects/*/jsonl 累加单个 session 的 input/output/cache_read/cache_create，按总量降序找 top sessions，看 cache_create 异常值或大 Bash 输出，定位真实漏点。
+**Evidence**: 本轮（2026-05-07）三项优化均针对 cache 无法覆盖的成本：合并 qa reviewer（减 cold start）、stop-hook 自动压缩 QA 报告（减累积 Read 成本）。SKILL.md 行数从 699 → 675 仅减 24 行的"防合理化指南抽离"反而是收益最低的一项——前两轮已经把 SKILL.md 优化到 cache 命中率 95%+。
+
+### [2026-05-07] Shell 脚本要支持外部 source 测试，必须用 BASH_SOURCE[0]
+<!-- tags: bash, shell, testing, source, BASH_SOURCE, autopilot, stop-hook -->
+**Scenario**: stop-hook.sh 第 18 行 `SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"` 在直接执行时 `$0` 是脚本路径，但被 source 时 `$0` 是调用者 shell（通常 `bash`），导致 `dirname "$0"` 取错路径，进而 `source "$SCRIPT_DIR/lib.sh"` 找不到文件，配合 `trap 'exit 0' ERR` 让整个 source 静默失败。红队测试的 invoke_compress 路径因此根本没成功调用 compress_qa_report 函数，但测试中早期断言（基于原文件内容）误 PASS 掩盖了真问题，只有最严格的断言（轮次 1 应被压缩）暴露失败。
+**Lesson**: bash 脚本中所有用于「定位脚本自身目录」的逻辑必须用 `${BASH_SOURCE[0]}` 而非 `$0`。同时为了让函数可被外部独立测试，应在 main 逻辑前添加 source 守卫：`if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then return 0 2>/dev/null || exit 0; fi`。两者一起才能兼容直接执行 + 外部 source 两种用法。这也提示红队测试设计：早期/弱断言可能因「函数没真正运行 + 原文件刚好满足」而误 PASS，需要至少一个能 distinguish「函数有效执行」与「函数从未运行」的强断言。
+**Evidence**: 本轮 implement 合流时红队 R1 fail「轮次 1 仍 4 行」，调试发现 source 静默失败导致函数从未被调用。修复 dirname + 加 source 守卫后 R1 全过。
