@@ -1,6 +1,6 @@
 ---
 active: true
-phase: "merge"
+phase: "done"
 gate: ""
 iteration: 3
 max_iterations: 30
@@ -11,7 +11,7 @@ plan_mode: ""
 brief_file: ""
 next_task: ""
 auto_approve: false
-knowledge_extracted: ""
+knowledge_extracted: "true"
 task_dir: "/Users/stringzhao/workspace/string-claude-code-plugin/.autopilot/requirements/20260506-基于-HANDOFF-worktree-sessio"
 session_id: 4bf08f73-95b9-464d-ae0b-5d43e1d2faad
 started_at: "2026-05-05T16:08:25Z"
@@ -223,3 +223,7 @@ git diff --stat：8 个文件变更（1 新脚本 + 1 新测试 + 6 个修改的
 - [2026-05-06T02:00:00Z] QA Wave 1.5：5 个真实场景独立执行（场景 1/2/3/4/5），全部 pass；场景 6 (e2e) 标注由用户手动验收
 - [2026-05-06T02:00:00Z] QA Wave 2：design-reviewer 13/13 需求 100% 覆盖；code-quality-reviewer 0 critical / 1 important（statusMessage UI 噪音，置信度 82，⚠️ 不阻塞）
 - [2026-05-06T02:00:00Z] QA 全部 ✅（1 ⚠️ 不阻塞），phase 不变 / gate → review-accept
+- [2026-05-06T03:00:00Z] 用户 approve → phase: merge
+- [2026-05-06T03:30:00Z] commit-agent 完成 feature 提交：27289dc feat(autopilot): SessionStart hook 兜底 worktree 自动初始化，升级至 v3.15.0；pre-commit hook 通过
+- [2026-05-06T03:30:00Z] 知识提取：decisions.md 新增 [2026-05-06] plugin hook 派发 gap 决策；commit 1af5e27 单独提交知识更新
+- [2026-05-06T03:30:00Z] phase → done，autopilot 闭环完成

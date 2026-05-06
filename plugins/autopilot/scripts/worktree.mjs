@@ -80,6 +80,33 @@ export function parseLinksFile(filepath) {
     .map(line => line.trim());
 }
 
+// ─── Write local-config.json (idempotent, worktree-only) ───
+// 仅当 worktreePath 是 worktree（.git 是文件）且 local-config.json 不存在时写入
+function writeLocalConfig(worktreePath) {
+  const dotGit = join(worktreePath, '.git');
+  let isWorktree = false;
+  try { isWorktree = lstatSync(dotGit).isFile(); } catch { /* not worktree */ }
+  if (!isWorktree) return;
+
+  const configPath = join(worktreePath, 'local-config.json');
+  if (existsSync(configPath)) {
+    log('→ local-config.json 已存在，跳过');
+    return;
+  }
+
+  const branch = gitSilent('-C', worktreePath, 'rev-parse', '--abbrev-ref', 'HEAD');
+  if (!branch || branch === 'HEAD') {
+    log('   ⚠ 无法获取 worktree 分支名，跳过 local-config.json');
+    return;
+  }
+  const port = computePort(branch);
+  writeFileSync(
+    configPath,
+    JSON.stringify({ server: { devPort: port, hostname: 'localhost', enableHttps: false } }) + '\n'
+  );
+  log(`→ 写入 local-config.json (端口: ${port})`);
+}
+
 // ─── REPAIR ───
 function repair(worktreePath) {
   const root = repoRoot(worktreePath);
@@ -201,6 +228,9 @@ function repair(worktreePath) {
     }
   }
 
+  // local-config.json (dev 端口) — 幂等写入，仅当 worktree 且文件不存在
+  writeLocalConfig(worktreePath);
+
   log('✅ 修复完成');
 }
 
@@ -254,18 +284,10 @@ function create() {
     }
   }
 
-  // Repair: symlinks + deps
+  // Repair: symlinks + deps + local-config.json（幂等，含端口分配）
   repair(worktreePath);
 
-  // Deterministic port
-  const port = computePort(branch);
-  log(`→ 分配端口: ${port}`);
-  writeFileSync(
-    join(worktreePath, 'local-config.json'),
-    JSON.stringify({ server: { devPort: port, hostname: 'localhost', enableHttps: false } }) + '\n'
-  );
-
-  log(`✅ Worktree 就绪，dev 端口: ${port}`);
+  log('✅ Worktree 就绪');
   process.stdout.write(worktreePath); // Only stdout — Claude reads this
 }
 
