@@ -1,5 +1,7 @@
 # autopilot — AI 自动驾驶工程套件
 
+> **v3.17.1**：修复 stop-hook 在 implement 阶段对后台 sub-agent 无感知导致主 agent 反复无效唤醒的 bug（解析 transcript_path 检测主线程 pending Agent，仅 implement 阶段静默放行）。
+>
 > **v3.17.0**：新增 `--fast` 快速模式（design 阶段 1 个 Explore agent + 编排器自审，QA 阶段 smoke 模式，自动检测小 diff 降级）。
 
 从目标描述到代码合并，全程自动化。人只在两个审批门介入：**设计审批** 和 **验收审批**。

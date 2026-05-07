@@ -13,7 +13,12 @@
 
 # 安全策略：Stop hook 中任何未预期的错误都应放行（exit 0），
 # 只有明确需要 block 时才输出 JSON。避免 set -e 导致意外非零退出。
-trap 'exit 0' ERR
+# 仅在直接执行模式安装：source 模式（外部测试）下不安装 trap，
+# 否则函数内 `[ ] || return 1` 短路链会被 trap 拦截为 exit 0，
+# 导致测试 spawnSync 拿到的退出码与函数 return 值不一致。
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    trap 'exit 0' ERR
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./lib.sh
@@ -133,7 +138,45 @@ compress_qa_report() {
             # 文件结束时如还在 QA 区且有缓冲，flush 为最后一轮（保留完整）
             if (in_qa && buffered) flush_buffer(1)
         }
-    ' "$state_file" > "$tmp" 2>/dev/null && mv "$tmp" "$state_file" || rm -f "$tmp"
+    ' "$state_file" > "$tmp" 2>/dev/null
+    if mv "$tmp" "$state_file" 2>/dev/null; then :; else rm -f "$tmp"; fi
+}
+
+# has_pending_subagents — 检测主线程是否有未完成的 Agent 调用
+#
+# 行为：解析 transcript JSONL 文件最后 N 字节，提取主线程（isSidechain=false）
+# 启动的 Agent 调用 id 集合 A，再提取所有 tool_result 的 tool_use_id 集合 R。
+# 若 A - R 非空，则有 sub-agent 仍在运行。
+#
+# 退出码：0 = 有 pending、1 = 无 pending（含错误降级）。
+# 错误降级原则：transcript 解析失败时返回 1（无 pending），让 stop-hook
+# 走原有路径，避免因检测失败导致 autopilot 永远卡死。
+has_pending_subagents() {
+    local transcript="$1"
+    [ -n "$transcript" ] && [ -f "$transcript" ] || return 1
+
+    # 末尾 2MB：覆盖含大代码内容的 tool_result（单 turn 通常 < 1MB）
+    local tail_data
+    tail_data=$(timeout 3 tail -c 2097152 "$transcript" 2>/dev/null) || return 1
+    [ -n "$tail_data" ] || return 1
+
+    local pending_count
+    # shellcheck disable=SC2016
+    pending_count=$(echo "$tail_data" | timeout 3 jq -rs '
+        ([.[] | select(.isSidechain == false or .isSidechain == null)
+              | .message.content[]?
+              | select(.type == "tool_use" and (.name == "Agent" or .name == "Task"))
+              | .id]) as $started
+        |
+        ([.[] | .message.content[]?
+              | select(.type == "tool_result")
+              | .tool_use_id]) as $finished
+        |
+        ($started - $finished) | length
+    ' 2>/dev/null) || return 1
+
+    [[ "$pending_count" =~ ^[0-9]+$ ]] || return 1
+    [ "$pending_count" -gt 0 ] && return 0 || return 1
 }
 
 # detect_smoke_eligible — 检测当前 diff 是否满足 smoke QA 条件，满足则设置 qa_scope=smoke
@@ -201,7 +244,7 @@ detect_smoke_eligible() {
 # 不执行 main 逻辑。这让外部测试可以单独验证函数行为。
 # 直接执行（bash stop-hook.sh）时 BASH_SOURCE[0] == $0，正常往下走。
 if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
-    return 0 2>/dev/null || exit 0
+    return 0
 fi
 
 # ── 0. 先读 stdin，提取 cwd 后再初始化路径 ──
@@ -211,11 +254,13 @@ fi
 
 HOOK_INPUT=$(timeout 5 cat 2>/dev/null || true)
 HOOK_CWD=$(echo "$HOOK_INPUT" | jq -r '.cwd // ""' 2>/dev/null || true)
+HOOK_TRANSCRIPT=$(echo "$HOOK_INPUT" | jq -r '.transcript_path // ""' 2>/dev/null || true)
 
 # 用 stdin 的 cwd 初始化路径（为空时 fallback 到当前 CWD）
 init_paths "$HOOK_CWD"
 
 # 状态文件不存在时直接放行
+# shellcheck disable=SC2153
 if [[ ! -f "$STATE_FILE" ]]; then
     exit 0
 fi
@@ -405,6 +450,22 @@ if [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
     echo "🛑 autopilot: 达到最大迭代次数 ($MAX_ITERATIONS)。" >&2
     bash "$SCRIPT_DIR/notify.sh" error 2>/dev/null || true
     rm -f "$(get_active_file)"
+    exit 0
+fi
+
+# ── 7.5 后台 sub-agent 检测（仅 implement 阶段） ──
+# implement 阶段主 agent 启动并行蓝队/红队 sub-agent，5-10 分钟运行期间
+# 主 agent 无事可做就结束响应。若注入下一阶段 prompt 会让主 agent 重复唤醒、
+# 空转输出"还在等"，浪费 token 且污染上下文。
+# 检测到 pending sub-agent 时静默放行：不递增 iteration、不构造 block JSON。
+# Sub-agent 完成后，Claude Code 内置机制让主 agent 自然恢复（tool_result 入流，
+# 下次 stop-hook 触发时 pending=0 走正常注入路径）。
+#
+# 限制 phase=implement：design/qa/merge 的 sub-agent 都是短时（< 2 分钟），
+# 不会触发此问题；保守限制可避免对其他阶段产生未预期影响。
+if [[ "$PHASE" == "implement" ]] && [[ -n "$HOOK_TRANSCRIPT" ]] && \
+    has_pending_subagents "$HOOK_TRANSCRIPT"; then
+    echo "[autopilot] 检测到后台 sub-agent 运行中，静默等待 (phase: ${PHASE}, iter: ${ITERATION})" >&2
     exit 0
 fi
 

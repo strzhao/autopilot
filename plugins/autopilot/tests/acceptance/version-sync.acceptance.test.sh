@@ -17,7 +17,7 @@ MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
 CLAUDE_MD="$REPO_ROOT/CLAUDE.md"
 AUTOPILOT_README="$REPO_ROOT/plugins/autopilot/README.md"
 
-TARGET_VERSION="3.17.0"
+TARGET_VERSION="3.17.1"
 
 fail() {
     echo "[FAIL] R8: $1" >&2
