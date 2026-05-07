@@ -1,6 +1,7 @@
 # Knowledge Index
 
 ## Decisions
+- [2026-05-07] 双轨道 fast track：显式 flag + hook 自动检测互为兜底 | tags: autopilot, token-optimization, fast-mode, dual-track, self-correction, hook | → decisions.md
 - [2026-05-07] Sub-agent 数量是 token 优化的真正杠杆，不是 SKILL.md 加载 | tags: autopilot, token-optimization, sub-agent, cold-start, qa-reviewer | → decisions.md
 - [2026-05-07] AI 自觉的优化机制不可靠，结构性优化必须由 hook 硬编码兜底 | tags: autopilot, hook, automation, ai-discipline, stop-hook, hard-coded | → decisions.md
 - [2026-05-06] Plugin hooks.json 不接收 `claude -w` 的 WorktreeCreate 事件，用 SessionStart 兜底 | tags: claude-code, plugin, hooks, worktree, event-dispatch, sessionstart, fallback | → decisions.md
@@ -13,6 +14,7 @@
 - [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → decisions.md
 
 ## Patterns
+- [2026-05-07] 函数支持"测试 mock 输入"分支会掩盖生产路径 bug | tags: autopilot, red-team, dual-path, function-signature, qa-blind-spot, production-vs-test | → patterns.md
 - [2026-05-07] Cache 命中率高不等于 token 成本低，要看绝对 token 数据 | tags: token-analysis, prompt-cache, methodology, autopilot | → patterns.md
 - [2026-05-07] Shell 脚本要支持 source 测试必须用 BASH_SOURCE[0] | tags: bash, shell, testing, source, BASH_SOURCE, autopilot, stop-hook | → patterns.md
 - [2026-05-06] 新增兜底路径暴露 create / repair 功能不对称 | tags: autopilot, worktree, repair, create, asymmetry, fallback, idempotent, bootstrap | → patterns.md

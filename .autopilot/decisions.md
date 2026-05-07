@@ -63,6 +63,14 @@
 **Trade-offs**: 失去两个独立视角的"双盲交叉验证"（设计 vs 代码质量），但实际两个 Agent 都在审查同一批代码，关注点互补不重叠。
 **Lesson**: 优化 token 不能只看「文件大小 / 加载频次」这种容易测量的指标——prompt cache 已经把这些重复成本拍平。真正的杠杆是「无法被 cache 共享的 fresh context」——每个 sub-agent 都是一次独立的 cold start，且都要 Read 同一批变更文件。优化的优先级应该是「减少 sub-agent 调用次数」 ＞「减少单 Agent prompt 大小」 ＞「减少 SKILL.md 文件大小」。
 
+### [2026-05-07] 双轨道 fast track：显式 flag + hook 自动检测互为兜底
+<!-- tags: autopilot, token-optimization, fast-mode, dual-track, self-correction, hook -->
+**Background**: 优化 sub-agent 数量是 token 关键杠杆（详见同日 sub-agent 决策条目），但单一触发机制各有局限：纯 user flag 依赖人工判断会漏覆盖；纯 hook 自动只能后置生效（implement 完成后才能拿到 diff），无法砍 design 阶段的 plan-reviewer / scenario-generator。
+**Choice**: 双轨道并行 — 轨道 A 显式 `fast_mode` flag 由 setup.sh 写入 frontmatter（design 阶段砍 plan-reviewer + scenario-generator，qa 阶段砍 qa-reviewer）；轨道 B stop-hook `detect_smoke_eligible` 按 git diff 体积自动设 `qa_scope: smoke`（仅 qa 阶段砍 qa-reviewer）。两轨道并行：用户标 fast 但实际大任务 → B 检测 diff 超阈值时降级 fast_mode 为 false；用户没标但任务实际小 → B 自动兜底。
+**Alternatives rejected**: (1) 纯 user flag — 漏覆盖未标注的小任务；(2) 纯 hook 自动 — 砍不到 design 阶段串行 sub-agent；(3) 引入新 `mode` 值 — 破坏 `mode`（结构维度 single/project）vs effort 维度的正交性，应作为独立字段（与 `auto_approve` / `plan_mode` 同 pattern）。
+**Trade-offs**: 多 1 个 frontmatter 字段 + 1 个 CLI flag。架构复杂度可控（复用现有 `qa_scope` 字段加 "smoke" 取值）。预期 sub-agent 数 7→4，token -30%~40%，wall-clock -30%。
+**Lesson**: token / 速度优化的"显式入口 + 自动兜底 + 自我修正"三件套是健壮模式。任何依赖单一信号（用户判断 / 静态规则 / 运行时检测）的优化都有覆盖盲区，组合可形成互补。
+
 ### [2026-05-07] AI 自觉的优化机制不可靠，结构性优化必须由 hook 硬编码兜底
 <!-- tags: autopilot, hook, automation, ai-discipline, stop-hook, hard-coded -->
 **Background**: SKILL.md 第 469 行（旧版）声明「写入前先将所有历史轮次报告压缩为一行摘要」，依赖 AI 在每次写 QA 报告前自觉执行。实际审查 stop-hook.sh 发现 `grep -n "压缩\|历史轮次" stop-hook.sh` 0 matches——完全没有自动化机制。多轮 QA 后状态文件膨胀至 7-15K tokens，30 轮迭代每次 phase 入口 Read 都付出此成本（累计 450K 浪费）。

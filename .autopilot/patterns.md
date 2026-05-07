@@ -113,6 +113,12 @@
 **Lesson**: 用「绝对 token 数据 per-session」而非「cache 命中率 %」作为优化决策依据。命中率高反而说明该路径的 token 已经被有效平摊，对该路径继续做小优化 ROI 极低；应转向 cache 无法覆盖的成本源。具体方法：`jq` 解析 ~/.claude/projects/*/jsonl 累加单个 session 的 input/output/cache_read/cache_create，按总量降序找 top sessions，看 cache_create 异常值或大 Bash 输出，定位真实漏点。
 **Evidence**: 本轮（2026-05-07）三项优化均针对 cache 无法覆盖的成本：合并 qa reviewer（减 cold start）、stop-hook 自动压缩 QA 报告（减累积 Read 成本）。SKILL.md 行数从 699 → 675 仅减 24 行的"防合理化指南抽离"反而是收益最低的一项——前两轮已经把 SKILL.md 优化到 cache 命中率 95%+。
 
+### [2026-05-07] 函数支持"测试 mock 输入"分支会掩盖生产路径 bug
+<!-- tags: autopilot, red-team, dual-path, function-signature, qa-blind-spot, production-vs-test -->
+**Scenario**: stop-hook.sh 的 `detect_smoke_eligible($1)` 为兼容红队测试用 invoke_detect 传入 mock diff 临时文件，新增了 $1 参数处理"测试模式分支"（如果 $1 是可读文件就当 raw diff 解析）；生产调用错写为 `detect_smoke_eligible "$STATE_FILE"`，状态文件路径被当作 mock diff，函数始终走"测试分支"对 state.md 做 `grep ^[+-]` → diff_lines 几乎总是 0 → 路径 C（≤30行/≤3文件）总满足 → smoke 永远触发，自动检测机制完全失效。
+**Lesson**: 当函数同时支持"测试参数化输入"和"生产自动 fetch"两条分支时，红队验收测试只会覆盖前者（因为它本就是为前者设计）；生产路径会变成"红队铁律"的盲区。三层防御：(1) 函数文档明确语义（无参=生产/有参=测试）+ 参数命名对应（`diff_input` 而非 `state_file`）；(2) 红队测试外**必须**新增 1 个生产路径 smoke test（无参调用 + 真实 git 仓库）作为 Tier 1.5 场景；(3) Wave 2 qa-reviewer 应主动 grep 函数所有调用点，对照签名约定逐项验证。
+**Evidence**: v3.17.0 第二轮 QA Wave 2 qa-reviewer 才抓到此 BLOCKER（line 428 错传 STATE_FILE）。第一轮 QA 红队 8/8 全过，因为 R5 用专用 invoke_detect 调用模式覆盖测试路径，没覆盖生产路径。修复仅需 1 行（删 "$STATE_FILE" 参数），但发现路径绕了完整一轮 QA + auto-fix。
+
 ### [2026-05-07] Shell 脚本要支持外部 source 测试，必须用 BASH_SOURCE[0]
 <!-- tags: bash, shell, testing, source, BASH_SOURCE, autopilot, stop-hook -->
 **Scenario**: stop-hook.sh 第 18 行 `SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"` 在直接执行时 `$0` 是脚本路径，但被 source 时 `$0` 是调用者 shell（通常 `bash`），导致 `dirname "$0"` 取错路径，进而 `source "$SCRIPT_DIR/lib.sh"` 找不到文件，配合 `trap 'exit 0' ERR` 让整个 source 静默失败。红队测试的 invoke_compress 路径因此根本没成功调用 compress_qa_report 函数，但测试中早期断言（基于原文件内容）误 PASS 掩盖了真问题，只有最严格的断言（轮次 1 应被压缩）暴露失败。
