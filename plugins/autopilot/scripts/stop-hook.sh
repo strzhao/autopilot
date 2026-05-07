@@ -136,6 +136,67 @@ compress_qa_report() {
     ' "$state_file" > "$tmp" 2>/dev/null && mv "$tmp" "$state_file" || rm -f "$tmp"
 }
 
+# detect_smoke_eligible — 检测当前 diff 是否满足 smoke QA 条件，满足则设置 qa_scope=smoke
+#
+# 触发路径：
+#   路径 A — fast_mode=true 且 diff ≤ 100 行 / ≤ 8 文件且无依赖变更 → smoke
+#   路径 B — fast_mode=true 但 diff 太大或含依赖 → 降级 fast_mode=false
+#   路径 C — 标准模式 diff ≤ 30 行 AND ≤ 3 文件且无依赖变更 → smoke
+#
+# $1（可选）：mock diff 文件路径（红队测试用）。生产留空时跑 `git diff --stat HEAD`。
+# 副作用：通过 set_field / append_changelog 修改全局 STATE_FILE 状态文件
+# 失败不阻断 stop-hook（调用方使用 || true 兜底）
+detect_smoke_eligible() {
+    local diff_input="${1:-}"
+
+    # qa_scope 已有值（如 "selective"）时不重复评估
+    [[ -n "$(get_field qa_scope)" ]] && return 0
+
+    local diff_lines=0 diff_files=0 has_deps=0
+
+    if [[ -n "$diff_input" ]] && [[ -f "$diff_input" ]]; then
+        # 测试模式：从传入文件解析 mock raw diff
+        diff_lines=$(grep -cE '^[+-][^+-]' "$diff_input" 2>/dev/null || echo 0)
+        diff_files=$(grep -cE '^diff --git' "$diff_input" 2>/dev/null || echo 0)
+        if grep -qE '(package\.json|pnpm-lock|yarn\.lock|requirements\.txt|Cargo\.lock)' "$diff_input" 2>/dev/null; then
+            has_deps=1
+        fi
+    else
+        # 生产模式：git diff --stat
+        local stat_output
+        stat_output=$(git diff --stat HEAD 2>/dev/null) || return 0
+        [[ -z "$stat_output" ]] && return 0
+        diff_lines=$(echo "$stat_output" | tail -1 | grep -oE '[0-9]+ insertion|[0-9]+ deletion' | grep -oE '[0-9]+' | awk '{s+=$1} END{print s+0}')
+        diff_files=$(echo "$stat_output" | grep -cE '^\s+\S+\s+\|\s+[0-9]+')
+        if echo "$stat_output" | grep -qE '(package\.json|pnpm-lock|yarn\.lock|requirements\.txt|Cargo\.lock)'; then
+            has_deps=1
+        fi
+    fi
+
+    local fast_mode
+    fast_mode=$(get_field fast_mode || true)
+
+    # 路径 A — fast_mode=true 且全部阈值内（≤100行/≤8文件/无依赖）→ smoke + 保持 fast_mode
+    if [[ "$fast_mode" == "true" ]] && [[ "$has_deps" -eq 0 ]] && [[ "${diff_lines:-999}" -le 100 ]] && [[ "${diff_files:-999}" -le 8 ]]; then
+        set_field "qa_scope" '"smoke"'
+        append_changelog "stop-hook: fast_mode=true 且 diff 在阈值内（${diff_lines}行/${diff_files}文件），启用 smoke QA"
+        return 0
+    fi
+
+    # 路径 B — fast_mode=true 但任一阈值超出（行/文件/依赖）→ 降级 fast_mode
+    if [[ "$fast_mode" == "true" ]] && { [[ "${diff_lines:-0}" -gt 100 ]] || [[ "${diff_files:-0}" -gt 8 ]] || [[ "$has_deps" -eq 1 ]]; }; then
+        set_field "fast_mode" "false"
+        append_changelog "stop-hook: fast_mode 降级（${diff_lines}行/${diff_files}文件/含依赖=${has_deps}），QA 走全量"
+        return 0
+    fi
+
+    # 路径 C — 标准模式：严格阈值，diff ≤ 30 行 AND ≤ 3 文件 AND 无依赖
+    if [[ "$has_deps" -eq 0 ]] && [[ "${diff_lines:-999}" -le 30 ]] && [[ "${diff_files:-999}" -le 3 ]]; then
+        set_field "qa_scope" '"smoke"'
+        append_changelog "stop-hook: 自动检测 diff 体积小（${diff_lines}行/${diff_files}文件），启用 smoke QA"
+    fi
+}
+
 # 支持 source 加载模式：被 source 时只导出函数定义（compress_qa_report 等），
 # 不执行 main 逻辑。这让外部测试可以单独验证函数行为。
 # 直接执行（bash stop-hook.sh）时 BASH_SOURCE[0] == $0，正常往下走。
@@ -362,6 +423,10 @@ NEW_PHASE=$(get_field "phase" || true)
 if [[ "$NEW_PHASE" == "qa" ]] || [[ "$NEW_PHASE" == "auto-fix" ]]; then
     compress_qa_report "$STATE_FILE" || true
 fi
+# 单独的 qa 触发点（不在 auto-fix 触发，避免重复评估）
+if [[ "$NEW_PHASE" == "qa" ]]; then
+    detect_smoke_eligible || true
+fi
 
 # ── 9. 构造 block JSON ──
 # 注意：macOS bash 3.2 有 multibyte bug，$VAR 后紧跟全角标点会吞掉变量值。
@@ -370,18 +435,26 @@ fi
 # design 阶段使用 Plan Mode（auto_approve 时跳过 Plan Mode）
 AUTO_APPROVE=$(get_field "auto_approve" || true)
 PLAN_MODE=$(get_field "plan_mode" || true)
+FAST_MODE=$(get_field "fast_mode" || true)
 if [[ "$PHASE" == "design" ]]; then
     if [[ "$AUTO_APPROVE" == "true" ]]; then
         PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. auto_approve=true: 跳过 Plan Mode, 直接写设计文档到状态文件. ⚠️ 必须使用 Agent 工具启动 plan-reviewer sub-agent (model: sonnet) 审查设计方案, 参见 references/plan-reviewer-prompt.md. 审查通过则推进到 implement; 失败则回退到正常 Plan Mode (设置 auto_approve: false). 按照 autopilot skill 的 Phase: design 指引执行."
     elif [[ "$PLAN_MODE" == "deep" ]]; then
         PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. plan_mode=deep: 先执行 Deep Design 交互探索流程（参见 references/deep-design-guide.md），包括项目上下文探索、视觉伴侣征求、逐个澄清问题(AskUserQuestion)、提出 2-3 种方案. 交互探索完成后再调用 EnterPlanMode 写正式设计文档. ⚠️ 在 ExitPlanMode 之前, 必须使用 Agent 工具启动 plan-reviewer sub-agent (model: sonnet) 审查设计方案, 参见 references/plan-reviewer-prompt.md. 审查通过再 ExitPlanMode. 产出物写入 task_dir: $(get_field 'task_dir'). 按照 autopilot skill 的 Phase: design 指引执行."
+    elif [[ "$FAST_MODE" == "true" ]]; then
+        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述, fast_mode=true: 立即调用 EnterPlanMode 工具进入 Plan Mode. 设计阶段只用 1 个 Explore agent, 不启动 scenario-generator Agent, 不启动 plan-reviewer Agent — 编排器对 plan file 按 references/plan-reviewer-prompt.md 中的 6 维度自审（需求完整性/技术可行性/任务分解/验证方案/风险/范围控制）, 自审通过后直接 ExitPlanMode. 详见 SKILL.md Fast Mode 快速路径章节. 按照 autopilot skill 的 Phase: design 指引执行."
     else
         PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述, 然后立即调用 EnterPlanMode 工具进入 Plan Mode. 不要在调用 EnterPlanMode 之前做任何代码探索. 所有探索和设计工作必须在 Plan Mode 内完成. ⚠️ 在 ExitPlanMode 之前, 必须使用 Agent 工具启动 plan-reviewer sub-agent (model: sonnet) 审查设计方案, 参见 references/plan-reviewer-prompt.md. 审查通过再 ExitPlanMode. 按照 autopilot skill 的 Phase: design 指引执行."
     fi
 elif [[ "$PHASE" == "implement" ]]; then
     PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: implement, 迭代: ${NEXT_ITERATION}. ⚠️ 红蓝对抗铁律: (1) 从状态文件读取设计文档, 检查是否有领域 Skill 委托; (2) 无委托时必须使用 Agent 工具在同一轮响应中同时启动蓝队和红队两个并行 sub-agent (model: sonnet), prompt 模板参见 references/blue-team-prompt.md 和 references/red-team-prompt.md; (3) 红队绝对不能读取蓝队新写的实现代码——红队只看设计文档; (4) 两个 Agent 都完成后合流: 收集产出、写入红队测试文件、更新状态文件. 详细工作流参见 references/implement-phase.md. 按照 autopilot skill 的 Phase: implement 指引执行."
 elif [[ "$PHASE" == "qa" ]]; then
-    PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: qa, 迭代: ${NEXT_ITERATION}. ⚠️ Tier 1.5 铁律: (1) 必须执行设计文档中的每一个真实测试场景, 不允许跳过任何场景; (2) 结果判定前先做场景计数匹配——统计报告中执行:标记数量 E 与设计文档场景总数 N, E<N 则有场景被跳过, 必须补做. 按照 autopilot skill 的指引执行当前阶段的工作流."
+    QA_SCOPE=$(get_field "qa_scope" || true)
+    if [[ "$QA_SCOPE" == "smoke" ]]; then
+        PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: qa (smoke), 迭代: ${NEXT_ITERATION}. ⚠️ smoke QA: 只执行 Wave 1 (Tier 0/1 红队验收测试 + 类型/Lint/单元/构建) + Wave 1.5 真实测试场景, 不启动 qa-reviewer Agent — 编排器自行 Read git diff 后内联做 3 项自审 (设计符合性 / OWASP 关键 / 代码质量明显问题). Tier 1.5 铁律不变: 必须执行设计文档每一个真实测试场景, 场景计数匹配 E≥N. 按照 autopilot skill 的指引执行."
+    else
+        PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: qa, 迭代: ${NEXT_ITERATION}. ⚠️ Tier 1.5 铁律: (1) 必须执行设计文档中的每一个真实测试场景, 不允许跳过任何场景; (2) 结果判定前先做场景计数匹配——统计报告中执行:标记数量 E 与设计文档场景总数 N, E<N 则有场景被跳过, 必须补做. 按照 autopilot skill 的指引执行当前阶段的工作流."
+    fi
 elif [[ "$PHASE" == "merge" ]]; then
     PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: merge, 迭代: ${NEXT_ITERATION}. ⚠️ merge 阶段必须使用 Agent 工具启动 commit-agent (model: sonnet), 参见 references/commit-agent-prompt.md 模板. 不要使用 Skill: autopilot-commit. 完成知识提取后, 用 Edit 设置 knowledge_extracted 为 true 或 skipped, 再设 phase: done. 按照 autopilot skill 的 Phase: merge 指引执行."
 else

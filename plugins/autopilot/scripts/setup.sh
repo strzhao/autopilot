@@ -76,6 +76,7 @@ autopilot — AI 自动驾驶工程套件
 
 选项:
   --deep                    深度设计模式（交互式 Q&A + 方案对比 + 规格审查）
+  --fast                    快速模式（1 个 Explore agent，编排器自审，smoke QA）
   --project                 强制项目模式（跳过复杂度检测）
   --single                  强制单任务模式（跳过复杂度检测）
   --max-iterations <n>      最大迭代次数 (默认: 30)
@@ -195,6 +196,7 @@ HELP_EOF
             MAX_RETRY=$(get_field "max_retries")
             STARTED=$(get_field "started_at")
             MODE=$(get_field "mode" || true)
+            FAST_MODE_STATUS=$(get_field "fast_mode" || true)
 
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo "  autopilot 状态"
@@ -205,6 +207,7 @@ HELP_EOF
             echo "重试:     $RETRY / $MAX_RETRY"
             echo "开始时间: $STARTED"
             [[ -n "$MODE" ]] && echo "模式:     $MODE"
+            [[ "$FAST_MODE_STATUS" == "true" ]] && echo "快速模式: true"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         fi
         # 项目 DAG 状态（无论是否有活跃 autopilot 都尝试显示）
@@ -332,6 +335,8 @@ MAX_ITERATIONS=30
 MAX_RETRIES=3
 MODE_OVERRIDE=""
 PLAN_MODE_OVERRIDE=""
+# 状态字段 fast_mode: false 为默认值，--fast flag 时改写为 true。
+FAST_MODE_OVERRIDE=""
 BRIEF_FILE=""
 
 while [[ $# -gt 0 ]]; do
@@ -362,6 +367,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --deep)
             PLAN_MODE_OVERRIDE="deep"
+            shift
+            ;;
+        --fast)
+            FAST_MODE_OVERRIDE="true"
             shift
             ;;
         *)
@@ -439,6 +448,7 @@ max_retries: $MAX_RETRIES
 retry_count: 0
 mode: "${MODE_OVERRIDE}"
 plan_mode: "${PLAN_MODE_OVERRIDE}"
+fast_mode: ${FAST_MODE_OVERRIDE:-false}
 brief_file: ""
 next_task: ""
 auto_approve: false
@@ -485,6 +495,9 @@ elif [[ "$MODE_OVERRIDE" == "project" ]]; then
 elif [[ "$PLAN_MODE_OVERRIDE" == "deep" ]]; then
     DISPLAY_GOAL="$GOAL"
     PHASE_FLOW="deep design（Q&A → 方案对比 → 规格审查）→ 审批 → implement → qa → 审批 → merge"
+elif [[ "$FAST_MODE_OVERRIDE" == "true" ]]; then
+    DISPLAY_GOAL="$GOAL"
+    PHASE_FLOW="design (fast) → 审批 → implement → qa (smoke) → merge"
 else
     DISPLAY_GOAL="$GOAL"
     PHASE_FLOW="design → 审批 → implement → qa → 审批 → merge"
