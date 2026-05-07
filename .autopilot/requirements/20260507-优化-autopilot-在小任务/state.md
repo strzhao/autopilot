@@ -1,6 +1,6 @@
 ---
 active: true
-phase: "merge"
+phase: "done"
 gate: ""
 iteration: 7
 max_iterations: 30
@@ -11,7 +11,7 @@ plan_mode: ""
 brief_file: ""
 next_task: ""
 auto_approve: false
-knowledge_extracted: ""
+knowledge_extracted: "true"
 task_dir: "/Users/stringzhao/workspace/string-claude-code-plugin/.autopilot/requirements/20260507-优化-autopilot-在小任务"
 session_id: e56d0fc2-e335-460c-800f-9c70d2a0c765
 started_at: "2026-05-06T16:51:13Z"
@@ -348,3 +348,4 @@ Section B: 1 Critical + 1 Minor
 - [2026-05-07T04:00:00Z] qa 轮次 2：Tier 0 8/8 + Tier 1 + Tier 1.5 7/7 全 ✅，Wave 2 qa-reviewer 发现 BLOCKER：stop-hook.sh:428 生产调用传错参数让 smoke 永远触发。phase → auto-fix
 - [2026-05-07T05:00:00Z] auto-fix 轮次 2：BLOCKER stop-hook.sh:428 改为 `detect_smoke_eligible || true`（无参，走 git diff 生产路径）；Minor references/state-file-guide.md 补全 fast_mode/plan_mode/brief_file/auto_approve/mode/next_task 等字段说明 + 新增项目模式 Plan 模板。生产路径冒烟测试：940 行大 diff 正确不触发 smoke ✅。run-all.sh 8/8 仍全过。phase → qa，retry_count → 2
 - [2026-05-07T06:00:00Z] qa 轮次 3：Tier 0 8/8 + Tier 1 + Tier 1.5 8/8（含场景 8 BLOCKER 回归）+ Wave 2 qa-reviewer 复核全 ✅。设 gate=review-accept 等待用户审批
+- [2026-05-07T07:00:00Z] 用户批准 → merge 阶段。commit-agent 提交 7366de4 (feat: v3.17.0 双轨道 fast track，16 文件 +1383/-106)。知识提取沉淀 2 条（决策：双轨道 fast track；模式：函数 mock 输入分支掩盖生产路径 bug），单独 commit ff8db23。phase → done
