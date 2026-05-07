@@ -204,36 +204,54 @@ After autopilot-commit completes, review the full autopilot run to extract knowl
 
 ## Worktree-Aware Extraction
 
-When running in a git worktree (v3.18+ 选择性 symlink 模式)，`.autopilot/` 是真实目录，里面的共享知识项（`decisions.md`、`patterns.md`、`index.md`、`domains/` 等）以 symlink 指向主仓库 `.autopilot/<item>`。检测知识应该提交到哪个仓库时，**检查共享项是否为 symlink**，而不是检查 `.autopilot` 自身。
+When running in a git worktree (v3.18+ 选择性 symlink 模式)，`.autopilot/` 是真实目录，里面的共享知识项（`decisions.md`、`patterns.md`、`index.md`、`domains/`、`project/`、`requirements/` 等）以 symlink 指向主仓库 `.autopilot/<item>`。检测知识应该提交到哪个仓库时，**遍历 SHARED 项找第一个 symlink 作为锚点**——不要固定单一文件，因为新工程未必创建过 `decisions.md`。
 
 #### Step 1: 选择性 symlink 模式（happy path，v3.18+）
-`test -L .autopilot/decisions.md` → 共享项是 symlink
 
-- 解析主仓库并在那里提交：
-  ```bash
-  KNOWLEDGE_REAL=$(realpath .autopilot/decisions.md)
-  MAIN_REPO=$(cd "$(dirname "$KNOWLEDGE_REAL")/.." && git rev-parse --show-toplevel)
+遍历 SHARED 项找锚点：
+
+```bash
+ANCHOR=""
+for item in decisions.md patterns.md index.md domains project requirements; do
+  if [ -L ".autopilot/$item" ]; then
+    ANCHOR=".autopilot/$item"
+    break
+  fi
+done
+
+if [ -n "$ANCHOR" ]; then
+  MAIN_REPO=$(cd "$(dirname "$(realpath "$ANCHOR")")/.." && git rev-parse --show-toplevel)
   git -C "$MAIN_REPO" add .autopilot/
   git -C "$MAIN_REPO" commit -m "docs(knowledge): extract {brief summary}"
-  ```
+fi
+```
 
 #### Step 1b: 旧版全量 symlink（v3.17 及更早）
 `test -L .autopilot` → `.autopilot` 整体是 symlink
 
-- 同步骤 1，但解析路径换成 `.autopilot` 自身：
+- 解析路径用 `.autopilot` 自身：
   ```bash
   KNOWLEDGE_REAL=$(realpath .autopilot)
   MAIN_REPO=$(cd "$KNOWLEDGE_REAL" && git rev-parse --show-toplevel)
   git -C "$MAIN_REPO" add .autopilot/ && git -C "$MAIN_REPO" commit -m "docs(knowledge): ..."
   ```
-- （可选）建议用户跑 `worktree-repair` skill 升级到选择性 symlink。
+- 建议下次 SessionStart 让 `worktree-bootstrap` 自动升级到选择性 symlink（已配置自动升级路径）。
 
-#### Step 2: 在 worktree 中但 symlink 全部缺失（fallback + self-heal）
-`test -f .git` → 是 worktree（.git 是文件而非目录），但 `.autopilot/decisions.md` 也不是 symlink
+#### Step 2: 在 worktree 中但 SHARED 项全部不是 symlink（fallback + self-heal）
+
+`test -f .git` 为真（worktree）且 Step 1 的循环未找到锚点 → 共享项缺失或被分支覆盖。
 
 1. 解析主仓库根：`COMMON_DIR=$(git rev-parse --git-common-dir); MAIN_REPO=$(cd "$COMMON_DIR/.." && pwd)`
-2. 复制知识到主仓库并提交：`mkdir -p "$MAIN_REPO/.autopilot/"; cp -r .autopilot/decisions.md .autopilot/patterns.md .autopilot/index.md .autopilot/domains "$MAIN_REPO/.autopilot/" 2>/dev/null; git -C "$MAIN_REPO" add .autopilot/; git -C "$MAIN_REPO" commit -m "docs(knowledge): ..."`
-3. 自愈：建议跑 `worktree-repair` skill 重建选择性 symlink
+2. 复制知识到主仓库并提交：
+   ```bash
+   mkdir -p "$MAIN_REPO/.autopilot/"
+   for item in decisions.md patterns.md index.md domains project requirements; do
+     [ -e ".autopilot/$item" ] && cp -r ".autopilot/$item" "$MAIN_REPO/.autopilot/"
+   done
+   git -C "$MAIN_REPO" add .autopilot/
+   git -C "$MAIN_REPO" commit -m "docs(knowledge): ..."
+   ```
+3. 自愈：下次 SessionStart 让 `worktree-bootstrap` 重建选择性 symlink
 
 #### Step 3: Normal repo (no worktree)
 `test -d .git` → 正常 git 仓库，使用标准操作：`git add .autopilot/ && git commit -m "docs(knowledge): ..."`
