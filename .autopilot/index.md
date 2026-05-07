@@ -3,6 +3,7 @@
 ## Decisions
 - [2026-05-07] 双轨道 fast track：显式 flag + hook 自动检测互为兜底 | tags: autopilot, token-optimization, fast-mode, dual-track, self-correction, hook | → decisions.md
 - [2026-05-07] Sub-agent 数量是 token 优化的真正杠杆，不是 SKILL.md 加载 | tags: autopilot, token-optimization, sub-agent, cold-start, qa-reviewer | → decisions.md
+- [2026-05-07] Stop hook 利用 transcript_path 检测后台 sub-agent 等待状态 | tags: autopilot, stop-hook, sub-agent, transcript, token-optimization, hard-coded, implement | → decisions.md
 - [2026-05-07] AI 自觉的优化机制不可靠，结构性优化必须由 hook 硬编码兜底 | tags: autopilot, hook, automation, ai-discipline, stop-hook, hard-coded | → decisions.md
 - [2026-05-06] Plugin hooks.json 不接收 `claude -w` 的 WorktreeCreate 事件，用 SessionStart 兜底 | tags: claude-code, plugin, hooks, worktree, event-dispatch, sessionstart, fallback | → decisions.md
 - [2026-05-05] Lint / 健康检查能力优先 AI 语义判断而非正则脚本 | tags: autopilot, doctor, lint, ai-judgment, knowledge-engineering, design-principle | → decisions.md
@@ -17,6 +18,7 @@
 - [2026-05-07] 函数支持"测试 mock 输入"分支会掩盖生产路径 bug | tags: autopilot, red-team, dual-path, function-signature, qa-blind-spot, production-vs-test | → patterns.md
 - [2026-05-07] Cache 命中率高不等于 token 成本低，要看绝对 token 数据 | tags: token-analysis, prompt-cache, methodology, autopilot | → patterns.md
 - [2026-05-07] Shell 脚本要支持 source 测试必须用 BASH_SOURCE[0] | tags: bash, shell, testing, source, BASH_SOURCE, autopilot, stop-hook | → patterns.md
+- [2026-05-07] 顶层 `trap 'exit 0' ERR` 拦截函数内 `|| return 1` 短路链 | tags: bash, trap-err, return, source-mode, testing, stop-hook, autopilot | → patterns.md
 - [2026-05-06] 新增兜底路径暴露 create / repair 功能不对称 | tags: autopilot, worktree, repair, create, asymmetry, fallback, idempotent, bootstrap | → patterns.md
 - [2026-05-04] Worktree 检测使用 .git 文件/目录区分法 | tags: autopilot, worktree, shell, detection | → patterns.md
 - [2026-03-21] 多处引用同一数据（版本号 / 计数 / 路径）容易长期不同步 | tags: autopilot, doctor, consistency, version, dimension, lint | → patterns.md

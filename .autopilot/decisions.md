@@ -78,3 +78,11 @@
 **Alternatives rejected**: 加更强的 SKILL.md 警告语 + 防合理化提醒——本质还是依赖 AI 自觉，已被实践证伪。
 **Trade-offs**: shell + awk 解析 markdown 不如 AI 智能（边缘格式可能漏处理），但「确定执行 + 简单逻辑」比「依赖自觉 + 复杂逻辑」可靠得多；幂等设计让边缘 case 失败也不会导致状态破坏。
 **Lesson**: 凡是「依赖 AI 在每个循环正确执行」的优化机制，都应当评估是否能下沉到 hook / 工具层硬编码。AI 在长 session / 多任务交错 / 注意力分散时会遗忘软约束；而 hook 是确定性执行。这条原则适用于：状态压缩、文件清理、版本同步、变更日志追加等机械性操作。
+
+### [2026-05-07] Stop hook 利用 transcript_path 检测后台 sub-agent 等待状态
+<!-- tags: autopilot, stop-hook, sub-agent, transcript, token-optimization, hard-coded, implement -->
+**Background**: implement 阶段主 agent 启动并行蓝队/红队 sub-agent (5-10 分钟)，自身无事可做就结束响应。Stop hook 此前完全感知不到后台 sub-agent，照常按 phase 注入 implement 阶段的"红蓝对抗铁律"长 prompt → 主 agent 被唤醒，看到指引但 sub-agent 还在跑只能输出"还在等"再次结束响应 → Stop hook 又触发又注入 → 短时间连续 3-5 次无效 iteration（error.txt 实证 iter 3→4→5→6 全空转），每次主 agent 唤醒消耗大量 token + 污染上下文。
+**Choice**: 在 `stop-hook.sh` 利用 stdin JSON 已有但此前未使用的 `transcript_path` 字段，新增 `has_pending_subagents` 函数：`tail -c 2MB` + jq 解析主线程（`isSidechain==false`）启动的 Agent/Task `tool_use` id 集合 A，对比 `tool_result.tool_use_id` 集合 R，差集即未完成 sub-agent。守卫**仅在 phase=implement** 时启用（保守取向，design/qa/merge 阶段 sub-agent 都是短时不会触发本问题），pending 时 `exit 0` 静默放行不递增 iteration。
+**Alternatives rejected**: (1) 注册 SubagentStop hook — Claude Code 在 sub-agent 完成时已自动让 tool_result 入流激活主 agent，注册 SubagentStop 对主 agent 唤醒无直接增量；(2) 主 agent 写 `awaiting_subagents` 状态字段 — 违反"hook 硬编码兜底，不依赖 AI 自觉"原则（同日另一条决策确立的设计原则）；(3) 主 agent 启动 sub-agent 后用 Monitor 阻塞等待 — error.txt 显示 AI 自己尝试过此方案，但 Monitor 也是后台任务、主 agent 仍 idle 触发 stop-hook，不解决问题。
+**Trade-offs**: 多 ~25 行 bash + jq 解析（实测 5MB 文件 < 2s，stop-hook 10s 总超时内充裕）；transcript 损坏/jq 失败时降级返回 1（视为无 pending 走原路径），优先避免 autopilot 永久卡死而非追求精确性。仅 implement 阶段启用 = 未来若 design/qa/merge 也出现长时间 sub-agent 等待需扩展 phase 列表。
+**Lesson**: Claude Code Hook 的 stdin JSON 提供 `session_id`/`cwd`/`transcript_path` 等丰富上下文，原作者可能只用了其中一部分。当 hook 决策依赖"运行时进行中状态"而非"持久化文件状态"时，transcript 解析是 zero-dependency 的可靠信号源——它是 Claude Code 写入的事实记录，不需要主 agent 配合写状态字段。tail + jq 集合差是处理大 JSONL 的高效模式。
