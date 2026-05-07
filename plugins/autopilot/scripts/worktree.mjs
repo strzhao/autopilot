@@ -2,7 +2,7 @@
 // worktree.mjs — autopilot worktree module
 // Unified entry: create / remove / repair
 import { execSync, execFileSync } from 'child_process';
-import { readFileSync, existsSync, mkdirSync, symlinkSync, lstatSync, unlinkSync, readdirSync, writeFileSync, realpathSync, rmSync } from 'fs';
+import { readFileSync, existsSync, mkdirSync, symlinkSync, lstatSync, unlinkSync, readdirSync, writeFileSync, realpathSync, rmSync, renameSync } from 'fs';
 import { join, basename, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -78,6 +78,139 @@ export function parseLinksFile(filepath) {
     .split('\n')
     .filter(line => line.trim() && !/^\s*#/.test(line))
     .map(line => line.trim());
+}
+
+// ─── Selective .autopilot layout ───
+// 仅这些项以 symlink → 主仓库共享；其余（含 sessions/）皆 worktree-local 真实文件。
+// 顺序：常用 → 不常用，便于 log 阅读。
+export const SHARED_AUTOPILOT_ITEMS = [
+  'decisions.md',
+  'patterns.md',
+  'index.md',
+  'domains',
+  'project',
+  'requirements',
+  'doctor-report.md',
+  'worktree-links',
+  'active',
+  'autopilot.local.md',
+];
+
+// 把 worktree 的 .autopilot 配置成"选择性 symlink"布局：
+//   .autopilot/                  ← 真实目录
+//   .autopilot/sessions/<name>/  ← 真实目录（worktree-local，提交到 worktree 分支）
+//   .autopilot/<shared item>     ← symlink → 主仓库 .autopilot/<shared item>
+//
+// 旧版兼容：如果 .autopilot 整体是全量 symlink，先把 main 里属于本 worktree 的
+// sessions 子目录暂存到 worktree 内，重建后再放回 sessions/<name>/。
+export function ensureSelectiveAutopilotLayout(mainRoot, worktreePath) {
+  const apSrc = join(mainRoot, '.autopilot');
+  const apDst = join(worktreePath, '.autopilot');
+
+  if (!existsSync(apSrc)) {
+    log('→ 主仓库无 .autopilot，预创建...');
+    mkdirSync(apSrc, { recursive: true });
+  }
+
+  let dstStat = null;
+  try { dstStat = lstatSync(apDst); } catch { /* not exists */ }
+
+  // 旧版迁移：worktree/.autopilot 是全量 symlink
+  let stashedSessions = null;
+  if (dstStat?.isSymbolicLink()) {
+    const wtName = basename(worktreePath);
+    const mainWtSession = join(apSrc, 'sessions', wtName);
+    if (existsSync(mainWtSession)) {
+      stashedSessions = join(worktreePath, `.autopilot-sessions-stash-${process.pid}`);
+      log(`→ 迁移 main/.autopilot/sessions/${wtName}/ → worktree（暂存到 ${basename(stashedSessions)}）`);
+      try {
+        renameSync(mainWtSession, stashedSessions);
+      } catch (e) {
+        log(`   ⚠ 暂存失败，跳过迁移: ${e.message}`);
+        stashedSessions = null;
+      }
+    }
+    log('→ 移除旧版 .autopilot 全量 symlink，重建为真实目录');
+    unlinkSync(apDst);
+    dstStat = null;
+  }
+
+  if (!existsSync(apDst)) mkdirSync(apDst, { recursive: true });
+
+  // 共享项：替换为 symlink → 主仓库
+  for (const item of SHARED_AUTOPILOT_ITEMS) {
+    const src = join(apSrc, item);
+    const dst = join(apDst, item);
+    if (!existsSync(src)) continue; // main 没这一项就跳过
+
+    let s = null;
+    try { s = lstatSync(dst); } catch { /* not exists */ }
+
+    if (s?.isSymbolicLink()) {
+      // 已是 symlink — 检查是否指对了
+      let needsFix = false;
+      try {
+        if (realpathSync(dst) !== realpathSync(src)) needsFix = true;
+      } catch { needsFix = true; /* broken symlink */ }
+      if (!needsFix) continue;
+      unlinkSync(dst);
+    } else if (s) {
+      // 真实文件/目录（来自分支 checkout）— 保护：内容一致才静默替换，否则 rename 到备份
+      let canDiscard = false;
+      if (s.isFile()) {
+        try {
+          const dstBuf = readFileSync(dst);
+          const srcBuf = readFileSync(src);
+          canDiscard = dstBuf.equals(srcBuf);
+        } catch { /* 比对失败按冲突处理 */ }
+      }
+
+      if (canDiscard) {
+        log(`→ .autopilot/${item}（与主仓库内容一致）替换为符号链接`);
+        rmSync(dst, { recursive: true, force: true });
+      } else {
+        const ts = Date.now();
+        const conflictName = `.autopilot-conflict-${item.replace(/\//g, '-')}-${ts}`;
+        const conflictPath = join(worktreePath, conflictName);
+        log(`   ⚠ .autopilot/${item} 是真实文件/目录（与主仓库不一致或为目录）`);
+        log(`     备份到 ${conflictName}，再建立 symlink。请手动 diff/合并`);
+        try {
+          renameSync(dst, conflictPath);
+        } catch (e) {
+          log(`   ⚠ 备份失败 (${e.message})；保留原状，跳过此项 symlink`);
+          continue;
+        }
+      }
+    }
+    symlinkSync(src, dst);
+    log(`   ✓ .autopilot/${item} → 主仓库`);
+  }
+
+  // sessions/ 必须是 worktree-local 真实目录
+  const sessionsDir = join(apDst, 'sessions');
+  let sessStat = null;
+  try { sessStat = lstatSync(sessionsDir); } catch { /* not exists */ }
+  if (sessStat?.isSymbolicLink()) {
+    log('→ sessions/ 是 symlink，移除（应为 worktree-local 真实目录）');
+    unlinkSync(sessionsDir);
+  }
+  if (!existsSync(sessionsDir)) mkdirSync(sessionsDir, { recursive: true });
+
+  // 还原暂存的 sessions
+  if (stashedSessions && existsSync(stashedSessions)) {
+    const wtName = basename(worktreePath);
+    const finalSession = join(sessionsDir, wtName);
+    if (existsSync(finalSession)) {
+      log(`   ⚠ sessions/${wtName}/ 已存在，stash 保留在 ${stashedSessions}（请手动合并）`);
+    } else {
+      try {
+        renameSync(stashedSessions, finalSession);
+        log(`   ✓ 还原 sessions/${wtName}/ 到 worktree`);
+      } catch (e) {
+        log(`   ⚠ 还原 sessions 失败: ${e.message}（stash 保留在 ${stashedSessions}）`);
+      }
+    }
+  }
 }
 
 // ─── Write local-config.json (idempotent, worktree-only) ───
@@ -157,46 +290,9 @@ function repair(worktreePath) {
     } catch { /* no .env files */ }
   }
 
-  // ─── Knowledge directory symlink (always-link) ───
-  // Knowledge is conceptually shared across all worktrees
-  const knowledgeSrc = join(root, '.autopilot');
-  const knowledgeDst = join(worktreePath, '.autopilot');
-  if (existsSync(knowledgeSrc)) {
-    try {
-      const stat = lstatSync(knowledgeDst);
-      if (stat.isSymbolicLink()) {
-        log('   — .autopilot 已是符号链接');
-      } else if (stat.isDirectory()) {
-        // Replace git-checked-out copy with symlink to main repo
-        log('→ 替换 .autopilot 为符号链接（指向主仓库）...');
-        rmSync(knowledgeDst, { recursive: true, force: true });
-        symlinkSync(knowledgeSrc, knowledgeDst);
-        log('   ✓ .autopilot → 主仓库');
-      }
-    } catch (e) {
-      // knowledgeDst doesn't exist — create symlink
-      if (e.code === 'ENOENT') {
-        symlinkSync(knowledgeSrc, knowledgeDst);
-        log('   ✓ .autopilot → 主仓库');
-      } else {
-        log(`   ⚠ 无法检查 .autopilot: ${e.message}`);
-      }
-    }
-  } else {
-    // Main repo has no knowledge dir yet — create it proactively
-    log('→ 主仓库无 .autopilot，预创建目录并建立符号链接...');
-    mkdirSync(knowledgeSrc, { recursive: true });
-    try {
-      const stat = lstatSync(knowledgeDst);
-      if (!stat.isSymbolicLink()) {
-        rmSync(knowledgeDst, { recursive: true, force: true });
-      }
-    } catch { /* doesn't exist */ }
-    if (!existsSync(knowledgeDst)) {
-      symlinkSync(knowledgeSrc, knowledgeDst);
-      log('   ✓ .autopilot → 主仓库（预创建）');
-    }
-  }
+  // ─── Selective .autopilot symlinks ───
+  // sessions/ 是 worktree-local；knowledge/project/requirements 等共享项 symlink → main
+  ensureSelectiveAutopilotLayout(root, worktreePath);
 
   // Install dependencies
   const nodeModules = join(worktreePath, 'node_modules');
@@ -329,24 +425,38 @@ function remove() {
     } catch { /* dir may not exist */ }
   }
 
-  // Clean up .autopilot symlink
-  const knowledgePath = join(worktreePath, '.autopilot');
-  try {
-    if (lstatSync(knowledgePath).isSymbolicLink()) {
-      unlinkSync(knowledgePath);
-      log('   ✓ 移除符号链接: .autopilot');
-    }
-  } catch { /* not a symlink or doesn't exist */ }
+  // Clean up .autopilot symlinks
+  // 新模式：.autopilot 是真实目录，里面每个 SHARED_AUTOPILOT_ITEMS 是 symlink；逐个 unlink。
+  // 旧模式（兼容）：.autopilot 整体是 symlink。
+  const apDst = join(worktreePath, '.autopilot');
+  let apIsLink = false;
+  try { apIsLink = lstatSync(apDst).isSymbolicLink(); } catch { /* not exists */ }
 
-  // Clean up worktree session directory (.autopilot/sessions/<name>/)
+  if (apIsLink) {
+    unlinkSync(apDst);
+    log('   ✓ 移除符号链接: .autopilot（旧版全量 symlink）');
+  } else if (existsSync(apDst)) {
+    for (const item of SHARED_AUTOPILOT_ITEMS) {
+      const link = join(apDst, item);
+      try {
+        if (lstatSync(link).isSymbolicLink()) {
+          unlinkSync(link);
+          log(`   ✓ 移除符号链接: .autopilot/${item}`);
+        }
+      } catch { /* not symlink or missing */ }
+    }
+  }
+
+  // 旧模式遗留：main/.autopilot/sessions/<name>/ 清理
+  // 新模式下 sessions 已经在 worktree 里，这条不会触发；保留作为旧版兼容。
   const worktreeName = basename(worktreePath);
-  const sessionDir = join(root, '.autopilot', 'sessions', worktreeName);
-  if (existsSync(sessionDir)) {
+  const legacyMainSession = join(root, '.autopilot', 'sessions', worktreeName);
+  if (existsSync(legacyMainSession)) {
     try {
-      rmSync(sessionDir, { recursive: true, force: true });
-      log(`   ✓ 清理 worktree session: sessions/${worktreeName}`);
+      rmSync(legacyMainSession, { recursive: true, force: true });
+      log(`   ✓ 清理旧版 main/.autopilot/sessions/${worktreeName}/`);
     } catch (e) {
-      log(`   ⚠ 无法清理 session 目录: ${e.message}`);
+      log(`   ⚠ 无法清理: ${e.message}`);
     }
   }
 

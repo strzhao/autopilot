@@ -204,25 +204,36 @@ After autopilot-commit completes, review the full autopilot run to extract knowl
 
 ## Worktree-Aware Extraction
 
-When running in a git worktree, `.autopilot` should be a symlink to the main repo. Use this 3-step detection chain:
+When running in a git worktree (v3.18+ 选择性 symlink 模式)，`.autopilot/` 是真实目录，里面的共享知识项（`decisions.md`、`patterns.md`、`index.md`、`domains/` 等）以 symlink 指向主仓库 `.autopilot/<item>`。检测知识应该提交到哪个仓库时，**检查共享项是否为 symlink**，而不是检查 `.autopilot` 自身。
 
-#### Step 1: Symlink exists (happy path)
-`test -L .autopilot` → 是符号链接
+#### Step 1: 选择性 symlink 模式（happy path，v3.18+）
+`test -L .autopilot/decisions.md` → 共享项是 symlink
 
-- Resolve main repo and commit there:
+- 解析主仓库并在那里提交：
   ```bash
-  KNOWLEDGE_REAL=$(realpath .autopilot)
-  MAIN_REPO=$(cd "$KNOWLEDGE_REAL" && git rev-parse --show-toplevel)
+  KNOWLEDGE_REAL=$(realpath .autopilot/decisions.md)
+  MAIN_REPO=$(cd "$(dirname "$KNOWLEDGE_REAL")/.." && git rev-parse --show-toplevel)
   git -C "$MAIN_REPO" add .autopilot/
   git -C "$MAIN_REPO" commit -m "docs(knowledge): extract {brief summary}"
   ```
 
-#### Step 2: In worktree, symlink missing (fallback + self-heal)
-`test -f .git` → 是 worktree（.git 是文件而非目录），但符号链接缺失
+#### Step 1b: 旧版全量 symlink（v3.17 及更早）
+`test -L .autopilot` → `.autopilot` 整体是 symlink
+
+- 同步骤 1，但解析路径换成 `.autopilot` 自身：
+  ```bash
+  KNOWLEDGE_REAL=$(realpath .autopilot)
+  MAIN_REPO=$(cd "$KNOWLEDGE_REAL" && git rev-parse --show-toplevel)
+  git -C "$MAIN_REPO" add .autopilot/ && git -C "$MAIN_REPO" commit -m "docs(knowledge): ..."
+  ```
+- （可选）建议用户跑 `worktree-repair` skill 升级到选择性 symlink。
+
+#### Step 2: 在 worktree 中但 symlink 全部缺失（fallback + self-heal）
+`test -f .git` → 是 worktree（.git 是文件而非目录），但 `.autopilot/decisions.md` 也不是 symlink
 
 1. 解析主仓库根：`COMMON_DIR=$(git rev-parse --git-common-dir); MAIN_REPO=$(cd "$COMMON_DIR/.." && pwd)`
-2. 复制知识到主仓库并提交：`mkdir -p "$MAIN_REPO/.autopilot/"; cp -r .autopilot/* "$MAIN_REPO/.autopilot/"; git -C "$MAIN_REPO" add .autopilot/; git -C "$MAIN_REPO" commit -m "docs(knowledge): ..."`
-3. 自愈修复符号链接：`rm -rf .autopilot; ln -s "$MAIN_REPO/.autopilot" .autopilot`
+2. 复制知识到主仓库并提交：`mkdir -p "$MAIN_REPO/.autopilot/"; cp -r .autopilot/decisions.md .autopilot/patterns.md .autopilot/index.md .autopilot/domains "$MAIN_REPO/.autopilot/" 2>/dev/null; git -C "$MAIN_REPO" add .autopilot/; git -C "$MAIN_REPO" commit -m "docs(knowledge): ..."`
+3. 自愈：建议跑 `worktree-repair` skill 重建选择性 symlink
 
 #### Step 3: Normal repo (no worktree)
 `test -d .git` → 正常 git 仓库，使用标准操作：`git add .autopilot/ && git commit -m "docs(knowledge): ..."`

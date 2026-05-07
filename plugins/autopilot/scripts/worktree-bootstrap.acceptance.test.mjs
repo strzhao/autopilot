@@ -112,27 +112,21 @@ describe('场景 1：主仓库 session — .git 是目录', () => {
 });
 
 // ===========================================================================
-// 场景 2：已配好的 worktree（.git 是文件 + .autopilot 是 symlink + node_modules 存在 + local-config.json 存在）
+// 场景 2：新模式已配好 worktree（.autopilot 是真实目录 + sessions/ 子目录 + node_modules + local-config.json）
 // 期望：exit 0，stderr 无 [autopilot] 输出（幂等 silent exit）
 // ===========================================================================
-describe('场景 2：已配好 worktree — silent exit', () => {
+describe('场景 2：新模式已配好 worktree — silent exit', () => {
   it('exit 0 且 stderr 无 [autopilot] 输出', async () => {
-    const tmpDir = await makeTempDir('configured');
+    const tmpDir = await makeTempDir('configured-new');
     tempDirs.push(tmpDir);
 
-    // 模拟 worktree：.git 是文件（worktree 的标志）
-    await writeFile(join(tmpDir, '.git'), 'gitdir: /some/main/repo/.git/worktrees/configured');
+    // 模拟 worktree：.git 是文件
+    await writeFile(join(tmpDir, '.git'), 'gitdir: /some/main/repo/.git/worktrees/configured-new');
 
-    // 模拟 .autopilot 是 symlink（目标目录不必真实存在，symlink 存在即可）
-    // 建一个真实目标避免 broken symlink 引发问题
-    const fakeAutopilotTarget = join(tmpDir, '_autopilot_target');
-    await mkdir(fakeAutopilotTarget, { recursive: true });
-    await symlink(fakeAutopilotTarget, join(tmpDir, '.autopilot'));
+    // 新模式：.autopilot 是真实目录，里面有 sessions/ 子目录
+    await mkdir(join(tmpDir, '.autopilot', 'sessions'), { recursive: true });
 
-    // 模拟 node_modules 存在
     await mkdir(join(tmpDir, 'node_modules'), { recursive: true });
-
-    // 模拟 local-config.json 已写入（v3.15.1 起 bootstrap 也检查这个文件）
     await writeFile(
       join(tmpDir, 'local-config.json'),
       '{"server":{"devPort":4567,"hostname":"localhost","enableHttps":false}}\n'
@@ -143,33 +137,24 @@ describe('场景 2：已配好 worktree — silent exit', () => {
       env: { CLAUDE_PLUGIN_ROOT: dirname(__dirname) },
     });
 
-    // 验证 1：exit 0
     assert.equal(result.exitCode, 0, `期望 exit 0，实际 exit ${result.exitCode}`);
-
-    // 验证 2：stdout 永远为空
     assert.equal(result.stdout, '', `stdout 必须为空，实际: ${result.stdout}`);
-
-    // 验证 3：stderr 无 [autopilot] 输出（幂等，不重复 repair）
     assert.ok(
       !result.stderr.includes('[autopilot]'),
-      `已配好 worktree 场景 stderr 不应有 [autopilot] 输出，实际: ${result.stderr}`
+      `新模式已配好 worktree stderr 不应有 [autopilot] 输出，实际: ${result.stderr}`
     );
   });
 
-  it('local-config.json 缺失时仍触发 repair（v3.15.1 新行为）', async () => {
-    const tmpDir = await makeTempDir('missing-config');
+  it('local-config.json 缺失时仍触发 repair', async () => {
+    const tmpDir = await makeTempDir('missing-config-new');
     tempDirs.push(tmpDir);
 
-    // worktree + .autopilot symlink + node_modules 都齐，唯独 local-config.json 缺失
-    await writeFile(join(tmpDir, '.git'), 'gitdir: /some/main/repo/.git/worktrees/configured-no-cfg');
-    const fakeAutopilotTarget = join(tmpDir, '_autopilot_target');
-    await mkdir(fakeAutopilotTarget, { recursive: true });
-    await symlink(fakeAutopilotTarget, join(tmpDir, '.autopilot'));
+    // 新模式齐全，唯独 local-config.json 缺失
+    await writeFile(join(tmpDir, '.git'), 'gitdir: /some/main/repo/.git/worktrees/configured-new-no-cfg');
+    await mkdir(join(tmpDir, '.autopilot', 'sessions'), { recursive: true });
     await mkdir(join(tmpDir, 'node_modules'), { recursive: true });
-    // 故意不写 local-config.json
 
-    // mock plugin root
-    const mockPluginRoot = await makeTempDir('mock-plugin-cfg');
+    const mockPluginRoot = await makeTempDir('mock-plugin-cfg-new');
     tempDirs.push(mockPluginRoot);
     const mockScriptsDir = join(mockPluginRoot, 'scripts');
     await mkdir(mockScriptsDir, { recursive: true });
@@ -191,6 +176,52 @@ process.exit(0);
       `local-config.json 缺失应触发 repair，stderr: ${result.stderr}`
     );
     assert.ok(existsSync(callLogFile), 'repair mock 应被调用');
+  });
+});
+
+// ===========================================================================
+// 场景 2b：旧版（.autopilot 是全量 symlink）→ 触发升级
+// 期望：exit 0，stderr 含 [autopilot] 升级 提示，repair mock 被调用
+// ===========================================================================
+describe('场景 2b：旧版 .autopilot 全量 symlink — 触发升级', () => {
+  it('全量 symlink + node_modules + local-config.json → 触发选择性升级', async () => {
+    const tmpDir = await makeTempDir('legacy-symlink');
+    tempDirs.push(tmpDir);
+
+    await writeFile(join(tmpDir, '.git'), 'gitdir: /some/main/repo/.git/worktrees/legacy');
+
+    // 旧版：.autopilot 是符号链接（指向 fake target）
+    const fakeAutopilotTarget = join(tmpDir, '_autopilot_target');
+    await mkdir(fakeAutopilotTarget, { recursive: true });
+    await symlink(fakeAutopilotTarget, join(tmpDir, '.autopilot'));
+    await mkdir(join(tmpDir, 'node_modules'), { recursive: true });
+    await writeFile(
+      join(tmpDir, 'local-config.json'),
+      '{"server":{"devPort":4567,"hostname":"localhost","enableHttps":false}}\n'
+    );
+
+    const mockPluginRoot = await makeTempDir('mock-plugin-legacy');
+    tempDirs.push(mockPluginRoot);
+    const mockScriptsDir = join(mockPluginRoot, 'scripts');
+    await mkdir(mockScriptsDir, { recursive: true });
+    const callLogFile = join(mockPluginRoot, 'repair-called.log');
+    await writeFile(join(mockScriptsDir, 'worktree.mjs'), `import { writeFileSync } from 'fs';
+writeFileSync(${JSON.stringify(callLogFile)}, process.argv.slice(2).join(' '), 'utf8');
+process.exit(0);
+`);
+
+    const result = await runBootstrap({
+      cwdPayload: tmpDir,
+      env: { CLAUDE_PLUGIN_ROOT: mockPluginRoot },
+    });
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(result.stdout, '');
+    assert.ok(
+      result.stderr.includes('[autopilot]') && result.stderr.includes('升级'),
+      `旧版应触发"升级"提示，stderr: ${result.stderr}`
+    );
+    assert.ok(existsSync(callLogFile), '升级 repair mock 应被调用');
   });
 });
 
