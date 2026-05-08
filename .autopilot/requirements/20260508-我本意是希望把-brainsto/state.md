@@ -1,8 +1,8 @@
 ---
 active: true
-phase: "merge"
+phase: "done"
 gate: ""
-iteration: 2
+iteration: 3
 max_iterations: 30
 max_retries: 3
 retry_count: 0
@@ -12,7 +12,7 @@ fast_mode: false
 brief_file: ""
 next_task: ""
 auto_approve: false
-knowledge_extracted: ""
+knowledge_extracted: "true"
 task_dir: "/Users/stringzhao/workspace/string-claude-code-plugin/.autopilot/requirements/20260508-我本意是希望把-brainsto"
 session_id: 159d0a81-0cd6-4f57-9c89-7d10010bbded
 started_at: "2026-05-08T14:12:00Z"
@@ -395,3 +395,7 @@ QA 阶段为修复 B-I-1 添加了一行注释（stop-hook.sh:498），重跑了
 - [2026-05-08T14:55:00Z] implement 阶段 — 红队产出 brainstorm-default.acceptance.test.sh（17 assertion / 10 核心契约），未读取蓝队实现代码（信息隔离铁律保持）
 - [2026-05-08T14:57:00Z] implement 阶段 — 合流完成，phase 推进至 qa
 - [2026-05-08T15:10:00Z] qa 阶段 — Wave 1 全 PASS（5 个 .sh 测试 + 17 contract assertion）；Tier 1 mjs 35/41 pass（6 fail 为 pre-existing 非回归）；Wave 1.5 真实场景 4/4 PASS（E=N=4）；Wave 2 qa-reviewer Ready to merge（4.2/5.0）；QA 阶段顺手修复 B-I-1 死读取注释，重跑测试通过；gate: review-accept
+- [2026-05-08T15:25:00Z] merge 阶段 — 用户审批通过，commit-agent 提交主 commit 4b9fca2（feat: brainstorm 默认化 + 决策树 4→3 档 + v3.21.0），同时把工作树残留的 worktree.mjs / knowledge-symlink 改动拆为独立 fix commit 45e3555（与本次任务无关的搭车修复）
+- [2026-05-08T15:28:00Z] merge 阶段 — 知识沉淀：decisions.md 追加方案 B' 决策 + patterns.md 追加 YAGNI flag 设计 pattern + index.md 同步索引；独立 commit d9ef543
+- [2026-05-08T15:30:00Z] merge 阶段 — phase: done，autopilot 流程完成
+- [2026-05-08T15:30:00Z] 备注：设计文档「## 验证方案」第 2 项保留了方案 B 的 `--quick` 残留措辞（B → B' 漏改），实际 B' 用 --fast。归档供历史溯源，不影响实施结果（Tier 1.5 已按 B' 实际意图执行了 --fast 场景）
