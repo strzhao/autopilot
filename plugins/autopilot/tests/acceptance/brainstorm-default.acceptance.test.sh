@@ -84,18 +84,6 @@ pass "契约1: 决策树不含 plan_mode 独立档位"
 # 契约 2：默认行为含 brainstorm（stop-hook.sh design else 分支 PROMPT 含 "brainstorm"）
 # ════════════════════════════════════════════════════════════════════════════
 
-# 策略：提取 stop-hook.sh 中 design 阶段 else 分支（最后一个 else/fi 块内）
-# 判断其 PROMPT 赋值中是否含 "brainstorm"
-# 宽松验证：在 else 之后、下一个 elif/fi 之前，整体含 brainstorm
-design_else_has_brainstorm=$(awk '
-    # 识别 design 阶段上下文（粗粒度，找到含 "design" 的阶段块）
-    /design/ { in_design=1 }
-    in_design && /^else$|^    else$|^        else$/ { in_else=1 }
-    in_else && /brainstorm/ { found=1 }
-    in_else && /^fi$|^    fi$|^        fi$/ { in_else=0 }
-    END { print (found ? "yes" : "no") }
-' "$STOP_HOOK")
-
 # 宽松策略：直接检查 stop-hook.sh 中 else 分支区域含 brainstorm
 # （因为 else 是默认路径，含 brainstorm 即满足设计契约）
 else_with_brainstorm=$(grep -c "brainstorm" "$STOP_HOOK" || true)

@@ -495,7 +495,8 @@ fi
 
 # design 阶段直接写设计文档到状态文件（auto_approve 时跳过审批）
 AUTO_APPROVE=$(get_field "auto_approve" || true)
-PLAN_MODE=$(get_field "plan_mode" || true)  # 兼容期保留：plan_mode 字段已弃用，分支体已删除（v3.21.0），仅保留赋值便于后续 grep 检测旧字段使用
+# shellcheck disable=SC2034  # 兼容期保留：plan_mode 字段已弃用，分支体已删除（v3.21.0），仅保留赋值便于后续 grep 检测旧字段使用
+PLAN_MODE=$(get_field "plan_mode" || true)
 FAST_MODE=$(get_field "fast_mode" || true)
 if [[ "$PHASE" == "design" ]]; then
     if [[ "$AUTO_APPROVE" == "true" ]]; then
