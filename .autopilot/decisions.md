@@ -94,3 +94,12 @@
 **Alternatives rejected**: (1) 注册 SubagentStop hook — Claude Code 在 sub-agent 完成时已自动让 tool_result 入流激活主 agent，注册 SubagentStop 对主 agent 唤醒无直接增量；(2) 主 agent 写 `awaiting_subagents` 状态字段 — 违反"hook 硬编码兜底，不依赖 AI 自觉"原则（同日另一条决策确立的设计原则）；(3) 主 agent 启动 sub-agent 后用 Monitor 阻塞等待 — error.txt 显示 AI 自己尝试过此方案，但 Monitor 也是后台任务、主 agent 仍 idle 触发 stop-hook，不解决问题。
 **Trade-offs**: 多 ~25 行 bash + jq 解析（实测 5MB 文件 < 2s，stop-hook 10s 总超时内充裕）；transcript 损坏/jq 失败时降级返回 1（视为无 pending 走原路径），优先避免 autopilot 永久卡死而非追求精确性。仅 implement 阶段启用 = 未来若 design/qa/merge 也出现长时间 sub-agent 等待需扩展 phase 列表。
 **Lesson**: Claude Code Hook 的 stdin JSON 提供 `session_id`/`cwd`/`transcript_path` 等丰富上下文，原作者可能只用了其中一部分。当 hook 决策依赖"运行时进行中状态"而非"持久化文件状态"时，transcript 解析是 zero-dependency 的可靠信号源——它是 Claude Code 写入的事实记录，不需要主 agent 配合写状态字段。tail + jq 集合差是处理大 JSONL 的高效模式。
+
+### [2026-05-08] Design 阶段默认含 brainstorm Q&A，--fast 复用为快速通道
+<!-- tags: autopilot, brainstorm, design, fast-mode, default-inversion, simplification, yagni -->
+**Background**: v3.20.0（9c770a8 之后）design 阶段默认走 standard 路径——直接写设计文档无 Q&A 探索，仅 `--deep` flag 显式触发交互式 brainstorm。用户实际诉求"模糊任务希望默认有 brainstorm"在显式 flag 下经常错过。同时四档决策树（auto_approve / plan_mode:deep / fast_mode / standard）心智模型偏重。
+**Choice**: 默认值反转——空 `plan_mode` 即触发 brainstorm + 完整 sub-agent 审查；`--fast` 语义扩展为「跳过 brainstorm + 砍 scenario-generator + 砍 plan-reviewer」一档式快速通道；`--deep` flag 保留为兼容期 deprecation（行为同默认），plan_mode 字段事实弃用。决策树从 4 档简化为 3 档（auto_approve / fast_mode / 默认）。
+**Alternatives rejected**: (1) 方案 A 完全删除 plan_mode 字段 — 与 9c770a8 简化方向冲突，"明确意图任务"无 escape hatch；(2) 方案 B 新增 `--quick` flag 单独控制"跳过 brainstorm" — flag 数量膨胀，中间档"无 brainstorm + 严格审查"实际低频；(3) 方案 C 编排器自动判断意图清晰度 — 违反知识库已沉淀的 "AI 自觉机制不可靠" pattern。
+**Trade-offs**: 接受语义耦合——「无 brainstorm + 完整 sub-agent 审查」中间档消失。用户对明确小任务必须用 --fast（同时砍审查）；如未来出现"明确意图但需要严格审查"高频需求再单独加 --quick 不晚。
+**Evidence**: v3.20.0→v3.21.0；setup.sh / stop-hook.sh / SKILL.md / state-file-guide.md 同步；3 个现有验收测试更新 + 1 新增 brainstorm-default.acceptance.test.sh（17 assertion / 10 核心契约）。Tier 1.5 三个真实场景（默认 / --fast / --deep 兼容）全 PASS。
+**Lesson**: 当用户提议"默认化某行为 X"时，不要直接照做——先评估 X 当前的使用模式分布，复用现有 escape hatch flag 通常优于新增 flag。本次 plan_mode 字段事实上只有 2 个有效值（""空 / "deep"），是 boolean 用 string 表达，本身就有简化空间——这种"语义冗余字段"重构时可顺势清理为 dead field（保留兼容期防止历史 state.md 解析报错）。关联 9c770a8 形成「Plan Mode 移除 → brainstorm 默认化」决策链，方向一致：把通用流程做减法、把高质量行为提升为默认。

@@ -1,6 +1,7 @@
 # Knowledge Index
 
 ## Decisions
+- [2026-05-08] Design 阶段默认含 brainstorm Q&A，--fast 复用为快速通道（决策树 4→3 档） | tags: autopilot, brainstorm, design, fast-mode, default-inversion, simplification, yagni | → decisions.md
 - [2026-05-08] Design 阶段移除 Plan Mode，用 AskUserQuestion 替代 ExitPlanMode 审批 | tags: autopilot, plan-mode, design, AskUserQuestion, approval-gate, simplification | → decisions.md
 - [2026-05-07] 双轨道 fast track：显式 flag + hook 自动检测互为兜底 | tags: autopilot, token-optimization, fast-mode, dual-track, self-correction, hook | → decisions.md
 - [2026-05-07] Sub-agent 数量是 token 优化的真正杠杆，不是 SKILL.md 加载 | tags: autopilot, token-optimization, sub-agent, cold-start, qa-reviewer | → decisions.md
@@ -16,6 +17,7 @@
 - [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → decisions.md
 
 ## Patterns
+- [2026-05-08] 字段反转默认值 + 复用现有 flag 优于新增 flag | tags: autopilot, design-decision, yagni, flag-design, default-inversion | → patterns.md
 - [2026-05-07] 函数支持"测试 mock 输入"分支会掩盖生产路径 bug | tags: autopilot, red-team, dual-path, function-signature, qa-blind-spot, production-vs-test | → patterns.md
 - [2026-05-07] Cache 命中率高不等于 token 成本低，要看绝对 token 数据 | tags: token-analysis, prompt-cache, methodology, autopilot | → patterns.md
 - [2026-05-07] Shell 脚本要支持 source 测试必须用 BASH_SOURCE[0] | tags: bash, shell, testing, source, BASH_SOURCE, autopilot, stop-hook | → patterns.md

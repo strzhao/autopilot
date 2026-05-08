@@ -130,3 +130,10 @@
 **Scenario**: `stop-hook.sh` 顶层 `trap 'exit 0' ERR` 是为脚本主流程兜底（任何未预期错误放行）。新增 `has_pending_subagents` 函数用 `[ -n "$transcript" ] && [ -f "$transcript" ] || return 1` 短路链做错误降级，期望 `return 1` 表示"无 pending"。生产代码通过 `if has_pending_subagents "$x"; then ... fi` 调用，在 if 条件保护下 ERR 不触发——看起来一切正常。但红队测试通过 `bash -c 'source stop-hook.sh; has_pending_subagents ""'` 顶层裸调用，所有错误降级路径返回的 1 全部被 ERR trap 转成 exit 0，spawnSync 拿到 status=0 与函数 return 1 不一致，10 个测试有 7 个失败。
 **Lesson**: bash ERR trap 对"函数返回非零"的触发条件取决于调用上下文：在 `if`/`while`/`until` 条件、`||` `&&` 链、`!` 否定中调用 → 不触发；裸调用（顶层 simple command）→ 触发。这意味着脚本的"生产正确性"和"测试可观察性"在 trap ERR 存在时是两套语义。修复模式：trap 仅在直接执行模式安装（`if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then trap 'exit 0' ERR; fi`），让 source 测试模式下函数 return 直接传递给 spawnSync。子 shell 包装也行不通——子 shell 仍继承父 shell 的 ERR trap。
 **Evidence**: 实测 `trap "echo TRAP; exit 0" ERR; foo() { return 1; }; foo` 输出 `TRAP` 退出，但 `if foo; then ...; fi` 不触发。本次 QA 轮次 1 红队测试 7/10 失败，root cause 定位通过 5 行最小复现脚本在 `bash -c` 中直接验证。
+
+### [2026-05-08] 字段反转默认值 + 复用现有 flag 优于新增 flag
+<!-- tags: autopilot, design-decision, yagni, flag-design, default-inversion -->
+**Scenario**: 用户提议「把行为 X 默认化」（例如 brainstorm 默认开启）时，简单实现是新增一个 opt-out flag。但很多时候现有的某个 flag 已经隐含了"opt out X"语义，复用比新增更优。
+**Pattern**: 三步决策——(1) 列出 X 当前的所有使用模式（auto / explicit-on / explicit-off / 默认行为）；(2) 检查现有 escape hatch flag 是否能覆盖"opt-out X"语义，如果耦合可接受 → 直接扩展该 flag 语义；(3) 仅当中间档（非 X 但需要某些子项）真实存在高频需求时才新增 flag。
+**Counter-example**: 本次 brainstorm 默认化任务初版方案 B 设计了 --quick 新增 flag，与现有 --fast 中间档差距其实很小（仅 sub-agent 审查严格性差异）；用户在审批时主动提出复用 --fast，方案演进为 B'，flag 数量从 +1 变为 0，决策树从 4→3 档进一步简化。
+**Lesson**: flag 设计的 YAGNI 原则——"假想中间需求"不应作为新 flag 的设计依据。如果未来真出现高频需求再加 flag 也不晚，向前兼容性只在不删字段时存在风险。事实弃用的字段应保留兼容期（不立即删除）以避免历史持久化文件解析错误。
