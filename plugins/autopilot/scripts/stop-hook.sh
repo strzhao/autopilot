@@ -144,11 +144,16 @@ compress_qa_report() {
 
 # has_pending_subagents — 检测主线程是否有未完成的 Agent 调用
 #
-# 行为：解析 transcript JSONL 文件最后 N 字节，提取主线程（isSidechain=false）
-# 启动的 Agent 调用 id 集合 A，再提取所有 tool_result 的 tool_use_id 集合 R。
-# 若 A - R 非空，则有 sub-agent 仍在运行。
+# 行为：两条独立路径合并判断 —
+#   路径 A（同步 Agent）：主线程（isSidechain=false）启动的 Agent tool_use 集合 S，
+#       减去所有 tool_result.tool_use_id 集合 R，余项 = 同步 pending。
+#   路径 B（异步 Agent，run_in_background=true）：toolUseResult.isAsync==true &&
+#       status=="async_launched" 的 .agentId 集合 L，减去 queue-operation 类型
+#       enqueue 中 <task-id>X</task-id> 的 X 集合 C，余项 = 异步 pending。
+#       异步路径必须独立判定，因其 tool_result 在启动瞬间就回流（写有
+#       "Async agent launched..." 文本），路径 A 看不到它仍在跑。
 #
-# 退出码：0 = 有 pending、1 = 无 pending（含错误降级）。
+# 退出码：0 = 有 pending（同步∪异步）、1 = 无 pending（含错误降级）。
 # 错误降级原则：transcript 解析失败时返回 1（无 pending），让 stop-hook
 # 走原有路径，避免因检测失败导致 autopilot 永远卡死。
 has_pending_subagents() {
@@ -163,6 +168,7 @@ has_pending_subagents() {
     local pending_count
     # shellcheck disable=SC2016
     pending_count=$(echo "$tail_data" | timeout 3 jq -rs '
+        # 路径 A — 同步 Agent
         ([.[] | select(.isSidechain == false or .isSidechain == null)
               | .message.content[]?
               | select(.type == "tool_use" and (.name == "Agent" or .name == "Task"))
@@ -172,7 +178,21 @@ has_pending_subagents() {
               | select(.type == "tool_result")
               | .tool_use_id]) as $finished
         |
-        ($started - $finished) | length
+        ($started - $finished) as $sync_pending
+        |
+        # 路径 B — 异步 Agent (run_in_background=true)
+        ([.[] | .toolUseResult? | objects
+              | select(.isAsync == true and .status == "async_launched")
+              | .agentId]) as $async_launched
+        |
+        ([.[] | select(.type? == "queue-operation" and .operation? == "enqueue")
+              | .content // ""
+              | (capture("<task-id>(?<id>[^<]+)</task-id>") | .id)?
+              | select(. != null)]) as $async_completed
+        |
+        ($async_launched - $async_completed) as $async_pending
+        |
+        ($sync_pending | length) + ($async_pending | length)
     ' 2>/dev/null) || return 1
 
     [[ "$pending_count" =~ ^[0-9]+$ ]] || return 1

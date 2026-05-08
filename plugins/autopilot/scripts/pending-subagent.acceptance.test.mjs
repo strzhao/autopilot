@@ -7,8 +7,13 @@
  * Design contract:
  *   - has_pending_subagents(transcript_path) exits 0  = has pending sub-agents (silence stop-hook)
  *   - has_pending_subagents(transcript_path) exits 1  = no pending / any error (run stop-hook normally)
- *   - Only main-thread tool_use (isSidechain==false or null) lines are counted as agent calls
- *   - A call is "pending" when its .id has no matching tool_result .tool_use_id in the transcript
+ *   - Detection has TWO independent paths combined by union:
+ *     Path A (synchronous Agent): main-thread tool_use without matching tool_result is pending
+ *     Path B (async Agent, run_in_background=true): toolUseResult.isAsync==true &&
+ *            status=="async_launched" gives agentId; pending until a queue-operation
+ *            enqueue line contains <task-id>{agentId}</task-id> (completion notification).
+ *            Path B exists because async tool_result returns immediately with the launch
+ *            text "Async agent launched..." — Path A would falsely declare it complete.
  *   - Error cases always degrade gracefully to exit 1 (no false positives)
  *
  * Run: node --test plugins/autopilot/scripts/pending-subagent.acceptance.test.mjs
@@ -132,6 +137,34 @@ function sidechainToolResult(toolUseId) {
         },
       ],
     },
+  });
+}
+
+/** Async Agent launch tool_result — toolUseResult.isAsync==true marks it. */
+function asyncLaunchedToolResult(toolUseId, agentId) {
+  return JSON.stringify({
+    isSidechain: false,
+    type: 'user',
+    message: {
+      role: 'user',
+      content: [
+        {
+          type: 'tool_result',
+          tool_use_id: toolUseId,
+          content: [{ type: 'text', text: `Async agent launched successfully.\nagentId: ${agentId}` }],
+        },
+      ],
+    },
+    toolUseResult: { isAsync: true, status: 'async_launched', agentId },
+  });
+}
+
+/** Async Agent completion notification — queue-operation enqueue with task-id. */
+function asyncCompletionEnqueue(agentId, toolUseId) {
+  return JSON.stringify({
+    type: 'queue-operation',
+    operation: 'enqueue',
+    content: `<task-notification>\n<task-id>${agentId}</task-id>\n<tool-use-id>${toolUseId}</tool-use-id>\n<status>completed</status>\n<summary>Agent done</summary>\n</task-notification>`,
   });
 }
 
@@ -358,6 +391,81 @@ test('VC9: performance — 5 MB transcript with all agents completed → exit 1 
   assert.ok(
     elapsed < 2000,
     `Expected < 2000ms but took ${elapsed}ms (may need tail-based optimization)`
+  );
+});
+
+// ===========================================================================
+// VC10: Async Agent (run_in_background=true) launched but no completion → exit 0
+//
+// Reproduces the production bug: blue/red team agents are launched with
+// run_in_background=true. Path A (sync detection) sees their tool_result and
+// concludes "no pending". Path B (async detection) must catch them via
+// toolUseResult.isAsync==true and the absence of a queue-operation enqueue
+// for that agentId.
+// ===========================================================================
+test('VC10: async Agent launched without completion notification → exit 0 (pending)', () => {
+  const dir = makeTempDir();
+  const transcriptPath = writeTranscript([
+    mainThreadAgentToolUse('toolu_async_001'),
+    asyncLaunchedToolResult('toolu_async_001', 'agent-blue001'),
+    // No queue-operation enqueue — agent still running in background
+  ], dir);
+
+  const result = runHasPending(transcriptPath);
+  assert.equal(
+    result.status,
+    0,
+    `Expected exit 0 (async pending) but got ${result.status}. stderr: ${result.stderr}`
+  );
+});
+
+// ===========================================================================
+// VC11: Async Agent launched AND completion enqueue present → exit 1
+// ===========================================================================
+test('VC11: async Agent with matching completion enqueue → exit 1 (no pending)', () => {
+  const dir = makeTempDir();
+  const transcriptPath = writeTranscript([
+    mainThreadAgentToolUse('toolu_async_002'),
+    asyncLaunchedToolResult('toolu_async_002', 'agent-blue002'),
+    asyncCompletionEnqueue('agent-blue002', 'toolu_async_002'),
+  ], dir);
+
+  const result = runHasPending(transcriptPath);
+  assert.equal(
+    result.status,
+    1,
+    `Expected exit 1 (async completed) but got ${result.status}. stderr: ${result.stderr}`
+  );
+});
+
+// ===========================================================================
+// VC12: Mixed sync + async, partial pending → exit 0
+//
+// Two async launches: one completed, one still running.
+// One sync Agent already finished.
+// Detection must spot the still-running async via Path B.
+// ===========================================================================
+test('VC12: mixed sync+async, one async still running → exit 0', () => {
+  const dir = makeTempDir();
+  const transcriptPath = writeTranscript([
+    // sync Agent — completed
+    mainThreadAgentToolUse('toolu_sync_done'),
+    mainThreadToolResult('toolu_sync_done'),
+    // async Agent #1 — completed
+    mainThreadAgentToolUse('toolu_async_done'),
+    asyncLaunchedToolResult('toolu_async_done', 'agent-done'),
+    asyncCompletionEnqueue('agent-done', 'toolu_async_done'),
+    // async Agent #2 — still pending
+    mainThreadAgentToolUse('toolu_async_pending'),
+    asyncLaunchedToolResult('toolu_async_pending', 'agent-pending'),
+    // No completion enqueue for agent-pending
+  ], dir);
+
+  const result = runHasPending(transcriptPath);
+  assert.equal(
+    result.status,
+    0,
+    `Expected exit 0 (one async still pending) but got ${result.status}. stderr: ${result.stderr}`
   );
 });
 

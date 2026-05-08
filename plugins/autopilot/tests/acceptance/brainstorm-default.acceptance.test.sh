@@ -15,7 +15,7 @@
 #   7.  brainstorm-guide.md 存在
 #   8.  deep-design-guide.md 不存在
 #   9.  SKILL.md 引用一致：不再含 "deep-design-guide.md"
-#  10.  版本一致 v3.21.0（plugin.json + marketplace.json + CLAUDE.md 三处）
+#  10.  版本一致 v3.22.1（plugin.json + marketplace.json + CLAUDE.md 三处）
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -29,7 +29,7 @@ PLUGIN_JSON="$REPO_ROOT/plugins/autopilot/.claude-plugin/plugin.json"
 MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
 CLAUDE_MD="$REPO_ROOT/CLAUDE.md"
 
-TARGET_VERSION="3.22.0"
+TARGET_VERSION="3.22.1"
 
 # ── 辅助函数 ─────────────────────────────────────────────────────────────────
 pass() { echo "[PASS] R9: $1"; }
@@ -215,7 +215,7 @@ fi
 pass "契约9: SKILL.md 已含 brainstorm-guide.md 引用（引用一致性通过）"
 
 # ════════════════════════════════════════════════════════════════════════════
-# 契约 10：版本一致 v3.21.0（plugin.json + marketplace.json + CLAUDE.md 三处）
+# 契约 10：版本一致 v3.22.1（plugin.json + marketplace.json + CLAUDE.md 三处）
 # ════════════════════════════════════════════════════════════════════════════
 
 # 10a: plugin.json

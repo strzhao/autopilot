@@ -10,7 +10,7 @@
 #   C2.  HTML 模板静态结构：plan-review-template.html 存在 textarea#feedback + 三按钮
 #   C3.  SKILL.md 步骤 4 分支逻辑：html_review 开关描述 + 默认路径 hint 文案
 #   C4.  state-file-guide.md：html_review frontmatter 字段说明存在
-#   C5.  版本号同步至 v3.22.0（plugin.json + marketplace.json + CLAUDE.md 三处）
+#   C5.  版本号同步至 v3.22.1（plugin.json + marketplace.json + CLAUDE.md 三处）
 #
 # 注意：场景 3/4（端到端浏览器）需人工操作，不在本脚本内；见 acceptance-checklist.md
 set -uo pipefail
@@ -27,7 +27,7 @@ PLUGIN_JSON="$REPO_ROOT/plugins/autopilot/.claude-plugin/plugin.json"
 MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
 CLAUDE_MD="$REPO_ROOT/CLAUDE.md"
 
-TARGET_VERSION="3.22.0"
+TARGET_VERSION="3.22.1"
 
 # ── 辅助函数 ─────────────────────────────────────────────────────────────────
 pass() { echo "[PASS] R10: $1"; }
@@ -300,11 +300,11 @@ fi
 pass "C4b: html_review 字段说明含默认值 false"
 
 # ════════════════════════════════════════════════════════════════════════════
-# 契约 C5：版本号同步至 v3.22.0
+# 契约 C5：版本号同步至 v3.22.1
 #   设计文档：plugin.json + marketplace.json + CLAUDE.md（package.json 不存在，跳过）
 # ════════════════════════════════════════════════════════════════════════════
 echo ""
-echo "---- C5: 版本号同步至 v3.22.0 ----"
+echo "---- C5: 版本号同步至 v3.22.1 ----"
 
 # C5a: plugin.json 版本
 plugin_version=$(grep '"version"' "$PLUGIN_JSON" \
@@ -363,7 +363,7 @@ elif [[ "$curr_major" -eq "$prev_major" ]] && [[ "$curr_minor" -eq "$prev_minor"
 fi
 
 if [[ $is_greater -eq 0 ]]; then
-    fail "C5e: 版本 $plugin_version 不高于上一版 ${prev_version}（期望：从 3.21.0 升级到 3.22.0）"
+    fail "C5e: 版本 $plugin_version 不高于上一版 ${prev_version}（期望：从 3.21.0 升级到 3.22.1）"
 fi
 pass "C5e: 版本 $plugin_version > $prev_version — 升级方向正确"
 
