@@ -1,6 +1,7 @@
 # Knowledge Index
 
 ## Decisions
+- [2026-05-08] Design 阶段移除 Plan Mode，用 AskUserQuestion 替代 ExitPlanMode 审批 | tags: autopilot, plan-mode, design, AskUserQuestion, approval-gate, simplification | → decisions.md
 - [2026-05-07] 双轨道 fast track：显式 flag + hook 自动检测互为兜底 | tags: autopilot, token-optimization, fast-mode, dual-track, self-correction, hook | → decisions.md
 - [2026-05-07] Sub-agent 数量是 token 优化的真正杠杆，不是 SKILL.md 加载 | tags: autopilot, token-optimization, sub-agent, cold-start, qa-reviewer | → decisions.md
 - [2026-05-07] Stop hook 利用 transcript_path 检测后台 sub-agent 等待状态 | tags: autopilot, stop-hook, sub-agent, transcript, token-optimization, hard-coded, implement | → decisions.md

@@ -7,6 +7,14 @@
 **Evidence**: hook wrapper + log 对照实证（详见 commit 27289dc 的 HANDOFF 文档）—— plugin hooks.json 的 wrapper 0 字节日志，user-settings 的同 wrapper 收到完整 stdin payload。GitHub issue [#36205](https://github.com/anthropics/claude-code/issues/36205) 已报但只覆盖 settings.json 场景，未提到 plugin hooks.json gap。
 **Lesson**: Plugin hook 事件派发**不是覆盖所有 events**——写 plugin hook 时不能假设 hooks.json 注册的 event 都会被触发，必须用实证验证（wrapper + log）。已知 SessionStart 在 plugin hooks.json **会**派发，可作为高频兜底事件。
 
+### [2026-05-08] Design 阶段移除 Plan Mode，用 AskUserQuestion 替代 ExitPlanMode 审批
+<!-- tags: autopilot, plan-mode, design, AskUserQuestion, approval-gate, simplification -->
+**Background**: design 阶段依赖 Claude Code 的 EnterPlanMode/ExitPlanMode 实现"探索→设计→审批"流程。deep 模式下需要先在 Plan Mode 外做 brainstorm（Phase A），再进入 Plan Mode 做 plan（Phase B），实质上同一件事做了两遍。Plan Mode 的写入禁止作为安全网已不再必要（AI 指令遵循能力足够）。
+**Choice**: 完全移除 Plan Mode 依赖。所有设计模式统一为"探索 → 写设计文档到状态文件 → 审查 → AskUserQuestion 审批"。deep 模式合并为单流程（brainstorm + design 一气呵成）。审批门从 ExitPlanMode 改为 AskUserQuestion（通过/修改/放弃 三选一）。
+**Alternatives rejected**: (1) 只在 deep 模式去掉 Plan Mode 而标准模式保留——导致两套逻辑并存，维护成本不降；(2) 把 brainstorm 合并进 Plan Mode 内部——Plan Mode 禁止 Write，brainstorm.md 写入需要 workaround。
+**Trade-offs**: 失去 Plan Mode 提供的写入保护（理论上 AI 可能在设计阶段误写文件）；换来更简洁的流程和更小的 SKILL 文件（减少 ~36 行）。设计文档直接写入状态文件消除了 plan file → state file 的复制步骤。
+**Lesson**: 当 AI 能力提升使得某个机制级保护变得冗余时，应该果断移除而非继续维护兼容代码。AskUserQuestion 是一个足够好的审批门替代，因为它保留了用户选择权且无需模式切换开销。
+
 ### [2026-05-05] Lint / 健康检查能力优先 AI 语义判断而非正则脚本
 <!-- tags: autopilot, doctor, lint, ai-judgment, knowledge-engineering, design-principle -->
 **Background**: 知识库 Lint 设计需要识别"过拟合条目"（如硬编码 UI 高度的具体数值而非"动态读取 UI 高度"原则）。最初方案是写独立脚本用正则匹配版本号 / 行号 / 文件名列表等模式做检测。
