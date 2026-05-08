@@ -83,18 +83,46 @@ export function parseLinksFile(filepath) {
 // ─── Selective .autopilot layout ───
 // 仅这些项以 symlink → 主仓库共享；其余（含 sessions/）皆 worktree-local 真实文件。
 // 顺序：常用 → 不常用，便于 log 阅读。
+//
+// ⚠ 不要把会被 main 仓库 tracked 为「目录」的项加进来。
+// 因为 git 不允许 tracked 路径穿过 symlink — 一旦 main 把 .autopilot/foo 跟踪为目录，
+// worktree 把 .autopilot/foo 做成 symlink 后，lint-staged stash / git stash 等命令会
+// 失败（"is beyond a symbolic link"）。runtime 也会做防御性检测，但保持列表本身干净更好。
 export const SHARED_AUTOPILOT_ITEMS = [
   'decisions.md',
   'patterns.md',
   'index.md',
   'domains',
-  'project',
   'requirements',
   'doctor-report.md',
   'worktree-links',
   'active',
   'autopilot.local.md',
 ];
+
+// 历史上曾在 SHARED_AUTOPILOT_ITEMS 但因为是 tracked-dir 已被移除的项目。
+// 现存 worktree 升级时需要把这些 symlink 改回真实目录（让 git checkout 恢复）。
+export const LEGACY_SHARED_AUTOPILOT_ITEMS = ['project'];
+
+// 判断 .autopilot/<item> 在主仓库的跟踪状态：'file' / 'dir' / 'untracked'
+function isTrackedInMain(mainRoot, relPath) {
+  const out = gitSilent('-C', mainRoot, 'ls-files', '--', relPath);
+  if (!out) return 'untracked';
+  const lines = out.split('\n').filter(Boolean);
+  if (lines.length === 1 && lines[0] === relPath) return 'file';
+  return 'dir';
+}
+
+// 对 worktree 里 tracked 的 symlink 路径标记 skip-worktree，避免 typechange 污染 git status。
+// 失败静默：worktree 分支可能已删除该路径，此时 update-index 会报错，无需关心。
+function applySkipWorktree(worktreePath, relPath) {
+  try {
+    gitSilent('-C', worktreePath, 'update-index', '--skip-worktree', '--', relPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // 把 worktree 的 .autopilot 配置成"选择性 symlink"布局：
 //   .autopilot/                  ← 真实目录
@@ -137,11 +165,38 @@ export function ensureSelectiveAutopilotLayout(mainRoot, worktreePath) {
 
   if (!existsSync(apDst)) mkdirSync(apDst, { recursive: true });
 
+  // 旧版升级：曾是 SHARED 但因 tracked-dir 风险被移除的项，
+  // 若 worktree 里仍是 symlink，移除后用 git checkout 恢复真实目录。
+  for (const item of LEGACY_SHARED_AUTOPILOT_ITEMS) {
+    const dst = join(apDst, item);
+    let s = null;
+    try { s = lstatSync(dst); } catch { continue; }
+    if (s.isSymbolicLink()) {
+      log(`→ 旧版升级：.autopilot/${item} 从 symlink 改为真实目录`);
+      unlinkSync(dst);
+      try {
+        gitSilent('-C', worktreePath, 'checkout', 'HEAD', '--', `.autopilot/${item}`);
+        log(`   ✓ 已从 git 恢复 .autopilot/${item}（真实目录）`);
+      } catch (e) {
+        log(`   ⚠ git checkout 失败 (${e.message})；如需要请手动恢复 .autopilot/${item}`);
+      }
+    }
+  }
+
   // 共享项：替换为 symlink → 主仓库
   for (const item of SHARED_AUTOPILOT_ITEMS) {
     const src = join(apSrc, item);
     const dst = join(apDst, item);
     if (!existsSync(src)) continue; // main 没这一项就跳过
+
+    // 防御：如果 main 把这一项跟踪为「目录」，强行 symlink 会触发
+    // git "is beyond a symbolic link" 错误，导致 lint-staged stash 等失败。
+    // 此时跳过 symlink，让 git checkout 在 worktree 里正常拉出真实目录。
+    const trackedKind = isTrackedInMain(mainRoot, `.autopilot/${item}`);
+    if (trackedKind === 'dir') {
+      log(`   ⚠ .autopilot/${item} 在主仓库是 tracked 目录，跳过 symlink（git 不支持 tracked 路径穿过 symlink）`);
+      continue;
+    }
 
     let s = null;
     try { s = lstatSync(dst); } catch { /* not exists */ }
@@ -152,7 +207,11 @@ export function ensureSelectiveAutopilotLayout(mainRoot, worktreePath) {
       try {
         if (realpathSync(dst) !== realpathSync(src)) needsFix = true;
       } catch { needsFix = true; /* broken symlink */ }
-      if (!needsFix) continue;
+      if (!needsFix) {
+        // 即使 symlink 没变，仍尝试补打 skip-worktree（幂等）
+        if (trackedKind === 'file') applySkipWorktree(worktreePath, `.autopilot/${item}`);
+        continue;
+      }
       unlinkSync(dst);
     } else if (s) {
       // 真实文件/目录（来自分支 checkout）— 保护：内容一致才静默替换，否则 rename 到备份
@@ -184,6 +243,13 @@ export function ensureSelectiveAutopilotLayout(mainRoot, worktreePath) {
     }
     symlinkSync(src, dst);
     log(`   ✓ .autopilot/${item} → 主仓库`);
+
+    // tracked file 的 symlink 会被 git 视为 typechange — 用 skip-worktree 抑制
+    if (trackedKind === 'file') {
+      if (applySkipWorktree(worktreePath, `.autopilot/${item}`)) {
+        log(`     标记 skip-worktree（消除 typechange）`);
+      }
+    }
   }
 
   // sessions/ 必须是 worktree-local 真实目录
@@ -436,7 +502,8 @@ function remove() {
     unlinkSync(apDst);
     log('   ✓ 移除符号链接: .autopilot（旧版全量 symlink）');
   } else if (existsSync(apDst)) {
-    for (const item of SHARED_AUTOPILOT_ITEMS) {
+    // 清理当前 SHARED 项 + 旧版遗留项的 symlink
+    for (const item of [...SHARED_AUTOPILOT_ITEMS, ...LEGACY_SHARED_AUTOPILOT_ITEMS]) {
       const link = join(apDst, item);
       try {
         if (lstatSync(link).isSymbolicLink()) {
