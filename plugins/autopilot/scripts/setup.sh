@@ -75,8 +75,8 @@ autopilot — AI 自动驾驶工程套件
   /autopilot cancel                      取消并清理
 
 选项:
-  --deep                    深度设计模式（交互式 Q&A + 方案对比 + 规格审查）
-  --fast                    快速模式（1 个 Explore agent，编排器自审，smoke QA）
+  --deep                    已废弃（行为同默认）。旧版深度设计模式的兼容保留。
+  --fast                    快速模式（跳过 brainstorm 交互探索 + 简化审查，适用于明确小任务）
   --project                 强制项目模式（跳过复杂度检测）
   --single                  强制单任务模式（跳过复杂度检测）
   --max-iterations <n>      最大迭代次数 (默认: 30)
@@ -366,6 +366,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --deep)
+            echo "⚠️  --deep 已废弃，行为同默认。无需手动指定。" >&2
             PLAN_MODE_OVERRIDE="deep"
             shift
             ;;
@@ -492,9 +493,6 @@ if [[ -n "$BRIEF_FILE" ]]; then
 elif [[ "$MODE_OVERRIDE" == "project" ]]; then
     DISPLAY_GOAL="$GOAL"
     PHASE_FLOW="design → 复杂度检测 → 架构设计 → DAG 创建 → done"
-elif [[ "$PLAN_MODE_OVERRIDE" == "deep" ]]; then
-    DISPLAY_GOAL="$GOAL"
-    PHASE_FLOW="deep design（Q&A → 方案对比 → 规格审查）→ 审批 → implement → qa → 审批 → merge"
 elif [[ "$FAST_MODE_OVERRIDE" == "true" ]]; then
     DISPLAY_GOAL="$GOAL"
     PHASE_FLOW="design (fast) → 审批 → implement → qa (smoke) → merge"

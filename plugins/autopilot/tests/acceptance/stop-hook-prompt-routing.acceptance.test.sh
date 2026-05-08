@@ -98,18 +98,43 @@ if [[ "$detect_count" -lt 2 ]]; then
 fi
 pass "detect_smoke_eligible 在 stop-hook.sh 中有定义且被调用（出现 $detect_count 次）"
 
-# ── 断言 8：fast_mode 分支与 plan_mode 分支排序正确 ─────────────────────────
-# 设计文档: design 阶段优先级: auto_approve > plan_mode:"deep" > fast_mode > 其他
-# 验证 plan_mode 的行号 < fast_mode 的行号（plan_mode deep 分支应更早）
-plan_mode_line=$(grep -n 'PLAN_MODE.*==.*"deep"' "$STOP_HOOK" | head -1 | cut -d: -f1)
-if [[ -n "$plan_mode_line" ]] && [[ -n "$fast_mode_line" ]]; then
-    if [[ "$fast_mode_line" -le "$plan_mode_line" ]]; then
-        fail "fast_mode 分支（行 ${fast_mode_line}）应在 plan_mode 处理（行 ${plan_mode_line}）之后 — 优先级顺序违反设计"
-    fi
-    pass "fast_mode 分支行号($fast_mode_line) 在 plan_mode($plan_mode_line) 之后 — 优先级顺序正确"
-else
-    pass "plan_mode 引用未检测到或与 fast_mode 行号关系无法比较，跳过优先级顺序断言"
+# ── 断言 8：B' 方案验证 — 3 档决策树正向断言 ────────────────────────────────
+# 设计文档 B': design 阶段 3 档优先级: auto_approve > fast_mode > 默认（含 brainstorm）
+# (a) fast_mode 分支 PROMPT 含"跳过 brainstorm"语义
+fast_mode_prompt_line=$(grep -n 'FAST_MODE.*==.*"true"' "$STOP_HOOK" | head -1 | cut -d: -f1)
+if [[ -z "$fast_mode_prompt_line" ]]; then
+    fail "stop-hook.sh 中找不到 fast_mode=true 分支（B' 方案要求 fast_mode 为第 2 分支）"
 fi
+# 提取 fast_mode 分支附近内容（10 行范围）
+fast_mode_context=$(sed -n "$((fast_mode_prompt_line)),$((fast_mode_prompt_line + 10))p" "$STOP_HOOK")
+if ! echo "$fast_mode_context" | grep -qiE "跳过 brainstorm|brainstorm.*跳过|skip.*brainstorm"; then
+    fail "fast_mode 分支 PROMPT 未含"跳过 brainstorm"语义（B' 方案要求 fast_mode=true 跳过 brainstorm Q&A）"
+fi
+pass "fast_mode 分支 PROMPT 含"跳过 brainstorm"语义 — 正确"
+
+# (b) 默认（else）分支 PROMPT 含 brainstorm 和 AskUserQuestion 关键词
+# 找到 else 分支（design 阶段的最后 else）后提取其内容
+else_brainstorm=$(grep -A5 '# 默认含 brainstorm\|brainstorm.*探索流程\|brainstorm.*交互探索' "$STOP_HOOK" | head -20)
+if [[ -z "$else_brainstorm" ]]; then
+    fail "stop-hook.sh 默认（else）分支 PROMPT 未含 brainstorm 关键词（B' 方案要求默认触发 brainstorm）"
+fi
+pass "stop-hook.sh 默认（else）分支 PROMPT 含 brainstorm 关键词 — 正确"
+
+if ! grep -qE 'AskUserQuestion 逐个澄清|AskUserQuestion.*澄清' "$STOP_HOOK"; then
+    fail "stop-hook.sh 默认（else）分支 PROMPT 未含 AskUserQuestion 逐个澄清（B' 方案要求交互式 Q&A）"
+fi
+pass "stop-hook.sh 默认（else）分支 PROMPT 含 AskUserQuestion 逐个澄清 — 正确"
+
+# (c) PLAN_MODE 变量保留（兼容期 get_field 调用），但不再有独立分支
+plan_mode_branch=$(grep -n 'PLAN_MODE.*==.*"deep"' "$STOP_HOOK" | head -1 | cut -d: -f1)
+if [[ -n "$plan_mode_branch" ]]; then
+    fail "stop-hook.sh 中仍存在 PLAN_MODE==\"deep\" 独立分支（B' 方案要求删除该分支，plan_mode 用兼容期 fall-through）"
+fi
+plan_mode_var=$(grep -c 'PLAN_MODE=' "$STOP_HOOK" || true)
+if [[ "$plan_mode_var" -lt 1 ]]; then
+    fail "stop-hook.sh 中 PLAN_MODE 变量被完全删除（设计要求兼容期保留 get_field 调用）"
+fi
+pass "PLAN_MODE 变量保留（兼容期），但无独立 deep 分支 — 正确"
 
 echo "[OK ] R6 stop-hook-prompt-routing — 全部断言通过"
 exit 0

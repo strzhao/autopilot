@@ -55,8 +55,8 @@ if ! echo "$rules_section" | grep -q "fast_mode"; then
 fi
 pass "⚠️ 关键规则/决策树段落中包含 fast_mode 分支"
 
-# 断言 3：决策树 fast_mode 分支位于 auto_approve 与标准模式之间（行号顺序）
-# auto_approve 应在 fast_mode 之前出现（在 ⚠️ 块内）
+# 断言 3：决策树为 3 档（auto_approve / fast_mode / 默认），fast_mode 位于 auto_approve 之后
+# B' 方案：4 档 → 3 档，删除 plan_mode:deep 分支，fast_mode 升为第 2 优先级
 rules_auto_line=$(echo "$rules_section" | grep -n "auto_approve" | head -1 | cut -d: -f1)
 rules_fast_line=$(echo "$rules_section" | grep -n "fast_mode" | head -1 | cut -d: -f1)
 
@@ -64,22 +64,19 @@ if [[ -z "$rules_auto_line" ]]; then
     fail "⚠️ 关键规则块中未找到 auto_approve（设计决策树第 1 优先级应为 auto_approve: true）"
 fi
 if [[ -z "$rules_fast_line" ]]; then
-    fail "⚠️ 关键规则块中未找到 fast_mode（设计决策树第 3 优先级应为 fast_mode: true）"
+    fail "⚠️ 关键规则块中未找到 fast_mode（设计决策树第 2 优先级应为 fast_mode: true）"
 fi
 if [[ "$rules_fast_line" -le "$rules_auto_line" ]]; then
-    fail "决策树中 fast_mode 行($rules_fast_line) 应在 auto_approve 行($rules_auto_line) 之后（优先级 3 > 1）"
+    fail "决策树中 fast_mode 行($rules_fast_line) 应在 auto_approve 行($rules_auto_line) 之后（优先级 2 > 1）"
 fi
 pass "决策树优先级顺序：auto_approve(${rules_auto_line}) < fast_mode(${rules_fast_line}) — 正确"
 
-# 断言 4：决策树含 plan_mode deep 分支，且位于 auto_approve 后 fast_mode 前
-rules_plan_line=$(echo "$rules_section" | grep -n "plan_mode\|deep" | head -1 | cut -d: -f1)
-if [[ -z "$rules_plan_line" ]]; then
-    fail "⚠️ 关键规则块中未找到 plan_mode/deep（设计决策树第 2 优先级应为 plan_mode: deep）"
+# 断言 4：决策树为 3 档，不含 plan_mode:deep 独立分支（B' 方案已删除该分支）
+# plan_mode 相关词汇可能出现在兼容性说明中，但不应作为独立决策档位
+if echo "$rules_section" | grep -qE "^[0-9]+\. .*plan_mode.*deep|^\s+[0-9]+\. .*plan_mode.*deep"; then
+    fail "决策树中仍包含 plan_mode:deep 独立分支（B' 方案要求 4 档简化为 3 档，删除该分支）"
 fi
-if [[ "$rules_plan_line" -le "$rules_auto_line" ]] || [[ "$rules_plan_line" -ge "$rules_fast_line" ]]; then
-    fail "决策树优先级顺序违反：plan_mode(${rules_plan_line}) 应在 auto_approve(${rules_auto_line}) 之后、fast_mode(${rules_fast_line}) 之前"
-fi
-pass "决策树优先级顺序完整：auto_approve < plan_mode:deep < fast_mode — 正确"
+pass "决策树为 3 档（auto_approve / fast_mode / 默认），无 plan_mode:deep 独立分支 — 正确"
 
 # ═══════════════════════════════════════════════════════
 # 改动点 3-B：Fast Mode 快速路径子章节

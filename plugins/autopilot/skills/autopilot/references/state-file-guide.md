@@ -21,7 +21,7 @@
 **setup.sh 创建（AI 不修改）**：
 - `max_iterations`: 最大迭代次数（默认 30）
 - `max_retries`: auto-fix 最大重试次数（默认 3）
-- `plan_mode`: 交互探索模式（""/"deep"），由 `--deep` flag 设置。deep 时触发交互式 Q&A 流程
+- `plan_mode`: **已弃用**，新代码不读。旧值 `"deep"` 兼容期保留（行为同默认 `""`，均触发 brainstorm 探索流程）。真正的开关是 `fast_mode`
 - `brief_file`: 项目子任务简报文件路径（项目模式自动设置）
 - `task_dir`: 需求管理文件夹路径
 - `session_id`: 会话 ID

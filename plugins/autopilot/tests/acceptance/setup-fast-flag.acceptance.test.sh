@@ -90,5 +90,24 @@ if [[ $status_has_fast -eq 0 ]]; then
 fi
 pass "fast_mode 字段在 setup.sh/stop-hook.sh 中有相关处理（可被 status 输出使用）"
 
+# ── 断言 7（B' 扩展）：fast_mode=true 时 stop-hook PROMPT 含"跳过 brainstorm"语义 ──
+# 设计文档 B': fast_mode=true → 跳过 brainstorm Q&A + 砍 sub-agent 审查
+# 验证 stop-hook.sh 中 fast_mode 分支的 PROMPT 含"跳过 brainstorm"文字
+STOP_HOOK="$REPO_ROOT/plugins/autopilot/scripts/stop-hook.sh"
+if [[ ! -f "$STOP_HOOK" ]]; then
+    fail "stop-hook.sh 不存在: $STOP_HOOK"
+fi
+
+fast_mode_branch_line=$(grep -n 'FAST_MODE.*==.*"true"' "$STOP_HOOK" | head -1 | cut -d: -f1)
+if [[ -z "$fast_mode_branch_line" ]]; then
+    fail "stop-hook.sh 中找不到 FAST_MODE==\"true\" 分支（B' 方案要求 fast_mode 为第 2 档）"
+fi
+
+fast_prompt_context=$(sed -n "$((fast_mode_branch_line)),$((fast_mode_branch_line + 10))p" "$STOP_HOOK")
+if ! echo "$fast_prompt_context" | grep -qiE "跳过 brainstorm|brainstorm.*跳过|skip.*brainstorm"; then
+    fail "stop-hook.sh fast_mode 分支 PROMPT 缺少"跳过 brainstorm"语义（B' 方案要求 fast_mode=true 跳过 brainstorm 交互探索）"
+fi
+pass "stop-hook.sh fast_mode 分支 PROMPT 含"跳过 brainstorm"语义（B' 方案验证通过）"
+
 echo "[OK ] R4 setup-fast-flag — 全部断言通过"
 exit 0

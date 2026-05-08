@@ -640,10 +640,10 @@ started_at: "2026-01-01T00:00:00Z"
       assert.ok(content.includes('task_dir: ""'), 'frontmatter docs should include task_dir field');
     });
 
-    it('has deep design mode section', () => {
+    it('has standard design mode section with brainstorm', () => {
       const content = fs.readFileSync(SKILL_MD, 'utf8');
-      assert.ok(content.includes('Deep Design'), 'SKILL.md should have Deep Design section');
-      assert.ok(content.includes('deep-design-guide.md'), 'should reference deep design guide');
+      assert.ok(content.includes('brainstorm'), 'SKILL.md should have brainstorm section');
+      assert.ok(content.includes('brainstorm-guide.md'), 'should reference brainstorm guide');
       assert.ok(content.includes('visual-companion-guide.md'), 'should reference visual companion guide');
     });
 

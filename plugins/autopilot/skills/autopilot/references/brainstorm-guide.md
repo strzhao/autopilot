@@ -1,8 +1,8 @@
-# Deep Design 工作流指南
+# Brainstorm 工作流指南
 
-Deep Design 模式通过交互式需求探索，在写设计文档前充分理解用户意图。
+Brainstorm 模式通过交互式需求探索，在写设计文档前充分理解用户意图。
 
-**触发条件**：frontmatter `plan_mode: "deep"` 或步骤 1 用户选择深度设计。
+**触发条件**：默认触发，`--fast` flag 跳过。
 
 ---
 
