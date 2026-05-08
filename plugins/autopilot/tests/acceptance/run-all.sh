@@ -8,6 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 固定执行顺序：R1 (compress) → R2 (qa-reviewer-prompt) → R3 (skill-references)
 #               → R4 (setup-fast-flag) → R5 (detect-smoke-eligible)
 #               → R6 (stop-hook-prompt-routing) → R7 (skill-fast-mode-doc) → R8 (version-sync)
+#               → R9 (brainstorm-default) → R10 (plan-review-html)
 ORDERED_TESTS=(
     "compress-qa-report.acceptance.test.sh"
     "qa-reviewer-prompt.acceptance.test.sh"
@@ -17,6 +18,8 @@ ORDERED_TESTS=(
     "stop-hook-prompt-routing.acceptance.test.sh"
     "skill-fast-mode-doc.acceptance.test.sh"
     "version-sync.acceptance.test.sh"
+    "brainstorm-default.acceptance.test.sh"
+    "plan-review-html.acceptance.test.sh"
 )
 
 total=0

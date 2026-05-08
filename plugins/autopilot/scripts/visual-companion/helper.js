@@ -37,10 +37,12 @@
     const target = e.target.closest('[data-choice]');
     if (!target) return;
 
+    const feedbackEl = document.getElementById('feedback');
     sendEvent({
       type: 'click',
       text: target.textContent.trim(),
       choice: target.dataset.choice,
+      feedback: feedbackEl ? feedbackEl.value : '',
       id: target.id || null
     });
 

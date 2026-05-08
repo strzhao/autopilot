@@ -1,5 +1,7 @@
 # autopilot — AI 自动驾驶工程套件
 
+> **v3.22.0**：design 阶段步骤 4「请求审批」新增可选 HTML 浏览器评审路径（复用 visual-companion，0 runtime 依赖；内嵌 marked.min.js 提供原生 markdown 渲染——标题/列表/表格/代码块）。环境变量 `AUTOPILOT_HTML_REVIEW=1` 或 frontmatter `html_review: true` 开启，默认仍走 AskUserQuestion + preview，preview 末尾含开启提示。
+>
 > **v3.17.1**：修复 stop-hook 在 implement 阶段对后台 sub-agent 无感知导致主 agent 反复无效唤醒的 bug（解析 transcript_path 检测主线程 pending Agent，仅 implement 阶段静默放行）。
 >
 > **v3.17.0**：新增 `--fast` 快速模式（design 阶段 1 个 Explore agent + 编排器自审，QA 阶段 smoke 模式，自动检测小 diff 降级）。

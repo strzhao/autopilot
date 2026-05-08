@@ -13,6 +13,8 @@
 - `next_task`: 下一个就绪任务 ID（项目模式 merge 阶段写入，触发 auto-chain）
 - `knowledge_extracted`: 知识提取完成标记，AI 在 merge 阶段设为 `"true"`（有新增）或 `"skipped"`（无新增）。stop-hook 的 phase=done 守卫检查此字段，缺失或空值会回滚到 merge
 
+- `html_review`: 可选布尔值（默认 false）。设为 `true` 时，design 阶段步骤 4 启用 HTML 浏览器评审路径（自动打开浏览器渲染设计文档 + 反馈输入 + 通过/修改/放弃按钮），优先级高于环境变量 `AUTOPILOT_HTML_REVIEW=1`。不设置或为 false 时走默认 AskUserQuestion + preview 路径。
+
 **stop-hook 管理（AI 只读）**：
 - `iteration`: 当前迭代次数，stop-hook 自动递增
 - `auto_approve`: auto-chain 时为 true，失败回退为 false

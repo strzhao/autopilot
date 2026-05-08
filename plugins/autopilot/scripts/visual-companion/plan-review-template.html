@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Autopilot Plan Review</title>
+  <style>
+    /*
+     * AUTOPILOT PLAN REVIEW TEMPLATE
+     *
+     * v3.22+ — markdown 渲染版（marked.min.js 内嵌）
+     * - Design document 用 marked.js 渲染（标题/列表/表格/代码块/链接）
+     * - Feedback textarea
+     * - Three action buttons: approve / revise / abort
+     * - OS-aware light/dark theming
+     */
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+
+    /* ===== THEME VARIABLES ===== */
+    :root {
+      --bg-primary: #f5f5f7;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #e5e5e7;
+      --bg-code: #f0f0f3;
+      --border: #d1d1d6;
+      --text-primary: #1d1d1f;
+      --text-secondary: #86868b;
+      --text-tertiary: #aeaeb2;
+      --accent: #0071e3;
+      --accent-hover: #0077ed;
+      --success: #34c759;
+      --warning: #ff9f0a;
+      --error: #ff3b30;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1d1d1f;
+        --bg-secondary: #2d2d2f;
+        --bg-tertiary: #3d3d3f;
+        --bg-code: #242427;
+        --border: #424245;
+        --text-primary: #f5f5f7;
+        --text-secondary: #86868b;
+        --text-tertiary: #636366;
+        --accent: #0a84ff;
+        --accent-hover: #409cff;
+      }
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+    }
+
+    /* ===== FRAME ===== */
+    .header {
+      background: var(--bg-secondary);
+      padding: 0.5rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .header h1 { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+    .header .status { font-size: 0.7rem; color: var(--success); display: flex; align-items: center; gap: 0.4rem; }
+    .header .status::before { content: ''; width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+
+    .main { flex: 1; overflow-y: auto; }
+    .content-area { padding: 1.5rem 2rem; max-width: 980px; margin: 0 auto; }
+
+    /* ===== DESIGN DOCUMENT ===== */
+    .design-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+    .design-section-header {
+      background: var(--bg-tertiary);
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+    }
+    #design-content {
+      padding: 1.5rem 2rem;
+      font-size: 0.92rem;
+      line-height: 1.65;
+      color: var(--text-primary);
+      overflow-x: auto;
+    }
+
+    /* ===== MARKDOWN STYLING ===== */
+    #design-content h1,
+    #design-content h2,
+    #design-content h3,
+    #design-content h4,
+    #design-content h5,
+    #design-content h6 {
+      margin-top: 1.5rem;
+      margin-bottom: 0.6rem;
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--text-primary);
+    }
+    #design-content h1:first-child,
+    #design-content h2:first-child,
+    #design-content h3:first-child { margin-top: 0; }
+    #design-content h1 { font-size: 1.5rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+    #design-content h2 { font-size: 1.25rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border); }
+    #design-content h3 { font-size: 1.05rem; }
+    #design-content h4 { font-size: 0.95rem; }
+    #design-content p { margin: 0.6rem 0; }
+    #design-content ul,
+    #design-content ol { margin: 0.6rem 0 0.6rem 1.6rem; }
+    #design-content li { margin-bottom: 0.25rem; }
+    #design-content li > ul,
+    #design-content li > ol { margin-top: 0.25rem; margin-bottom: 0.25rem; }
+    #design-content blockquote {
+      margin: 0.8rem 0;
+      padding: 0.5rem 1rem;
+      border-left: 3px solid var(--accent);
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border-radius: 0 6px 6px 0;
+    }
+    #design-content code {
+      font-family: ui-monospace, 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+      font-size: 0.85em;
+      background: var(--bg-code);
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      color: var(--text-primary);
+    }
+    #design-content pre {
+      margin: 0.8rem 0;
+      padding: 0.9rem 1.1rem;
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: ui-monospace, 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+      font-size: 0.82rem;
+      line-height: 1.55;
+    }
+    #design-content pre code {
+      background: transparent;
+      padding: 0;
+      border-radius: 0;
+      font-size: inherit;
+    }
+    #design-content table {
+      border-collapse: collapse;
+      margin: 0.8rem 0;
+      width: 100%;
+      font-size: 0.88rem;
+    }
+    #design-content th,
+    #design-content td {
+      border: 1px solid var(--border);
+      padding: 0.4rem 0.7rem;
+      text-align: left;
+    }
+    #design-content th {
+      background: var(--bg-tertiary);
+      font-weight: 600;
+    }
+    #design-content tr:nth-child(even) td { background: var(--bg-tertiary); }
+    #design-content a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    #design-content a:hover { text-decoration: underline; }
+    #design-content hr {
+      border: 0;
+      border-top: 1px solid var(--border);
+      margin: 1rem 0;
+    }
+    #design-content strong { font-weight: 600; }
+    #design-content em { font-style: italic; }
+
+    /* ===== FEEDBACK ===== */
+    .feedback-section { margin-bottom: 1.25rem; }
+    .feedback-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+    #feedback {
+      width: 100%;
+      min-height: 80px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      resize: vertical;
+      transition: border-color 0.15s ease;
+      outline: none;
+    }
+    #feedback:focus { border-color: var(--accent); }
+    #feedback::placeholder { color: var(--text-tertiary); }
+
+    /* ===== ACTIONS ===== */
+    .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    button[data-choice] {
+      padding: 0.6rem 1.25rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    button[data-choice="approve"] { background: var(--success); color: #fff; }
+    button[data-choice="approve"]:hover { opacity: 0.85; }
+    button[data-choice="revise"] { background: var(--warning); color: #fff; }
+    button[data-choice="revise"]:hover { opacity: 0.85; }
+    button[data-choice="abort"] {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    button[data-choice="abort"]:hover { border-color: var(--error); color: var(--error); }
+
+    /* ===== INDICATOR ===== */
+    .indicator-bar {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      padding: 0.5rem 1.5rem;
+      flex-shrink: 0;
+      text-align: center;
+    }
+    .indicator-bar span { font-size: 0.75rem; color: var(--text-secondary); }
+    .indicator-bar .selected-text { color: var(--accent); font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Autopilot — 设计方案审批</h1>
+    <div class="status">等待审批</div>
+  </div>
+
+  <div class="main">
+    <div class="content-area">
+
+      <!-- Raw markdown 容器（隐藏，由 launch-plan-review.sh 替换占位）-->
+      <div id="design-content-raw" hidden>{{DESIGN_CONTENT}}</div>
+
+      <!-- 渲染后的设计文档 -->
+      <div class="design-section">
+        <div class="design-section-header">设计文档 &amp; 实现计划</div>
+        <div id="design-content"></div>
+      </div>
+
+      <!-- 反馈 -->
+      <div class="feedback-section">
+        <div class="feedback-label">修改意见（可选）</div>
+        <textarea id="feedback" placeholder="（可选）写下修改意见或评论，选择「修改」时会回传给 Claude"></textarea>
+      </div>
+
+      <!-- 按钮 -->
+      <div class="actions">
+        <button data-choice="approve">通过</button>
+        <button data-choice="revise">有修改意见</button>
+        <button data-choice="abort">放弃任务</button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="indicator-bar">
+    <span id="indicator-text">请阅读设计文档，然后点击上方按钮作出决策</span>
+  </div>
+
+  <!-- marked.min.js（由 launch-plan-review.sh 内嵌注入）-->
+  <script>{{MARKED_LIB}}</script>
+  <script>
+    (function () {
+      var rawEl = document.getElementById('design-content-raw');
+      var renderEl = document.getElementById('design-content');
+      var raw = rawEl ? rawEl.textContent : '';
+      try {
+        if (typeof marked !== 'undefined' && raw) {
+          renderEl.innerHTML = marked.parse(raw);
+        } else {
+          // marked 加载失败 → fallback 到 pre 文本
+          var pre = document.createElement('pre');
+          pre.textContent = raw;
+          pre.style.whiteSpace = 'pre-wrap';
+          pre.style.fontFamily = 'ui-monospace, monospace';
+          renderEl.appendChild(pre);
+        }
+      } catch (e) {
+        renderEl.textContent = raw;
+      }
+    })();
+  </script>
+
+</body>
+</html>
