@@ -1,0 +1,76 @@
+.claude-plugin/marketplace.json
+  971ed437f1354eb2 32
+CLAUDE.md
+  971ed437f1354eb2 14
+plugins/autopilot/.claude-plugin/plugin.json
+  971ed437f1354eb2 3-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.7",
+  "base_commit_sha": "34be8176a97d7db789e8ec27ce75f1da9590e2cf",
+  "prompts": {
+    "971ed437f1354eb2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa080700-a311-4897-b18e-f378a0f462ab",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 5,
+      "accepted_lines": 35,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        ".claude-plugin/marketplace.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "claude.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 13
+        },
+        "plugins/autopilot/.claude-plugin/plugin.json": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 2
+        },
+        "CLAUDE.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/skills/autopilot/skill.md": {
+          "accepted_lines": 18
+        }
+      }
+    },
+    "a44b215e914d6d09": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "02440ece-460f-41c7-b34a-521adbf39e53",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 715,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "plugins/autopilot/skills/autopilot-project/skill.md": {
+          "accepted_lines": 102
+        },
+        "claude.md": {
+          "accepted_lines": 49
+        },
+        "plugins/autopilot/skills/autopilot/skill.md": {
+          "accepted_lines": 564
+        }
+      }
+    }
+  }
+}
