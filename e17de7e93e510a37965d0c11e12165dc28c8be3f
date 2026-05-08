@@ -1,0 +1,68 @@
+CLAUDE.md
+  8c6963b79b71a0e7 14
+plugins/autopilot/.claude-plugin/plugin.json
+  8c6963b79b71a0e7 3
+.claude-plugin/marketplace.json
+  8c6963b79b71a0e7 32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.7",
+  "base_commit_sha": "e17de7e93e510a37965d0c11e12165dc28c8be3f",
+  "prompts": {
+    "8c6963b79b71a0e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d73eaf6c-a974-49cd-9c77-5ff07b294bdb",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 3,
+      "accepted_lines": 3,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "plugins/autopilot/.claude-plugin/plugin.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "CLAUDE.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        ".claude-plugin/marketplace.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        }
+      }
+    },
+    "a44b215e914d6d09": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "02440ece-460f-41c7-b34a-521adbf39e53",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 736,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "plugins/autopilot/skills/autopilot-project/skill.md": {
+          "accepted_lines": 102
+        },
+        "claude.md": {
+          "accepted_lines": 49
+        },
+        "plugins/autopilot/skills/autopilot/skill.md": {
+          "accepted_lines": 585
+        }
+      }
+    }
+  }
+}
