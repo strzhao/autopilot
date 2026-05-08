@@ -1,0 +1,94 @@
+plugins/autopilot/tests/acceptance/skill-fast-mode-doc.acceptance.test.sh
+  971ed437f1354eb2 8,106-108,110,112-114,116
+plugins/autopilot/skills/autopilot/references/deep-design-guide.md
+  971ed437f1354eb2 3,5,9,11,17,35,50,57,59,71,73,77,79
+plugins/autopilot/skills/autopilot/SKILL.md
+  971ed437f1354eb2 52,59,62,66-67,69,73,75,77,81,85,92,102,107,113,116,118,120,122,124,126,128,130,133,140,142,145-146,150,159-164,166-168,172,174,177
+plugins/autopilot/skills/autopilot/references/phase-checklists.md
+  971ed437f1354eb2 7-8,10-11
+plugins/autopilot/skills/autopilot/references/state-file-guide.md
+  971ed437f1354eb2 24,30,32
+plugins/autopilot/scripts/stop-hook.sh
+  971ed437f1354eb2 496,502,504,506,508
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.7",
+  "base_commit_sha": "9c770a88d44e395d1f75144e22d4167a39ba81a7",
+  "prompts": {
+    "971ed437f1354eb2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa080700-a311-4897-b18e-f378a0f462ab",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 118,
+      "total_deletions": 166,
+      "accepted_lines": 126,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "plugins/autopilot/scripts/stop-hook.sh": {
+          "additions": 5,
+          "deletions": 5,
+          "accepted_lines": 5
+        },
+        "plugins/autopilot/skills/autopilot/references/deep-design-guide.md": {
+          "additions": 13,
+          "deletions": 36,
+          "accepted_lines": 13
+        },
+        "plugins/autopilot/skills/autopilot/references/phase-checklists.md": {
+          "additions": 4,
+          "deletions": 5,
+          "accepted_lines": 4
+        },
+        "plugins/autopilot/skills/autopilot/references/state-file-guide.md": {
+          "additions": 3,
+          "deletions": 3,
+          "accepted_lines": 3
+        },
+        "plugins/autopilot/skills/autopilot/skill.md": {
+          "additions": 42,
+          "deletions": 54,
+          "accepted_lines": 50
+        },
+        "plugins/autopilot/tests/acceptance/skill-fast-mode-doc.acceptance.test.sh": {
+          "additions": 9,
+          "deletions": 9,
+          "accepted_lines": 9
+        },
+        "plugins/autopilot/skills/autopilot/SKILL.md": {
+          "additions": 42,
+          "deletions": 54,
+          "accepted_lines": 42
+        }
+      }
+    },
+    "a44b215e914d6d09": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "02440ece-460f-41c7-b34a-521adbf39e53",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 683,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "claude.md": {
+          "accepted_lines": 49
+        },
+        "plugins/autopilot/skills/autopilot/skill.md": {
+          "accepted_lines": 532
+        },
+        "plugins/autopilot/skills/autopilot-project/skill.md": {
+          "accepted_lines": 102
+        }
+      }
+    }
+  }
+}
