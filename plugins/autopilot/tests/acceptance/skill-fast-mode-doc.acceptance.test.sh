@@ -5,7 +5,7 @@
 #
 # 设计文档要求：
 #   改动点 3：SKILL.md design ⚠️ 关键规则块决策树前 3 位含 fast_mode 分支（优先级 3）
-#   改动点 3：新增 ### Fast Mode 快速路径 子章节，含 EnterPlanMode/ExitPlanMode/1个Explore agent/
+#   改动点 3：新增 ### Fast Mode 快速路径 子章节，含 AskUserQuestion审批/1个Explore agent/
 #             不启动 scenario-generator/编排器自审/不启动 plan-reviewer
 #   改动点 4：qa 阶段 qa_scope:smoke 分支：只跑 Wave 1 + Wave 1.5，
 #             不启动 qa-reviewer Agent，编排器 inline 自审
@@ -103,17 +103,17 @@ if [[ -z "$fast_section" ]]; then
     fail "无法提取 Fast Mode 快速路径子章节内容"
 fi
 
-# 断言 6：Fast Mode 子章节含 EnterPlanMode
-if ! echo "$fast_section" | grep -qiE "EnterPlanMode|enter.*plan.*mode"; then
-    fail "Fast Mode 子章节缺少 EnterPlanMode 步骤（设计要求步骤 1：EnterPlanMode）"
+# 断言 6：Fast Mode 子章节含 AskUserQuestion 审批
+if ! echo "$fast_section" | grep -qiE "AskUserQuestion|审批"; then
+    fail "Fast Mode 子章节缺少 AskUserQuestion 审批步骤（设计要求使用 AskUserQuestion 请求用户审批）"
 fi
-pass "Fast Mode 子章节包含 EnterPlanMode"
+pass "Fast Mode 子章节包含 AskUserQuestion 审批"
 
-# 断言 7：Fast Mode 子章节含 ExitPlanMode
-if ! echo "$fast_section" | grep -qiE "ExitPlanMode|exit.*plan.*mode"; then
-    fail "Fast Mode 子章节缺少 ExitPlanMode 步骤（设计要求步骤 5：ExitPlanMode）"
+# 断言 7：Fast Mode 子章节含自审描述（不使用 Plan Mode）
+if ! echo "$fast_section" | grep -qiE "自审|self.review"; then
+    fail "Fast Mode 子章节缺少自审描述（设计要求编排器自审后 AskUserQuestion 审批）"
 fi
-pass "Fast Mode 子章节包含 ExitPlanMode"
+pass "Fast Mode 子章节包含自审描述"
 
 # 断言 8：Fast Mode 子章节含 1 个 Explore agent 的描述
 if ! echo "$fast_section" | grep -qiE "Explore.*[Aa]gent|1.*[Ee]xplore|[Ee]xplore"; then

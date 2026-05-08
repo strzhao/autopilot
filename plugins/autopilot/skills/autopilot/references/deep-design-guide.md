@@ -1,22 +1,20 @@
 # Deep Design 工作流指南
 
-Deep Design 模式通过交互式需求探索（改编自 brainstorming skill），在进入 Plan Mode 前充分理解用户意图。
+Deep Design 模式通过交互式需求探索，在写设计文档前充分理解用户意图。
 
-**触发条件**：frontmatter `plan_mode: "deep"` 或步骤 1.5 用户选择深度设计。
+**触发条件**：frontmatter `plan_mode: "deep"` 或步骤 1 用户选择深度设计。
 
 ---
 
-## 阶段 A — Pre-Plan-Mode 交互探索
+## 单流程工作流
 
-在 Plan Mode 外执行，允许使用 Write/Bash 等工具。
-
-### A1. 探索项目上下文
+### 1. 探索项目上下文
 
 - 使用 1-2 个 Explore agent 分析代码库
 - 检查文件、文档、近期 commit
 - 如目标涉及多个独立子系统，立即标记（可能需要项目模式拆分）
 
-### A2. 视觉伴侣征求（可选）
+### 2. 视觉伴侣征求（可选）
 
 评估后续问题是否涉及视觉内容（UI mockup、架构图、布局对比），如果是：
 
@@ -34,7 +32,7 @@ Deep Design 模式通过交互式需求探索（改编自 brainstorming skill）
 - **用浏览器**：UI mockup、架构图、布局对比、设计风格对比
 - **用终端**：需求问题、概念选择、权衡列表、技术决策
 
-### A3. 逐个澄清问题
+### 3. 逐个澄清问题
 
 核心原则：
 - **一次一个问题**，不要一次问多个
@@ -49,26 +47,16 @@ Deep Design 模式通过交互式需求探索（改编自 brainstorming skill）
 
 每轮 Q&A 结果追加到 `$TASK_DIR/brainstorm.md`。
 
-### A4. 提出 2-3 种方案
+### 4. 提出 2-3 种方案
 
 - 准备 2-3 种方案，每种包含权衡分析
 - **先展示推荐方案**，解释推荐理由
 - 使用 AskUserQuestion 让用户选择
 - 记录选择和理由到 `$TASK_DIR/brainstorm.md`
 
-### A5. 过渡到 Plan Mode
+### 5. 写设计文档
 
-交互探索完成后：
-1. 将收集到的需求、约束、方案选择整理为上下文摘要
-2. 调用 `EnterPlanMode` 进入正式设计阶段
-
----
-
-## 阶段 B — Plan Mode 正式设计
-
-### B1. 写设计文档
-
-基于阶段 A 收集的完整上下文，在 plan file 中写入设计文档。模板同标准模式，但增加：
+基于收集的完整上下文，将设计文档写入状态文件 `## 设计文档` 和 `## 实现计划` 区域。模板同标准模式，但增加：
 
 ```markdown
 ## 需求探索摘要
@@ -80,26 +68,15 @@ Deep Design 模式通过交互式需求探索（改编自 brainstorming skill）
 - 被排除方案及原因：...
 ```
 
-### B2. 规格自审
+### 6. Plan Reviewer + Spec Reviewer
 
-写完设计文档后，用"新鲜眼光"检查：
-
-1. **占位符扫描**：是否有 "TBD"、"TODO"、不完整的部分？修复。
-2. **内部一致性**：各节是否相互矛盾？架构是否与功能描述匹配？
-3. **范围检查**：是否聚焦到足以支撑单个实现计划？
-4. **歧义检查**：是否有需求可被两种方式理解？明确选一种。
-
-发现问题直接内联修复，无需重新审查。
-
-### B3. Plan Reviewer + Spec Reviewer
-
-1. 启动 Plan Reviewer agent（同标准模式，参见 `references/plan-reviewer-prompt.md`）
+1. 启动 Plan Reviewer agent（参见 `references/plan-reviewer-prompt.md`）
 2. 启动 Spec Reviewer agent（参见 `references/spec-reviewer-prompt.md`），验证规格完整性
 3. 两个 reviewer 可并行启动
 
-### B4. ExitPlanMode
+### 7. AskUserQuestion 审批
 
-调用 ExitPlanMode，用户审阅设计方案。
+使用 AskUserQuestion 请求审批（同 SKILL.md 步骤 4）。
 
 ---
 

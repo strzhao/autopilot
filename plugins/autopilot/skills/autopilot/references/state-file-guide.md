@@ -21,15 +21,15 @@
 **setup.sh 创建（AI 不修改）**：
 - `max_iterations`: 最大迭代次数（默认 30）
 - `max_retries`: auto-fix 最大重试次数（默认 3）
-- `plan_mode`: 设计模式（""/"deep"），由 `--deep` flag 设置
+- `plan_mode`: 交互探索模式（""/"deep"），由 `--deep` flag 设置。deep 时触发交互式 Q&A 流程
 - `brief_file`: 项目子任务简报文件路径（项目模式自动设置）
 - `task_dir`: 需求管理文件夹路径
 - `session_id`: 会话 ID
 - `started_at`: 启动时间戳（ISO 8601）
 
-## 项目模式 Plan 模板
+## 项目模式设计模板
 
-项目模式（`--project` flag 或 step 1.5 检测）时，Plan Mode 中将以下内容写入计划文件，替代标准单任务 plan 模板：
+项目模式（`--project` flag 或 step 1 检测）时，将以下内容写入状态文件 `## 设计文档` 区域：
 
 ```markdown
 ## Context
