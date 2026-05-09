@@ -37,6 +37,31 @@
 4. 高信心 + 有就绪任务 → Edit frontmatter `next_task: "<task-id>"`
 5. 低信心或无就绪任务 → 保持 `next_task: ""`
 
+## 2.5. CI 验证（条件触发）
+
+commit 完成后，如果当前 commit 已被 push 到远端且远端配置了 GitHub Actions，必须等待 CI 结论。
+
+### 触发条件（全部满足才执行）
+1. 项目根目录存在 `.github/workflows/*.yml`（`ls .github/workflows/*.yml 2>/dev/null` 非空）
+2. `gh` CLI 可用（`command -v gh` 成功）
+3. 远端能查到本次 commit 触发的 CI run（`gh run list --branch "$(git rev-parse --abbrev-ref HEAD)" --limit 5 --json databaseId,headSha,status` 中存在 headSha 等于本次 HEAD 的 run）
+
+### 执行流程
+1. 找到本次 commit 对应的 run id
+2. `gh run watch <run-id> --exit-status`，超时 600s
+3. CI 通过（exit 0）→ 追加变更日志"CI 通过：<run-url>"，继续步骤 3
+4. CI 失败（exit ≠ 0）→ 设置 frontmatter `phase: "auto-fix"` 和 `qa_scope: "selective"`，`retry_count` 不变（CI 失败属于新一轮 QA 不计入 auto-fix retry），追加变更日志"CI 失败：<run-url> + 失败 job 摘要"
+
+### 降级（任何一项不满足即跳过，不阻塞）
+- `.github/workflows` 不存在 → 静默跳过
+- gh CLI 未安装 → 变更日志记录"gh CLI 不可用，跳过 CI 验证"
+- gh run list 找不到对应 run（commit 未被 push 或 CI 未触发）→ 变更日志记录"未找到对应 CI run，commit 可能未推送，跳过"
+- gh run watch 超时（600s）→ 变更日志记录"CI 仍在跑，请手动 gh run view <id> 检查"，不阻塞 phase 推进
+- 本步骤抛任何异常 → 视同降级跳过，不影响 merge 完成
+
+### 与默认行为的关系
+**不改变 autopilot 默认 commit-only 行为**。本步骤不发起 push，仅在 commit 已被 push 的场景下检测 CI。这与全局 CLAUDE.md "git push 后如果当前工程有 cicd, 那么要主动观察 cicd 的结论"一致。
+
 ## 3. 知识提取与沉淀
 
 commit Agent 完成后，回顾本次全流程产出，提取值得持久化的知识。

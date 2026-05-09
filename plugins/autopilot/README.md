@@ -1,5 +1,7 @@
 # autopilot — AI 自动驾驶工程套件
 
+> **v3.23.0**：基于 relight 项目回归案例（c3648c2 删除字段映射 + 路由，CI 红但流程过）加固 TDD 质量。4 处铁律改动：(1) red-team-prompt 加测试质量铁律段，禁止 `if (status === expected) {assert} else {warn}` 等宽容跳过模式；(2) merge-phase 新增 2.5 CI 验证步骤，commit 后已 push 时通过 gh run watch 等 CI 结论，CI 失败回 auto-fix（不改变 commit-only 默认行为）；(3) qa-reviewer 加 Section C 红队测试质量审查；(4) anti-rationalization 加红队 Agent 视角反模式段。
+>
 > **v3.22.1**：修复 stop-hook 对 `run_in_background=true` 的 Agent 无法识别的 bug — async tool_result 启动瞬间就回流，原 sync 检测误判完成。新增 async pending 检测路径（toolUseResult.isAsync + queue-operation 完成事件比对），与 sync 检测合并判定。
 >
 > **v3.22.0**：design 阶段步骤 4「请求审批」新增可选 HTML 浏览器评审路径（复用 visual-companion，0 runtime 依赖；内嵌 marked.min.js 提供原生 markdown 渲染——标题/列表/表格/代码块）。环境变量 `AUTOPILOT_HTML_REVIEW=1` 或 frontmatter `html_review: true` 开启，默认仍走 AskUserQuestion + preview，preview 末尾含开启提示。
