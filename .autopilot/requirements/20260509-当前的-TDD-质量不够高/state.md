@@ -1,8 +1,8 @@
 ---
 active: true
-phase: "merge"
+phase: "done"
 gate: ""
-iteration: 1
+iteration: 2
 max_iterations: 30
 max_retries: 3
 retry_count: 0
@@ -12,7 +12,7 @@ fast_mode: false
 brief_file: ""
 next_task: ""
 auto_approve: false
-knowledge_extracted: ""
+knowledge_extracted: "true"
 task_dir: "/Users/stringzhao/workspace/string-claude-code-plugin/.autopilot/requirements/20260509-当前的-TDD-质量不够高"
 session_id: a75cf4d7-508d-45e9-8f2b-28a79d7f5908
 started_at: "2026-05-09T14:38:40Z"
@@ -473,3 +473,8 @@ version-sync 还另有 1 个失败：要求 README.md 顶部 30 行内有 v3.23.
 - [2026-05-09T16:15:00Z] qa Wave 1 完成（Tier 0 红队 29/29 / 红队铁律自检 ✅ / bash acceptance 7/10 → selective auto-fix 同步硬编码版本号 + README 后 10/10 ✅ / mjs 48 fail 全部历史遗留与本次无关）
 - [2026-05-09T16:25:00Z] qa Wave 1.5 完成（10 个场景全部 ✅，含 dogfooding：场景 6 通过 Wave 2 qa-reviewer 实跑验证 console.warn 字面量识别）
 - [2026-05-09T16:30:00Z] qa Wave 2 qa-reviewer Agent 完成（A 5/5 / B 97 分 0 critical / C 0 BLOCKER） → gate: review-accept
+- [2026-05-09T16:35:00Z] 用户审批通过 → phase: merge
+- [2026-05-09T16:38:00Z] merge step 1: commit-agent 完成，commit 2f03459 "feat(autopilot): 加固 TDD 质量铁律，新增 merge CI 验证步骤，升级至 v3.23.0"，15 个文件
+- [2026-05-09T16:40:00Z] merge step 2.5 dogfooding: 触发条件 1+2 ✓ / 条件 3 ✗（gh run list 中 HEAD 2f03459 未匹配，本地 commit 未推送）→ 按设计降级跳过，不阻塞 merge。**自验证：本次新增的 2.5 步骤降级逻辑在真实场景中正确触发**
+- [2026-05-09T16:45:00Z] merge step 3 知识提取：1 decision（"最小集 + 纯追加 + 可独立回滚"）+ 1 pattern（acceptance test TARGET_VERSION 是版本同步盲区），独立 commit f49ae50
+- [2026-05-09T16:46:00Z] merge step 4-5: 完成报告输出 + frontmatter phase: done
