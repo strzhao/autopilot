@@ -1,5 +1,17 @@
 # Patterns & Lessons
 
+### [2026-05-09] 主对话需等待外部 UI 操作时，前台同步 Bash + 长 timeout 优于 run_in_background
+<!-- tags: autopilot, claude-code, bash-tool, run-in-background, ux, html-review, blocking-call -->
+**Scenario**: 涉及"用户在外部界面（浏览器/外部 GUI）操作 → 触发本地脚本完成 → Claude 主对话基于脚本输出继续"的功能，例如 HTML 评审、外部审批表单、远程触发。如果 Claude 用 `run_in_background: true` 把等待脚本扔后台，会破坏自动续上：用户操作完后还得回终端发一条消息（"我点完了"），Claude 才会去读结果文件——多一次无意义的二次操作。
+**Lesson**: 这类场景必须**前台同步** Bash 工具调用（`run_in_background: false`），并把 `timeout` 显式设到 600000ms（工具最大值 10 分钟）。bash 阻塞期间用户在浏览器/外部 UI 操作，操作完成后脚本立即 stdout 输出 → bash 工具立即返回 → 主对话自动接住继续。代价是主对话挂起 ≤10 分钟，但 99% 场景用户在几十秒内完成；少数 >10 分钟超时场景应有 fallback（AskUserQuestion + preview）。这是工具调用的隐含语义，必须在 SKILL.md 显式写明（"前台同步 / 禁用 run_in_background / timeout=600000"），否则 Claude Agent 自由选择会偏向后台。
+**Evidence**: v3.22 HTML plan review 上线时演示发现：第一次后台启动 → 用户点完按钮后还要回终端发消息触发我读 `/tmp/plan-review-out.json`，体验差。改前台同步后第二次演示 bash 立即返回 stdout JSON，0 次二次操作。文档锁定：SKILL.md 步骤 4c + html-review-guide.md 4c 调用规范段；红队 acceptance 加 C3h/C3i 断言。
+
+### [2026-05-09] macOS `tail -F | grep -m1 | timeout` 退出码语义不可靠，依赖 stdout 非空判成功
+<!-- tags: bash, macos, tail, grep, timeout, exit-code, event-watching, wait-decision, autopilot -->
+**Scenario**: 实现"watch 一个 append-only 文件，匹配第一行符合条件的内容后退出"的 bash 脚本。直觉写法 `timeout 30 tail -F file | grep -m1 PATTERN`，期望成功匹配 → exit 0，超时 → exit 124。
+**Lesson**: macOS（BSD tail + GNU coreutils timeout）下，**即使 grep -m1 匹配成功**，tail 进程不会因为 grep 关闭管道（SIGPIPE）主动退出，外层 timeout 持续到时限到达 → 整个管道被 SIGTERM 杀死 → 退出码 = 124（超时码），与真正超时无法区分。三种修复方案：(1) 调用方以"stdout 非空且为合法 JSON"作为成功判据，不查退出码；(2) 脚本内用 FIFO + 后台 tail + while read 循环，匹配后主动 `kill $TAIL_PID`；(3) 用 `head -1` 替代 grep（但需要预过滤）。autopilot 同时采用 (1)+(2) 双保险，并在 SKILL.md 文档明确写"以 stdout 非空判成功"。
+**Evidence**: wait-decision.sh 实现时遇到，Plan 审查 `references/plan-reviewer-prompt.md` 的"BLOCKER 级"阶段已发现并预警（设计文档「Plan 审查改进建议 1」记录）。修复后红队 22 项断言通过（含超时场景 stdout 为空 + 退出码非 0 的双重断言 C1g）。
+
 ### [2026-05-06] 新增兜底路径暴露 create / repair 功能不对称
 <!-- tags: autopilot, worktree, repair, create, asymmetry, fallback, idempotent, bootstrap -->
 **Scenario**: v3.15.0 新增 SessionStart hook 兜底初始化 worktree，调用 `worktree.mjs::repair()`。实测发现 worktree 缺 `local-config.json`（dev 端口配置），导致 dev server 抢占默认端口

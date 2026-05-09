@@ -1,3 +1,12 @@
+### [2026-05-09] 引入新能力时优先复用现有内部基础设施，再考虑引入新栈
+<!-- tags: autopilot, integration, dependency-discipline, infrastructure-reuse, plugin-design, html-review, visual-companion -->
+**Background**: 想给 autopilot design 阶段步骤 4 加 HTML 浏览器评审路径，业内有现成方案 plannotator（Bun + React + 单文件 HTML 打包）可参考甚至直接用。
+**Choice**: **不引入** plannotator 的 Bun + React 栈。复用 autopilot 自身的 `scripts/visual-companion/`（Node 原生 http + 手写 RFC 6455 WebSocket + helper.js click 事件捕获 + events JSONL 文件回流），只补 3 个文件（plan-review-template.html / wait-decision.sh / launch-plan-review.sh）+ 一次性 build-time 复制 marked.min.js（35KB MIT）。0 runtime 依赖，0 新增 npm 包。
+**Alternatives rejected**: (1) 直接引入 plannotator monorepo —— Bun 不在 autopilot 用户日常环境，引入相当于强制依赖运行时；(2) 自己写 200 行正则 markdown 渲染 —— 表格/嵌套列表边界 case 多，不如 marked.js 35KB 一次到位。
+**Trade-offs**: 复用既有基础设施时间成本 ~1.5h vs 引入 + 调通新栈 ≥1d；功能完整度对齐 plannotator 的 v1（用户主路径足够），段落级评论/截图上传等高级功能列入 future work。
+**Evidence**: 17 个文件改动，1352 lines 新增（含 35KB marked.min.js + 数百行 HTML/CSS）；红队 22 项断言全 PASS；端到端 approve / revise+中文 feedback 全验证通过。
+**Lesson**: 评估"引入新框架/库"前，先盘点项目内是否已有可复用的中性能力（HTTP server、事件总线、文件 IO 抽象）。能 0 依赖就 0 依赖——尤其对插件类项目，每个 runtime 依赖都会传染到所有用户。
+
 ### [2026-05-06] Plugin hooks.json 不接收 `claude -w` 派发的 WorktreeCreate 事件
 <!-- tags: claude-code, plugin, hooks, worktree, event-dispatch, sessionstart, fallback -->
 **Background**: autopilot plugin 在 `plugins/autopilot/hooks/hooks.json` 注册了 WorktreeCreate hook 做 worktree 初始化（symlink + pnpm install + local-config.json）。用户跑 `claude code -w <name>` 创建 worktree 时，hook 完全没触发——worktree 是裸的，缺 node_modules / .env / local-config.json，`.autopilot` 是 git 检出实仓而非符号链接。
