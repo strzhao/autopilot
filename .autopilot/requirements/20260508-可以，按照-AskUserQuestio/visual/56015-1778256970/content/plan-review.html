@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Autopilot Plan Review</title>
+  <style>
+    /*
+     * AUTOPILOT PLAN REVIEW TEMPLATE
+     *
+     * Provides a full-document review page with:
+     * - Design document rendered in <pre> (v1; v2 will use marked.js)
+     * - Feedback textarea
+     * - Three action buttons: approve / revise / abort
+     * - OS-aware light/dark theming (mirrors visual-companion conventions)
+     */
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+
+    /* ===== THEME VARIABLES ===== */
+    :root {
+      --bg-primary: #f5f5f7;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #e5e5e7;
+      --border: #d1d1d6;
+      --text-primary: #1d1d1f;
+      --text-secondary: #86868b;
+      --text-tertiary: #aeaeb2;
+      --accent: #0071e3;
+      --accent-hover: #0077ed;
+      --success: #34c759;
+      --warning: #ff9f0a;
+      --error: #ff3b30;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1d1d1f;
+        --bg-secondary: #2d2d2f;
+        --bg-tertiary: #3d3d3f;
+        --border: #424245;
+        --text-primary: #f5f5f7;
+        --text-secondary: #86868b;
+        --text-tertiary: #636366;
+        --accent: #0a84ff;
+        --accent-hover: #409cff;
+      }
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+    }
+
+    /* ===== FRAME STRUCTURE ===== */
+    .header {
+      background: var(--bg-secondary);
+      padding: 0.5rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .header h1 { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+    .header .status { font-size: 0.7rem; color: var(--success); display: flex; align-items: center; gap: 0.4rem; }
+    .header .status::before { content: ''; width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+
+    .main { flex: 1; overflow-y: auto; }
+
+    .content-area { padding: 1.5rem 2rem; }
+
+    /* ===== DESIGN DOCUMENT ===== */
+    .design-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+    .design-section-header {
+      background: var(--bg-tertiary);
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+    }
+    #design-content {
+      padding: 1.25rem 1.5rem;
+      font-family: ui-monospace, 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+      font-size: 0.8rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--text-primary);
+      overflow-x: auto;
+    }
+
+    /* ===== FEEDBACK AREA ===== */
+    .feedback-section {
+      margin-bottom: 1.25rem;
+    }
+    .feedback-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+    #feedback {
+      width: 100%;
+      min-height: 80px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      resize: vertical;
+      transition: border-color 0.15s ease;
+      outline: none;
+    }
+    #feedback:focus { border-color: var(--accent); }
+    #feedback::placeholder { color: var(--text-tertiary); }
+
+    /* ===== ACTION BUTTONS ===== */
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    button[data-choice] {
+      padding: 0.6rem 1.25rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    button[data-choice="approve"] {
+      background: var(--success);
+      color: #fff;
+    }
+    button[data-choice="approve"]:hover { opacity: 0.85; }
+
+    button[data-choice="revise"] {
+      background: var(--warning);
+      color: #fff;
+    }
+    button[data-choice="revise"]:hover { opacity: 0.85; }
+
+    button[data-choice="abort"] {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    button[data-choice="abort"]:hover { border-color: var(--error); color: var(--error); }
+
+    /* ===== INDICATOR BAR ===== */
+    .indicator-bar {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      padding: 0.5rem 1.5rem;
+      flex-shrink: 0;
+      text-align: center;
+    }
+    .indicator-bar span {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+    .indicator-bar .selected-text {
+      color: var(--accent);
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Autopilot — 设计方案审批</h1>
+    <div class="status">等待审批</div>
+  </div>
+
+  <div class="main">
+    <div class="content-area">
+
+      <!-- Design document (placeholder replaced by launch-plan-review.sh) -->
+      <div class="design-section">
+        <div class="design-section-header">设计文档 &amp; 实现计划</div>
+        <pre id="design-content">## 设计文档
+
+### 修订后目标
+
+为 autopilot design 阶段步骤 4「请求审批」提供**可选的 HTML 浏览器评审路径**：自动打开浏览器渲染设计文档 + 反馈输入 + 通过/修改/放弃按钮，用户原地操作，结果回流 Claude Code。基础设施完全复用 autopilot 现有 visual-companion（Node 原生 HTTP + WebSocket，0 新增依赖）。默认不开启，AskUserQuestion + preview 仍为基础路径。
+
+&gt; 注：原始目标&quot;模拟 AskUserQuestion + preview 展示效果&quot;已在对话中完成 demo，用户决定不走该简化方案，转向更友好的 HTML 评审，参考 plannotator 体验。
+
+### Context
+
+- **plannotator** 项目（`/Users/stringzhao/workspace/plannotator`）：plan review HTML 工具，hook 拦截 ExitPlanMode 触发，Bun.serve + React SPA + 阻塞 stdout JSON 决策回流
+- **autopilot 已有 visual-companion**（`scripts/visual-companion/`）：Node 原生 http + WebSocket（手写 RFC 6455），HTML 模板 + helper.js 事件捕获，events JSONL 文件记录用户操作。完整可复用
+- 当前步骤 4（SKILL.md:163-168）：单一 AskUserQuestion，无 preview 也无 HTML
+
+### 关键设计决策
+
+1. **复用 visual-companion，不引入 plannotator 栈**：避免 Bun + React 依赖，沿用 server.cjs / frame-template.html / helper.js / events 文件机制
+2. **可选增强，默认关闭**：环境变量 `AUTOPILOT_HTML_REVIEW=1`（会话级）+ frontmatter `html_review: true`（任务级覆盖）。优先级：frontmatter &gt; env &gt; false
+3. **回流 = 阻塞 bash + tail events**：HTML 端 helper.js 经 WebSocket 写 events，wait-decision.sh `tail -F` 阻塞读取 → stdout 输出原始 JSON → Claude 解析 decision/feedback。30 分钟超时
+4. **v1 极简版**：设计文档全文 `&lt;pre&gt;` 渲染（v2 引入 marked.js）+ textarea 反馈 + 3 按钮（通过/修改/放弃）。无段落级评论、无截图上传，列入 future work
+5. **降级**：浏览器打不开 → 命令行打印 URL 继续 wait | wait-decision 超时 → fallback AskUserQuestion + preview
+6. **preview 现状增强**：默认路径的 AskUserQuestion preview 末尾追加「💡 启用 HTML 评审：设置 AUTOPILOT_HTML_REVIEW=1 或 frontmatter html_review: true」提示
+
+### 架构
+
+```
+SKILL.md 步骤 4. 请求审批
+   │
+   ├── 检查 html_review 开关 (frontmatter &gt; env &gt; default false)
+   │
+   ├── ❌ 关闭 → AskUserQuestion + preview (现状路径)
+   │           preview 末尾: 提示如何开启 HTML 评审
+   │
+   └── ✅ 开启
+         │
+         └─ bash launch-plan-review.sh &quot;$task_dir&quot;
+            │
+            ├─ start-server.sh (复用，已有)
+            ├─ 渲染 plan-review.html → $CONTENT_DIR/
+            ├─ 跨平台 open / xdg-open / cmd start
+            └─ wait-decision.sh (阻塞 tail $STATE_DIR/events)
+                  │
+              stdout: {&quot;choice&quot;:&quot;approve|revise|abort&quot;,&quot;feedback&quot;:&quot;...&quot;}
+                  │
+              Claude 解析 → approve/revise/abort
+                  │
+                  ├─ timeout / 失败 → fallback AskUserQuestion
+                  └─ 正常 → 进步骤 5 / 回步骤 3 / 取消
+```
+
+### 文件改动清单
+
+**新增（3 个文件）**：
+- `plugins/autopilot/scripts/visual-companion/plan-review-template.html` — HTML 模板：顶部任务标题 / 主体 `&lt;pre&gt;` 设计文档 / textarea#feedback / 三按钮 `[data-choice=&quot;approve|revise|abort&quot;]`
+- `plugins/autopilot/scripts/visual-companion/wait-decision.sh` — `tail -F events | grep -m1 -E &#x27;&quot;choice&quot;:&quot;(approve|revise|abort)&quot;&#x27;`，超时 1800s（可参数覆盖），匹配行直接 echo 给 stdout
+- `plugins/autopilot/scripts/visual-companion/launch-plan-review.sh` — 编排：调 start-server.sh → 读取 state.md 设计文档 → 写入渲染好的 HTML 到 CONTENT_DIR → 跨平台 `open` 浏览器 → 调 wait-decision.sh 阻塞 → stop-server.sh 关闭
+
+**修改（5 个文件）**：
+- `plugins/autopilot/skills/autopilot/SKILL.md` 步骤 4 — 增加分支逻辑 + 默认 preview 末尾的 hint
+- `plugins/autopilot/scripts/visual-companion/helper.js` — click 事件捕获时附加读取 `#feedback` textarea 内容到 event payload（约 6 行）
+- `plugins/autopilot/skills/autopilot/references/state-file-guide.md` — frontmatter 增加 `html_review: false` 字段说明
+- `plugins/autopilot/.claude-plugin/plugin.json` + `package.json` 版本号 → v3.22.0
+- `.claude-plugin/marketplace.json` + `CLAUDE.md` 索引同步
+
+### 风险与缓解
+
+| 风险 | 缓解 |
+|------|------|
+| visual-companion server 已被 brainstorm 占用 | start-server.sh 已支持 PID 文件覆盖；plan-review 与 brainstorm 串行使用（design 阶段 brainstorm 已完成才到步骤 4） |
+| 浏览器打不开（headless / SSH） | 命令行打印 URL 让用户手动；wait-decision 仍工作 |
+| Markdown 渲染丑（v1 用 `&lt;pre&gt;`） | 接受，v2 引入 marked.js |
+| feedback JSON 转义 | helper.js 端 JSON.stringify；wait-decision 不解析中间字段，输出整行 JSON 给 Claude 解析 |
+| Windows + Git Bash nohup 失败 | start-server.sh 已自动 foreground 降级（已有逻辑） |
+
+### Future work（v2/v3）
+
+- marked.js 内嵌渲染 markdown
+- 章节折叠 + 进度指示
+- 段落级评论（markdown AST 锚点）
+- 实现任务复选框（用户可勾掉某些 plan 项）
+- 抽离独立插件复用到非 autopilot 场景
+
+## 实现计划
+
+蓝队任务：
+- [x] T1: 新增 `plan-review-template.html`（含 textarea + 3 按钮 + `&lt;pre&gt;` 占位 + helper 注入）
+- [x] T2: 新增 `wait-decision.sh`（FIFO + tail + read 循环，不依赖退出码）
+- [x] T3: 新增 `launch-plan-review.sh`（编排：start-server → render → open → wait → stop）
+- [x] T4: 扩展 `helper.js`（click 事件捕获 textarea#feedback 内容）
+- [x] T5: 修改 `SKILL.md` 步骤 4（4a/4b/4c 三路分支 + 默认 preview hint）
+- [x] T6: 更新 `state-file-guide.md`（frontmatter html_review 字段）
+- [x] T7: 3 处版本号同步至 v3.22.0（plugin.json / marketplace.json / CLAUDE.md，跳过不存在的 package.json）
+
+## 验证方案
+
+### 真实测试场景
+
+**[独立]** 场景 1（脚本级单测 wait-decision）：先 `mkdir -p /tmp/td-test/state &amp;&amp; touch /tmp/td-test/state/events`，后台 `bash scripts/visual-companion/wait-decision.sh /tmp/td-test/state 5 &amp;`，前台 `echo &#x27;{&quot;type&quot;:&quot;click&quot;,&quot;choice&quot;:&quot;approve&quot;,&quot;feedback&quot;:&quot;ok&quot;}&#x27; &gt;&gt; /tmp/td-test/state/events`。**期望输出**：wait-decision stdout 输出该 JSON 行；超时返回非 0 退出码
+
+**[独立]** 场景 2（HTML 静态检查）：`open plugins/autopilot/scripts/visual-companion/plan-review-template.html` 直接浏览器打开。**期望输出**：渲染含 textarea#feedback 和 3 个按钮（data-choice=approve/revise/abort）
+
+**[串行]** 场景 3（端到端 approve 路径）：`AUTOPILOT_HTML_REVIEW=1 claude`，跑 `/autopilot 添加 hello world 注释`，design 阶段步骤 4。**期望输出**：浏览器自动打开 plan-review 页 → 点「通过」→ 终端 Claude 输出 `decision: approve`，state.md frontmatter 切换到 phase: implement
+
+**[串行]** 场景 4（端到端 revise + feedback 路径）：同场景 3 起步 → 输入「请使用 ESM 不要 CJS」→ 点「修改」。**期望输出**：state.md 变更日志或目标区域出现 feedback 文本，phase 仍为 design
+
+**[串行]** 场景 5（默认关闭路径回归）：未设环境变量启动 autopilot。**期望输出**：步骤 4 仍走 AskUserQuestion + preview，preview 文案末尾包含「💡 启用 HTML 评审...」hint
+
+&gt; ✅ Plan 审查通过（6/6 维度通过，2 条不阻断改进建议）
+
+### Plan 审查改进建议（实施阶段需关注）
+
+1. **wait-decision.sh 退出码语义**：macOS 上 `tail -F | grep -m1` 即使匹配成功，外层 `timeout` 会以 exit 124 杀掉 tail 管道，成功/超时都返回非 0。**T2 实施时**：Claude 解析时以「stdout 非空且为合法 JSON」作为成功判据，不依赖退出码；或脚本改写为「`tail -F events &amp;; TAIL_PID=$!; while read line; do ...; done; kill $TAIL_PID`」捕获到匹配后主动 kill。
+
+2. **autopilot 插件不存在 package.json**：T7 设计文档列出&quot;4 处版本号同步&quot;含 `package.json`，实测 `plugins/autopilot/` 下无该文件。**T7 实施时**：实际同步 3 处（`plugin.json` + `marketplace.json` + `CLAUDE.md` 索引表），跳过 `package.json`，不要新建。</pre>
+      </div>
+
+      <!-- Feedback textarea -->
+      <div class="feedback-section">
+        <div class="feedback-label">修改意见（可选）</div>
+        <textarea id="feedback" placeholder="（可选）写下修改意见或评论，选择「修改」时会回传给 Claude"></textarea>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="actions">
+        <button data-choice="approve">通过</button>
+        <button data-choice="revise">有修改意见</button>
+        <button data-choice="abort">放弃任务</button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="indicator-bar">
+    <span id="indicator-text">请阅读设计文档，然后点击上方按钮作出决策</span>
+  </div>
+
+</body>
+</html>
