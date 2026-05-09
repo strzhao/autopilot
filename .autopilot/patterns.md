@@ -1,5 +1,11 @@
 # Patterns & Lessons
 
+### [2026-05-09] acceptance test 中 `TARGET_VERSION="X.Y.Z"` 是版本同步规则的隐藏盲区
+<!-- tags: autopilot, version-sync, acceptance-test, hardcoded, regression, blind-spot, autopilot-commit -->
+**Scenario**: autopilot v3.22.1 → v3.23.0 升级时，蓝队按 CLAUDE.md 版本管理规则同步了 plugin.json + marketplace.json + CLAUDE.md 三处版本号，但 `plugins/autopilot/tests/acceptance/{version-sync,brainstorm-default,plan-review-html}.acceptance.test.sh` 中的 `TARGET_VERSION="3.22.0"` / `"3.22.1"` 硬编码字符串没被同步规则覆盖，导致 Tier 1 bash acceptance 3 个测试 fail（断言形如 `plugin.json 版本 '3.23.0' != 期望 '3.22.1'`）。
+**Lesson**: CLAUDE.md 列出的版本同步范围只是"运行时版本号"层（plugin.json/marketplace.json/CLAUDE.md），但 acceptance 测试文件本身也会出现版本号字符串作为"上一版本契约"硬断言。autopilot-commit skill 的版本同步 grep 范围必须扩展到 `find . -path '*/acceptance/*' -name '*.test.sh'` 中的 `TARGET_VERSION=` 行，以及类似 `expected: '3.X.Y'` 模式的 mjs 测试。同样适用于 README.md 顶部"上一版本变更说明"段——v3.17.0 时建立的契约要求每升一版加一句话变更说明，蓝队 T5 同样漏过，被 version-sync.acceptance.test.sh 的 R8 断言抓住。
+**Evidence**: 本次 wave 1 selective auto-fix 修了 4 处：3 个 bash 测试 TARGET_VERSION + 1 处 README 顶部变更说明。修完 run-all.sh 7/10 → 10/10。下次 autopilot-commit 优化时把 acceptance test + README 一并加入 grep。
+
 ### [2026-05-09] 主对话需等待外部 UI 操作时，前台同步 Bash + 长 timeout 优于 run_in_background
 <!-- tags: autopilot, claude-code, bash-tool, run-in-background, ux, html-review, blocking-call -->
 **Scenario**: 涉及"用户在外部界面（浏览器/外部 GUI）操作 → 触发本地脚本完成 → Claude 主对话基于脚本输出继续"的功能，例如 HTML 评审、外部审批表单、远程触发。如果 Claude 用 `run_in_background: true` 把等待脚本扔后台，会破坏自动续上：用户操作完后还得回终端发一条消息（"我点完了"），Claude 才会去读结果文件——多一次无意义的二次操作。

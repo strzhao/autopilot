@@ -1,3 +1,12 @@
+### [2026-05-09] 修改脆弱 skill 时遵循"最小集 + 纯追加 + 可独立回滚"
+<!-- tags: autopilot, skill, fragility, minimal-change, append-only, rollback, tdd-quality, defensive-edit -->
+**Background**: 用户基于 relight 项目 c3648c2 回归（红队 22 PASS / 1 FAIL，PASS 大半是 if/else 包裹断言的假阳性 + CI 红 autopilot 不看）提出 7 条改进（P0-P3）。但用户明确"skill 非常脆弱，不要导致任何劣化"。需要在改进收益和回退风险间取舍。
+**Choice**: 这次只做 P0+P3 共 4 处最小集，全部走"纯追加段落、零删除/零结构改动"的策略。具体：(1) red-team-prompt 加铁律段在 `## ⚠️ 铁律` 之后、`## 目标` 之前；(2) merge-phase 加 2.5 CI 验证步骤在已有 2 和 3 之间；(3) qa-reviewer 加 Section C；(4) anti-rationalization 加红队 Agent 视角段。明确不动 SKILL.md 主决策树（防 [2026-04-17] 后置章节跳读）、phase 流程顺序、frontmatter 字段、autopilot 默认 commit-only 行为。每处可独立 `git revert -- <file>` 撤销。
+**Alternatives rejected**: (1) 一次性做全部 7 条 P0-P3 → 涉及 plan-reviewer/scenario-generator/auto-chain/红队 prompt 等 6+ 文件协调，劣化面最大；(2) 只做 P3 anti-rationalization → 漏掉本次 relight 实际触发的两条核心防线（红队铁律 + CI 不看）；(3) 在 SKILL.md 主决策树插新规则 → 历史教训明确指出后置章节会被跳读，新增主规则反而劣化。
+**Trade-offs**: P1（跨语言契约消费者字段、破坏性变更扫描）和 P2（场景生成器输出直连 / auto-chain CI 信心）留给下一轮——relight 案例中这两条是次要原因，本轮不动不会重现核心回归。代价：下次再有 mac App 这种跨语言消费方被改时，红队仍可能漏掉。
+**Evidence**: 4 处改动 git diff `references/` 0 删除行（场景 6 守门）；qa-reviewer Wave 2 给整体评分 97/100 / 0 critical / 0 important；29 个红队硬断言 PASS；merge step 2.5 dogfooding 在本地 commit 未 push 时正确触发降级跳过。
+**Lesson**: 对脆弱 skill / prompt 的改动，"最小集 + 纯追加" 优于"完整重构"。每处改动独立成块、可独立回滚、可独立单测，比"一次到位的优雅设计"更安全。设计阶段先列"非目标"清单（明确不做哪些）能防止范围溢出。
+
 ### [2026-05-09] 引入新能力时优先复用现有内部基础设施，再考虑引入新栈
 <!-- tags: autopilot, integration, dependency-discipline, infrastructure-reuse, plugin-design, html-review, visual-companion -->
 **Background**: 想给 autopilot design 阶段步骤 4 加 HTML 浏览器评审路径，业内有现成方案 plannotator（Bun + React + 单文件 HTML 打包）可参考甚至直接用。
