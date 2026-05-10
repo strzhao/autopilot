@@ -1,3 +1,11 @@
+### [2026-05-10] auto-fix 中"看似独立的两个 bug"应优先寻找共同上游脆弱点，一处合并修复
+<!-- tags: autopilot, qa, auto-fix, root-cause, merge-fix, anti-symptomatic, bash, scripting -->
+**Background**: QA 第 1 轮在 doctor SKILL.md Dim 8 worktree 健康抽查段同时发现 2 个独立失败：场景 5（脚本 exit=1 违反退出码 0 契约）+ 场景 8（在 worktree 内 MAIN_ROOT 错指）。表面看是两个独立 bug，可分别 fix。
+**Choice**: auto-fix 不分头修两处，而是把脆弱的"路径比对+赋值变量+短路链"整体替换为一处合并修复——`awk '/^worktree / {n++; if (n==1) next; print $2}'` + done 后追加 `|| true`。复用 git porcelain 输出顺序保证（参 patterns 同期新增 [2026-05-10] git worktree list 第一项稳定 条目），同时消除两个 bug 来源，与契约原话"第一项跳过"逐字对齐。
+**Alternatives rejected**: (1) 分别加 `|| true` 修退出码 + 用 `--git-common-dir` 重写 MAIN_ROOT —— 修了症状但 MAIN_ROOT 变量本身仍是脆弱设计（"路径比对"模式继续传染未来脚本）；(2) 加 `set -o pipefail` 并保留路径比对 —— 引入意外副作用且未消除根因；(3) 两处独立修但加注释 "TODO: 重构" —— TODO 永远不会做。
+**Trade-offs**: 合并修复要求多读一份 git 文档（验证 porcelain 第一项契约稳定性），但换来更小、更对齐契约描述、删掉 1 个变量、删掉 1 个比对分支的代码。auto-fix 单轮成功（retry_count: 1 → 2 即过 review-accept）证明合并修复路径效率高。
+**Lesson**: auto-fix 看到多个失败前，先问"它们是否共享同一脆弱点？"——如果是，找上游一处改可能同时灭掉所有症状；如果不是，再分头修。"分头修+加 || true" 是症状疗法，"识别脆弱模式整体替换" 是根本疗法。前提是有红队充分覆盖（本次 4 case A/B/C/D + 5 真实场景）防止合并修复引入新回归。
+
 ### [2026-05-10] 契约对齐采用 contract-checker agent + 集中 protocol，而非分散 prompt 铁律
 <!-- tags: autopilot, contract, red-team, blue-team, contract-checker, agent, single-source-of-truth, skill-fragility, gojko, sbe, cdc, pact, dbc, contract-protocol -->
 **Background**: 用户基于 relight 11 个 session 历史扫到 7 个红蓝契约不对齐真实案例（B 数据格式 / D 边界值 / H+A 路由签名 / C Mock）— 7/7 都是蓝队理解偏差方（红队不能改测试是规则），auto-fix 反复修不好。autopilot 设计文档无任何"契约"专属字段，红蓝队各自从自然语言归纳必然漂移。v1 方案是"4 处文件加 ⚠️ 章节 + 60 行模板"，被 skill 反审判 3 个致命问题（元任务陷阱 / 多 ⚠️ 章节稀释 / 占位符运行时崩）；同时业界深搜揭示 Gojko SBE 实证「纯纪律方案 88% 团队失败」，单 verifier 仅 +14% 改进，缺独立 contract-checker agent。

@@ -1,6 +1,7 @@
 # Knowledge Index
 
 ## Decisions
+- [2026-05-10] auto-fix 中"看似独立的两个 bug"应优先寻找共同上游脆弱点，一处合并修复 | tags: autopilot, qa, auto-fix, root-cause, merge-fix, anti-symptomatic, bash, scripting | → decisions.md
 - [2026-05-10] 契约对齐采用 contract-checker agent + 集中 protocol，而非分散 prompt 铁律 | tags: autopilot, contract, red-team, blue-team, contract-checker, agent, single-source-of-truth, skill-fragility, gojko, sbe, cdc, pact, dbc, contract-protocol | → decisions.md
 - [2026-05-09] 修改脆弱 skill 时遵循"最小集 + 纯追加 + 可独立回滚" | tags: autopilot, skill, fragility, minimal-change, append-only, rollback, tdd-quality, defensive-edit | → decisions.md
 - [2026-05-09] 引入新能力时优先复用现有内部基础设施，再考虑引入新栈 | tags: autopilot, integration, dependency-discipline, infrastructure-reuse, plugin-design, html-review, visual-companion | → decisions.md
@@ -20,6 +21,7 @@
 - [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → decisions.md
 
 ## Patterns
+- [2026-05-10] git worktree list --porcelain 第一项稳定为主仓库，按位置跳过优于按路径比对 | tags: git, worktree, porcelain, position-stable, run-anywhere, doctor, autopilot, path-resolution | → patterns.md
 - [2026-05-10] skill 改动应一处真相不重复 N 处文件 | tags: autopilot, skill, single-source-of-truth, drift, integration, sbe, gojko, contract, references | → patterns.md
 - [2026-05-10] frontmatter 加豁免字段是 skill 演进的元任务安全模式 | tags: autopilot, skill, evolution, meta-task, frontmatter, opt-in, historical-exemption, contract-required, setup-sh | → patterns.md
 - [2026-05-10] 红/蓝队 prompt 改动应在现有 ⚠️ 铁律 内追加 bullet，禁止新增 ⚠️ 章节 | tags: autopilot, red-team, blue-team, prompt, warning-section, anti-pattern, decision-tree, dilution, contract | → patterns.md

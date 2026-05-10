@@ -1,5 +1,11 @@
 # Patterns & Lessons
 
+### [2026-05-10] git worktree list --porcelain 第一项稳定为主仓库，按位置跳过优于按路径比对
+<!-- tags: git, worktree, porcelain, position-stable, run-anywhere, doctor, autopilot, path-resolution -->
+**Scenario**: 在仓库内任意位置（主仓库 / linked worktree）运行的脚本，需要遍历"非主仓库"的 worktree。
+**Lesson**: `git worktree list --porcelain` 输出顺序是 git 的稳定契约——第 1 项总是主仓库（main worktree），无论 cwd 在哪。优于"算出 main 路径再按字符串比对"——后者依赖 `git rev-parse --show-toplevel`，在 worktree 内返回 worktree 自身路径而非主仓库根，必须配 `--git-common-dir + dirname` 才正确（参 worktree.mjs:46 `repoRoot()`）。按位置跳过既避开这个解析陷阱，又使代码"运行路径无关"——这是写"在任何子目录都要工作"的脚本时的稳定模式。
+**Evidence**: doctor SKILL Dim 8 worktree 健康抽查初版 `MAIN_ROOT=$(git rev-parse --show-toplevel); [ "$wt" = "$MAIN_ROOT" ] && continue`，cwd 在 worktree 内时 MAIN_ROOT 错指当前 worktree → 主仓库被误当 worktree 检查（场景 8 失败）。改 `awk '/^worktree / {n++; if (n==1) next; print $2}'` 后场景 8 通过，同时删掉 MAIN_ROOT 变量。这条 pattern 是 [2026-03-27] "Worktree 路径解析统一处理策略"的精简补丁——不是所有场景都需要 `--git-common-dir`，能用 porcelain 顺序就别引入 path 解析。
+
 ### [2026-05-10] skill 改动应一处真相不重复 N 处文件
 <!-- tags: autopilot, skill, single-source-of-truth, drift, integration, sbe, gojko, contract, references -->
 **Scenario**: 给 autopilot 加契约规约能力，初版 v1 方案在 4 处文件（state-file-guide / plan-reviewer / red-team / blue-team）分别写「契约逐字一致」规则的不同表述。skill 反审指出这正是 [Gojko SBE 10 年回顾] 实证的 12% 兑现率 anti-pattern — 同一规则在 4 处用不同语言描述，3 个月内必出现 1-2 处不同步，业界 88% 团队靠纪律维持 spec-as-truth 失败。
