@@ -457,6 +457,7 @@ knowledge_extracted: ""
 task_dir: "$TASK_DIR"
 session_id: $SESSION_ID
 started_at: "$(now_iso)"
+contract_required: true
 ---
 
 ## 目标

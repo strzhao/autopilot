@@ -254,6 +254,7 @@ knowledge_extracted: ""
 task_dir: "$TASK_DIR"
 session_id: $session_id
 started_at: "$(now_iso)"
+contract_required: true
 ---
 
 ## 目标
@@ -328,6 +329,7 @@ knowledge_extracted: ""
 task_dir: "$TASK_DIR"
 session_id: $session_id
 started_at: "$(now_iso)"
+contract_required: true
 ---
 
 ## 目标
