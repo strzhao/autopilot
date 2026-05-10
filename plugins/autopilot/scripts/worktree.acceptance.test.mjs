@@ -7,11 +7,12 @@
  * Run: node --test scripts/worktree.acceptance.test.mjs
  */
 
-import { describe, it, before } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { writeFile, mkdtemp, rm, mkdir } from 'node:fs/promises';
+import { writeFile, mkdtemp, rm, mkdir, symlink, lstat } from 'node:fs/promises';
+import { existsSync, lstatSync, symlinkSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,7 +26,7 @@ const SCRIPT = resolve(__dirname, 'worktree.mjs');
 // If the module does not exist yet the entire suite will fail-fast with a
 // clear message rather than cryptic import errors.
 // ---------------------------------------------------------------------------
-let sanitizeName, computePort, parseLinksFile;
+let sanitizeName, computePort, parseLinksFile, ensureSelectiveAutopilotLayout;
 
 before(async () => {
   try {
@@ -33,6 +34,7 @@ before(async () => {
     sanitizeName = mod.sanitizeName;
     computePort = mod.computePort;
     parseLinksFile = mod.parseLinksFile;
+    ensureSelectiveAutopilotLayout = mod.ensureSelectiveAutopilotLayout;
   } catch (err) {
     // Re-throw with a helpful message so the runner shows why everything skips
     throw new Error(
@@ -256,5 +258,347 @@ describe('create stdout protocol', { skip: !process.env.RUN_INTEGRATION }, () =>
 
     // stderr may contain logs — that is fine, but stdout must be clean
     // (no assertion on stderr content, only that stdout is clean)
+  });
+});
+
+// ===========================================================================
+// 6. ensureSelectiveAutopilotLayout — tracked-dir 残留 symlink 清理
+//
+//    设计契约：
+//    - SHARED_AUTOPILOT_ITEMS 中含 'requirements'
+//    - 若 dst 是 symlink 且 main 将 .autopilot/requirements tracked 为目录(dir)
+//      → 清除 symlink，改用 git checkout 恢复为真实目录
+//    - 幂等；不抛错；exit 0
+// ===========================================================================
+describe('ensureSelectiveAutopilotLayout — tracked-dir 残留清理', () => {
+  // ---------------------------------------------------------------------------
+  // Helper: 创建带 .autopilot/requirements/ 提交的主仓库，返回 { mainRoot }
+  // ---------------------------------------------------------------------------
+  async function setupMainRepo(tmpDir) {
+    const mainRoot = join(tmpDir, 'main');
+    mkdirSync(mainRoot, { recursive: true });
+
+    const gitEnv = {
+      ...process.env,
+      GIT_AUTHOR_NAME: 'Test',
+      GIT_AUTHOR_EMAIL: 'test@test',
+      GIT_COMMITTER_NAME: 'Test',
+      GIT_COMMITTER_EMAIL: 'test@test',
+    };
+
+    const runGit = (...args) =>
+      execFileAsync('git', args, { cwd: mainRoot, env: gitEnv });
+
+    await runGit('init');
+    await runGit('checkout', '-b', 'main');
+
+    // 创建 .autopilot/requirements/spec.md 并提交 — 形成 tracked dir
+    mkdirSync(join(mainRoot, '.autopilot', 'requirements'), { recursive: true });
+    writeFileSync(join(mainRoot, '.autopilot', 'requirements', 'spec.md'), '# spec\n');
+
+    await runGit('add', '.');
+    await runGit('commit', '-m', 'init with requirements dir');
+
+    return { mainRoot, gitEnv };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Helper: 在主仓库上创建 git worktree，返回 worktreePath
+  // ---------------------------------------------------------------------------
+  async function addWorktree(mainRoot, wtName, gitEnv) {
+    const worktreePath = join(mainRoot, '..', wtName);
+    await execFileAsync(
+      'git', ['worktree', 'add', '-b', wtName, worktreePath],
+      { cwd: mainRoot, env: gitEnv }
+    );
+    return worktreePath;
+  }
+
+  // -------------------------------------------------------------------------
+  // Case A: dst 是 symlink + main tracked-dir + worktree HEAD 含该目录
+  //   期望：symlink 被替换为真实目录，且包含 main HEAD 中 requirements/ 的文件
+  // -------------------------------------------------------------------------
+  it('case A: 残留 symlink 被替换为真实目录（worktree HEAD 含该路径）', async () => {
+    assert.ok(
+      typeof ensureSelectiveAutopilotLayout === 'function',
+      'ensureSelectiveAutopilotLayout 未导出 — 需要蓝队补 export'
+    );
+
+    const tmpDir = await mkdtemp(join(tmpdir(), 'wt-tracked-dir-a-'));
+    try {
+      const { mainRoot, gitEnv } = await setupMainRepo(tmpDir);
+      const worktreePath = await addWorktree(mainRoot, 'wt-branch-a', gitEnv);
+
+      // 模拟"早期残留"：worktree 的 .autopilot/requirements 是指向 main 的 symlink
+      const wtAutopilot = join(worktreePath, '.autopilot');
+      const wtReq = join(wtAutopilot, 'requirements');
+      const mainReq = join(mainRoot, '.autopilot', 'requirements');
+
+      // 确保 .autopilot 目录存在（worktree 里可能已有或没有）
+      mkdirSync(wtAutopilot, { recursive: true });
+
+      // 如果 worktree 里 git checkout 已建出真实目录，先删掉再做 symlink
+      if (existsSync(wtReq)) {
+        const st = lstatSync(wtReq);
+        if (st.isDirectory()) {
+          // 暴力清除目录后创建 symlink
+          const { rmSync } = await import('node:fs');
+          rmSync(wtReq, { recursive: true, force: true });
+        } else if (st.isSymbolicLink()) {
+          const { unlinkSync } = await import('node:fs');
+          unlinkSync(wtReq);
+        }
+      }
+      symlinkSync(mainReq, wtReq);
+
+      // 前置断言：确认此刻确实是 symlink
+      const beforeStat = lstatSync(wtReq);
+      assert.ok(beforeStat.isSymbolicLink(), 'fixture: requirements 应为 symlink');
+
+      // 调用被测函数
+      ensureSelectiveAutopilotLayout(mainRoot, worktreePath);
+
+      // 后置断言 1：不再是 symlink
+      const afterStat = lstatSync(wtReq);
+      assert.ok(
+        !afterStat.isSymbolicLink(),
+        `Case A: requirements 应不再是 symlink，实际 isSymbolicLink=${afterStat.isSymbolicLink()}`
+      );
+
+      // 后置断言 2：是真实目录
+      assert.ok(
+        afterStat.isDirectory(),
+        `Case A: requirements 应是真实目录，实际 isDirectory=${afterStat.isDirectory()}`
+      );
+
+      // 后置断言 3：包含 main HEAD 中的文件
+      assert.ok(
+        existsSync(join(wtReq, 'spec.md')),
+        'Case A: requirements/ 下应包含 spec.md（来自 main HEAD）'
+      );
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Case B: dst 是 symlink + main tracked-dir + worktree HEAD 不含该路径
+  //   构造：worktree 切到一个根本没有 .autopilot/requirements/ 的旧分支
+  //   期望：unlink 执行，git checkout 失败被 catch（不抛错），
+  //         最终 dst 不存在（broken state 被清理），函数整体不抛异常
+  // -------------------------------------------------------------------------
+  it('case B: worktree 旧分支不含 requirements — symlink 被清理，函数不抛错', async () => {
+    assert.ok(
+      typeof ensureSelectiveAutopilotLayout === 'function',
+      'ensureSelectiveAutopilotLayout 未导出 — 需要蓝队补 export'
+    );
+
+    const tmpDir = await mkdtemp(join(tmpdir(), 'wt-tracked-dir-b-'));
+    try {
+      const gitEnv = {
+        ...process.env,
+        GIT_AUTHOR_NAME: 'Test',
+        GIT_AUTHOR_EMAIL: 'test@test',
+        GIT_COMMITTER_NAME: 'Test',
+        GIT_COMMITTER_EMAIL: 'test@test',
+      };
+
+      const mainRoot = join(tmpDir, 'main');
+      mkdirSync(mainRoot, { recursive: true });
+
+      const runGit = (...args) =>
+        execFileAsync('git', args, { cwd: mainRoot, env: gitEnv });
+
+      // 步骤 1：创建"旧提交"（没有 .autopilot/requirements/）
+      await runGit('init');
+      await runGit('checkout', '-b', 'main');
+      writeFileSync(join(mainRoot, 'README.md'), '# old\n');
+      await runGit('add', '.');
+      await runGit('commit', '-m', 'old commit without requirements');
+
+      // 记录旧提交的 SHA，用于创建"旧分支"
+      const { stdout: oldSha } = await execFileAsync(
+        'git', ['rev-parse', 'HEAD'],
+        { cwd: mainRoot, env: gitEnv }
+      );
+
+      // 步骤 2：在 main 上添加 requirements 目录提交
+      mkdirSync(join(mainRoot, '.autopilot', 'requirements'), { recursive: true });
+      writeFileSync(join(mainRoot, '.autopilot', 'requirements', 'spec.md'), '# spec\n');
+      await runGit('add', '.');
+      await runGit('commit', '-m', 'add requirements dir');
+
+      // 步骤 3：基于旧提交创建旧分支，并建 worktree（该分支没有 requirements）
+      const oldBranch = 'old-branch-no-req';
+      await execFileAsync(
+        'git', ['branch', oldBranch, oldSha.trim()],
+        { cwd: mainRoot, env: gitEnv }
+      );
+
+      const worktreePath = join(tmpDir, 'wt-old');
+      await execFileAsync(
+        'git', ['worktree', 'add', worktreePath, oldBranch],
+        { cwd: mainRoot, env: gitEnv }
+      );
+
+      // 步骤 4：在 worktree 里手动放置一个残留 symlink
+      const wtAutopilot = join(worktreePath, '.autopilot');
+      const wtReq = join(wtAutopilot, 'requirements');
+      const mainReq = join(mainRoot, '.autopilot', 'requirements');
+
+      mkdirSync(wtAutopilot, { recursive: true });
+      if (existsSync(wtReq)) {
+        const st = lstatSync(wtReq);
+        if (st.isDirectory()) {
+          const { rmSync } = await import('node:fs');
+          rmSync(wtReq, { recursive: true, force: true });
+        } else if (st.isSymbolicLink()) {
+          const { unlinkSync } = await import('node:fs');
+          unlinkSync(wtReq);
+        }
+      }
+      symlinkSync(mainReq, wtReq);
+
+      // 前置断言
+      assert.ok(lstatSync(wtReq).isSymbolicLink(), 'fixture: 应为 symlink');
+
+      // 调用被测函数 — 不应抛错
+      let thrown = null;
+      try {
+        ensureSelectiveAutopilotLayout(mainRoot, worktreePath);
+      } catch (err) {
+        thrown = err;
+      }
+      assert.equal(thrown, null, `Case B: 函数不应抛错，实际 thrown: ${thrown}`);
+
+      // 后置断言：symlink 应已被清理（dst 不存在）
+      // git checkout 会失败（旧分支无此路径），dst 应不存在
+      assert.ok(
+        !existsSync(wtReq),
+        'Case B: git checkout 失败后 dst 不应存在（broken state 被清理）'
+      );
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Case C: dst 不存在 + main tracked-dir
+  //   期望：函数不抛错，不创建任何 symlink，不调 unlink
+  // -------------------------------------------------------------------------
+  it('case C: dst 不存在时函数不报错，不创建 symlink', async () => {
+    assert.ok(
+      typeof ensureSelectiveAutopilotLayout === 'function',
+      'ensureSelectiveAutopilotLayout 未导出 — 需要蓝队补 export'
+    );
+
+    const tmpDir = await mkdtemp(join(tmpdir(), 'wt-tracked-dir-c-'));
+    try {
+      const { mainRoot, gitEnv } = await setupMainRepo(tmpDir);
+      const worktreePath = await addWorktree(mainRoot, 'wt-branch-c', gitEnv);
+
+      const wtReq = join(worktreePath, '.autopilot', 'requirements');
+
+      // 如果 worktree 里 git checkout 已经创建了目录/symlink，先手动删除，
+      // 模拟"dst 不存在"的场景
+      if (existsSync(wtReq)) {
+        const st = lstatSync(wtReq);
+        if (st.isDirectory()) {
+          const { rmSync } = await import('node:fs');
+          rmSync(wtReq, { recursive: true, force: true });
+        } else {
+          const { unlinkSync } = await import('node:fs');
+          unlinkSync(wtReq);
+        }
+      }
+      // 前置断言
+      assert.ok(!existsSync(wtReq), 'fixture: dst 应不存在');
+
+      // 调用被测函数
+      let thrown = null;
+      try {
+        ensureSelectiveAutopilotLayout(mainRoot, worktreePath);
+      } catch (err) {
+        thrown = err;
+      }
+      assert.equal(thrown, null, `Case C: 函数不应抛错，实际 thrown: ${thrown}`);
+
+      // 后置断言：dst 要么不存在，要么是真实目录（git checkout 恢复）
+      // 关键：不能是 symlink
+      if (existsSync(wtReq)) {
+        const st = lstatSync(wtReq);
+        assert.ok(
+          !st.isSymbolicLink(),
+          'Case C: 若 dst 被创建，应为真实目录而非 symlink'
+        );
+        assert.ok(st.isDirectory(), 'Case C: 创建的 dst 应是真实目录');
+      }
+      // 若不存在也合法 — 不创建任何东西
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Case D: dst 是真实目录（已存在）+ main tracked-dir
+  //   期望：函数不抛错，dst 保持原状（仍是真实目录，内容不变）
+  // -------------------------------------------------------------------------
+  it('case D: dst 已是真实目录时函数不报错，目录内容不变', async () => {
+    assert.ok(
+      typeof ensureSelectiveAutopilotLayout === 'function',
+      'ensureSelectiveAutopilotLayout 未导出 — 需要蓝队补 export'
+    );
+
+    const tmpDir = await mkdtemp(join(tmpdir(), 'wt-tracked-dir-d-'));
+    try {
+      const { mainRoot, gitEnv } = await setupMainRepo(tmpDir);
+      const worktreePath = await addWorktree(mainRoot, 'wt-branch-d', gitEnv);
+
+      const wtAutopilot = join(worktreePath, '.autopilot');
+      const wtReq = join(wtAutopilot, 'requirements');
+
+      // 确保 dst 是真实目录（不是 symlink）
+      // 若 git checkout 已经创建了，直接用；否则手动建
+      if (existsSync(wtReq) && lstatSync(wtReq).isSymbolicLink()) {
+        const { unlinkSync } = await import('node:fs');
+        unlinkSync(wtReq);
+        mkdirSync(wtReq, { recursive: true });
+      } else if (!existsSync(wtReq)) {
+        mkdirSync(wtReq, { recursive: true });
+      }
+
+      // 放置一个哨兵文件，用于验证"内容不变"
+      const sentinel = join(wtReq, 'worktree-local.md');
+      writeFileSync(sentinel, '# worktree local content\n');
+
+      // 前置断言
+      assert.ok(!lstatSync(wtReq).isSymbolicLink(), 'fixture: dst 应是真实目录，非 symlink');
+      assert.ok(existsSync(sentinel), 'fixture: 哨兵文件应存在');
+
+      // 调用被测函数
+      let thrown = null;
+      try {
+        ensureSelectiveAutopilotLayout(mainRoot, worktreePath);
+      } catch (err) {
+        thrown = err;
+      }
+      assert.equal(thrown, null, `Case D: 函数不应抛错，实际 thrown: ${thrown}`);
+
+      // 后置断言 1：dst 仍是真实目录（非 symlink）
+      const afterStat = lstatSync(wtReq);
+      assert.ok(
+        !afterStat.isSymbolicLink(),
+        'Case D: dst 应仍为真实目录，不能被转为 symlink'
+      );
+      assert.ok(afterStat.isDirectory(), 'Case D: dst 应仍是目录');
+
+      // 后置断言 2：哨兵文件内容不变
+      assert.ok(
+        existsSync(sentinel),
+        'Case D: 函数调用后哨兵文件应仍存在（内容未被破坏）'
+      );
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
   });
 });

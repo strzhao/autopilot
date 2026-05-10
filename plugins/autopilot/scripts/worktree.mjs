@@ -194,7 +194,27 @@ export function ensureSelectiveAutopilotLayout(mainRoot, worktreePath) {
     // 此时跳过 symlink，让 git checkout 在 worktree 里正常拉出真实目录。
     const trackedKind = isTrackedInMain(mainRoot, `.autopilot/${item}`);
     if (trackedKind === 'dir') {
-      log(`   ⚠ .autopilot/${item} 在主仓库是 tracked 目录，跳过 symlink（git 不支持 tracked 路径穿过 symlink）`);
+      // 检查 dst 是否已是残留 symlink（worktree 创建时 main 还 untracked，
+      // 之后 main 把它升级为 tracked-dir，导致 symlink 残留 → git commit 报
+      // "is beyond a symbolic link"）。残留则 unlink + git checkout 恢复真实目录。
+      let s = null;
+      try { s = lstatSync(dst); } catch { /* not exists */ }
+      if (s?.isSymbolicLink()) {
+        log(`→ .autopilot/${item} 在主仓库已变 tracked 目录，清理残留 symlink`);
+        unlinkSync(dst);
+        // 尝试从 worktree 当前分支 HEAD 恢复真实目录。
+        // worktree 切到旧分支（在该目录被 tracked 之前分叉的分支）时 HEAD 无此路径，
+        // checkout 会失败 — 此时仅 log warning，dst 保持"不存在"状态（broken state
+        // 已清理为干净的"未恢复"）。已比"残留 symlink → git commit 报错"好。
+        try {
+          git('-C', worktreePath, 'checkout', 'HEAD', '--', `.autopilot/${item}`);
+          log(`   ✓ 从 git 恢复 .autopilot/${item}（真实目录）`);
+        } catch (e) {
+          log(`   ⚠ git checkout 失败 (${e.message})；如需要请手动恢复`);
+        }
+      } else {
+        log(`   ⚠ .autopilot/${item} 在主仓库是 tracked 目录，跳过 symlink（git 不支持 tracked 路径穿过 symlink）`);
+      }
       continue;
     }
 

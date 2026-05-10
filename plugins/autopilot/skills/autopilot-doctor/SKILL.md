@@ -184,7 +184,21 @@ cat package.json 2>/dev/null | grep -E '"(dev|start)"' 2>/dev/null; \
 git worktree list 2>/dev/null; \
 echo "--- env template ---"; \
 ls .env.example .env.template .env.sample 2>/dev/null; \
-cat package.json | grep -E '"(envalid|@t3-oss/env|dotenv-safe)"' 2>/dev/null
+cat package.json | grep -E '"(envalid|@t3-oss/env|dotenv-safe)"' 2>/dev/null; \
+# === worktree 健康抽查（v3.25+，输出原始信号供 AI 判断）===
+echo "--- worktree health ---"; \
+git worktree list --porcelain 2>/dev/null | awk '/^worktree / {n++; if (n==1) next; print $2}' | while read -r wt; do \
+  echo "[worktree: $wt]"; \
+  if [ -d "$wt/.autopilot" ]; then \
+    find "$wt/.autopilot" -maxdepth 1 -type l 2>/dev/null | while read -r link; do \
+      [ ! -e "$link" ] && echo "  broken-symlink: $(basename "$link")"; \
+    done; \
+  else \
+    echo "  missing: .autopilot/"; \
+  fi; \
+  [ -f "$wt/package.json" ] && [ ! -d "$wt/node_modules" ] && echo "  missing: node_modules"; \
+  [ ! -f "$wt/local-config.json" ] && echo "  missing: local-config.json"; \
+done || true
 ```
 
 **评分标准**（0-10）：
@@ -193,9 +207,11 @@ cat package.json | grep -E '"(envalid|@t3-oss/env|dotenv-safe)"' 2>/dev/null
 |------|------|
 | 9-10 | pre-commit hooks + commitlint + lint-staged + worktree-links 配置 + 端口无硬编码 + .env.example 存在 |
 | 7-8 | pre-commit hooks + lint-staged + (.env 可链接或 worktree-links 存在) + (.env.example 或 env schema validation) |
-| 5-6 | 仅 pre-commit hooks 或仅 commitlint + 无 worktree 适配 |
+| 5-6 | 仅 pre-commit hooks 或 commitlint + 无 worktree 适配 |
 | 3-4 | 工具已安装但 hooks 未激活 |
 | 0 | 无 Git 工作流工具 |
+
+> **worktree 健康抽查解读**：检查输出含 `broken-symlink` / `missing:` 时，**不直接扣分**，而是在改进建议中列出具体 worktree 路径并建议 `cd <wt> && /worktree-repair`。worktree 抽查为空（无 worktree 或全 PASS）→ 不影响 Dim 8 评分。
 
 ### Dim 9: 依赖与安全基线（权重 6%）
 
