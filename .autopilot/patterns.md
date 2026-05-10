@@ -1,5 +1,23 @@
 # Patterns & Lessons
 
+### [2026-05-10] skill 改动应一处真相不重复 N 处文件
+<!-- tags: autopilot, skill, single-source-of-truth, drift, integration, sbe, gojko, contract, references -->
+**Scenario**: 给 autopilot 加契约规约能力，初版 v1 方案在 4 处文件（state-file-guide / plan-reviewer / red-team / blue-team）分别写「契约逐字一致」规则的不同表述。skill 反审指出这正是 [Gojko SBE 10 年回顾] 实证的 12% 兑现率 anti-pattern — 同一规则在 4 处用不同语言描述，3 个月内必出现 1-2 处不同步，业界 88% 团队靠纪律维持 spec-as-truth 失败。
+**Lesson**: skill 加新能力时，先建一个 `references/<concept>-protocol.md` 作为单一真相源（含完整规则 + 完整示例 + 反例），其他文件**只引用、不重复**。例如本次 v2: contract-protocol.md 集中所有契约协议规则；state-file-guide / plan-reviewer / red-team / blue-team 4 处仅写 1-3 行+「详情参 references/contract-protocol.md」链接。这样规则演进只需改一处，杜绝跨文件描述漂移。已存在的 progressive-disclosure 重构 pattern（[2026-03-21]）是同模式应用。
+**Evidence**: v1 4 处文件分散描述 vs v2 单一 contract-protocol.md + 4 处链接，diff 行数 v2 比 v1 少 ~40%；skill 反审在 v1 揭示「跨文件措辞漂移」⚠️，v2 重写后这条风险标记为已修；本次 11/11 红队 acceptance 中 C8/C9 两项验证「⚠️ 章节数不变」+ C10 验证「占位符不存在」均通过。
+
+### [2026-05-10] frontmatter 加豁免字段是 skill 演进的元任务安全模式
+<!-- tags: autopilot, skill, evolution, meta-task, frontmatter, opt-in, historical-exemption, contract-required, setup-sh -->
+**Scenario**: skill 引入新强制门（如 plan-reviewer 维度 7 必须有 ## 契约规约 章节）时，会立即卡死所有当前 phase=design 未推进的 state.md（含本次任务自身、其他 worktree 在跑、历史搁置任务），新规则上线即所有 autopilot session 卡住。这是 skill 升级的"元任务陷阱"，必修项。
+**Lesson**: 在 setup.sh / lib.sh 创建新 state.md 时，frontmatter 显式写入豁免开关字段（如 `contract_required: true`），新规则的 enforcement 路径（plan-reviewer 维度 / contract-checker agent）都先读这个字段，缺失或 false 直接跳过。旧 state.md 无此字段 → 视为 false → 自动豁免，不卡历史任务；新 task 由 setup.sh 强制启用。这个模式可推广到任何「新增 phase 门 / 新增 reviewer 维度 / 新增 lint」场景，保证 skill 平滑升级。
+**Evidence**: 本次 v3.24.0 升级，本任务自身 state.md（先于 setup.sh 改动创建）frontmatter 无 contract_required 字段，contract-checker 步骤 2.5 自动跳过 — 这是预期行为且实测通过；C5/C6 红队 acceptance 验证字段说明 + 写入位置正确；skill 反审给元任务陷阱 ⚠️ 在 v2 后标记为已修。
+
+### [2026-05-10] 红/蓝队 prompt 改动应在现有 ⚠️ 铁律 内追加 bullet，禁止新增 ⚠️ 章节
+<!-- tags: autopilot, red-team, blue-team, prompt, warning-section, anti-pattern, decision-tree, dilution, contract -->
+**Scenario**: 给红队 prompt 加新规则（如「契约逐字一致」），最直觉的做法是新增 `## ⚠️ 契约优先铁律` 章节。但红队 prompt 已有 `## ⚠️ 铁律` 和 `## ⚠️ 测试质量铁律` 两个 ⚠️ 章节，再加第三个就撞 [2026-04-17] decision「SKILL.md 决策树中后置章节会被 AI 跳过」anti-pattern — AI 读到第一个 ⚠️ 立即行动，后续 ⚠️ 章节优先级被稀释，新规则形同虚设。
+**Lesson**: 红/蓝队 prompt 加新规则时，**绝对不新增 ⚠️ 章节**。改在现有 ⚠️ 铁律章节内追加 1 条 bullet，或加在 `## 工作规则` 编号列表末尾。例如本次 v2: 红队规则加在 `## ⚠️ 铁律`（line 9）章节内的 bullet 列表末尾；蓝队规则加在 `## 工作规则`（9 条 → 10 条）末尾。⚠️ 章节数严格保持改动前数量（红队 = 2，蓝队 = 0），由 acceptance test 硬断言锁死。
+**Evidence**: v1 提案被 skill 反审判「多 ⚠️ 章节稀释」致命问题，v2 改为现有章节追加 bullet；C8/C9 两项红队 acceptance 硬断言「红队 ⚠️ 章节数 = 2」「蓝队 ⚠️ 章节数 = 0」均 PASS；占位符变量 EXPECTED_FIELD_NAME_FROM_CONTRACT 在 v1 prompt 中（运行时崩 lint），v2 移除后 C10 acceptance 验证 0 命中。
+
 ### [2026-05-09] acceptance test 中 `TARGET_VERSION="X.Y.Z"` 是版本同步规则的隐藏盲区
 <!-- tags: autopilot, version-sync, acceptance-test, hardcoded, regression, blind-spot, autopilot-commit -->
 **Scenario**: autopilot v3.22.1 → v3.23.0 升级时，蓝队按 CLAUDE.md 版本管理规则同步了 plugin.json + marketplace.json + CLAUDE.md 三处版本号，但 `plugins/autopilot/tests/acceptance/{version-sync,brainstorm-default,plan-review-html}.acceptance.test.sh` 中的 `TARGET_VERSION="3.22.0"` / `"3.22.1"` 硬编码字符串没被同步规则覆盖，导致 Tier 1 bash acceptance 3 个测试 fail（断言形如 `plugin.json 版本 '3.23.0' != 期望 '3.22.1'`）。

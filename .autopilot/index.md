@@ -1,6 +1,7 @@
 # Knowledge Index
 
 ## Decisions
+- [2026-05-10] 契约对齐采用 contract-checker agent + 集中 protocol，而非分散 prompt 铁律 | tags: autopilot, contract, red-team, blue-team, contract-checker, agent, single-source-of-truth, skill-fragility, gojko, sbe, cdc, pact, dbc, contract-protocol | → decisions.md
 - [2026-05-09] 修改脆弱 skill 时遵循"最小集 + 纯追加 + 可独立回滚" | tags: autopilot, skill, fragility, minimal-change, append-only, rollback, tdd-quality, defensive-edit | → decisions.md
 - [2026-05-09] 引入新能力时优先复用现有内部基础设施，再考虑引入新栈 | tags: autopilot, integration, dependency-discipline, infrastructure-reuse, plugin-design, html-review, visual-companion | → decisions.md
 - [2026-05-08] Design 阶段默认含 brainstorm Q&A，--fast 复用为快速通道（决策树 4→3 档） | tags: autopilot, brainstorm, design, fast-mode, default-inversion, simplification, yagni | → decisions.md
@@ -19,6 +20,9 @@
 - [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → decisions.md
 
 ## Patterns
+- [2026-05-10] skill 改动应一处真相不重复 N 处文件 | tags: autopilot, skill, single-source-of-truth, drift, integration, sbe, gojko, contract, references | → patterns.md
+- [2026-05-10] frontmatter 加豁免字段是 skill 演进的元任务安全模式 | tags: autopilot, skill, evolution, meta-task, frontmatter, opt-in, historical-exemption, contract-required, setup-sh | → patterns.md
+- [2026-05-10] 红/蓝队 prompt 改动应在现有 ⚠️ 铁律 内追加 bullet，禁止新增 ⚠️ 章节 | tags: autopilot, red-team, blue-team, prompt, warning-section, anti-pattern, decision-tree, dilution, contract | → patterns.md
 - [2026-05-09] acceptance test 中 `TARGET_VERSION="X.Y.Z"` 是版本同步规则的隐藏盲区 | tags: autopilot, version-sync, acceptance-test, hardcoded, regression, blind-spot, autopilot-commit | → patterns.md
 - [2026-05-09] 主对话需等待外部 UI 操作时，前台同步 Bash + 长 timeout 优于 run_in_background | tags: autopilot, claude-code, bash-tool, run-in-background, ux, html-review, blocking-call | → patterns.md
 - [2026-05-09] macOS `tail -F | grep -m1 | timeout` 退出码语义不可靠，依赖 stdout 非空判成功 | tags: bash, macos, tail, grep, timeout, exit-code, event-watching, wait-decision, autopilot | → patterns.md
