@@ -360,24 +360,26 @@ function repair(worktreePath) {
   // sessions/ 是 worktree-local；knowledge/project/requirements 等共享项 symlink → main
   ensureSelectiveAutopilotLayout(root, worktreePath);
 
-  // Install dependencies
-  const nodeModules = join(worktreePath, 'node_modules');
-  if (!existsSync(nodeModules)) {
-    log('→ 安装依赖（自动识别包管理器）...');
-    const execOpts = { cwd: worktreePath, stdio: ['pipe', 'pipe', 'inherit'] };
-    try {
-      if (existsSync(join(worktreePath, 'pnpm-lock.yaml'))) {
-        execSync('pnpm install', execOpts);
-      } else if (existsSync(join(worktreePath, 'yarn.lock'))) {
-        execSync('yarn install', execOpts);
-      } else {
-        execSync('npm install', execOpts);
+  // Install dependencies — 仅当存在 package.json 时（避免在非 Node 项目里跑无意义安装）
+  if (existsSync(join(worktreePath, 'package.json'))) {
+    const nodeModules = join(worktreePath, 'node_modules');
+    if (!existsSync(nodeModules)) {
+      log('→ 安装依赖（自动识别包管理器）...');
+      const execOpts = { cwd: worktreePath, stdio: ['pipe', 'pipe', 'inherit'] };
+      try {
+        if (existsSync(join(worktreePath, 'pnpm-lock.yaml'))) {
+          execSync('pnpm install', execOpts);
+        } else if (existsSync(join(worktreePath, 'yarn.lock'))) {
+          execSync('yarn install', execOpts);
+        } else {
+          execSync('npm install', execOpts);
+        }
+      } catch (e) {
+        log(`   ⚠ 依赖安装失败: ${e.message}`);
       }
-    } catch (e) {
-      log(`   ⚠ 依赖安装失败: ${e.message}`);
+    } else {
+      log('→ node_modules 已存在，跳过安装');
     }
-  } else {
-    log('→ node_modules 已存在，跳过安装');
   }
 
   // Prisma generate
@@ -534,13 +536,14 @@ function remove() {
   // Get branch name before removing worktree
   const branch = gitSilent('-C', worktreePath, 'rev-parse', '--abbrev-ref', 'HEAD');
 
-  // Remove worktree
-  git('worktree', 'remove', '--force', worktreePath);
+  // Remove worktree — 用 -C root 而非 process.cwd()，否则从 worktree 内部触发
+  // remove 时（hook 的 cwd 就是被删的 worktree），git 命令会因 cwd 失效而出错。
+  git('-C', root, 'worktree', 'remove', '--force', worktreePath);
 
   // Delete branch (unless main/HEAD)
   if (branch && branch !== 'main' && branch !== 'HEAD') {
     try {
-      git('branch', '-D', branch);
+      git('-C', root, 'branch', '-D', branch);
       log(`   ✓ 分支已删除: ${branch}`);
     } catch { /* branch may not exist */ }
   }

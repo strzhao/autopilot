@@ -96,7 +96,7 @@
 <!-- tags: autopilot, red-team, testing, file-path, merge -->
 **Scenario**: 将 worktree-setup 合并到 autopilot 时，红队仅凭设计文档编写文件存在性验收测试，对项目目录结构做出错误假设——检查 `worktree.test.mjs`（实际是 `worktree.acceptance.test.mjs`）、检查 `references/knowledge-engineering.md`（实际路径是 `skills/autopilot/references/knowledge-engineering.md`）
 **Lesson**: 红队信息隔离在"文件迁移/重组"类任务中有天然劣势：文件名和嵌套路径需要精确匹配，但红队只看设计文档无法确认真实路径。对此类任务，设计文档应在文件影响范围表中提供完整的绝对路径而非缩写，或在验证方案中给出精确的文件存在性检查命令
-**Evidence**: worktree-merge.acceptance.test.mjs 27 测试中 2 个因路径假设失败（25/27 通过），均为红队路径推测错误而非实现缺陷
+**Evidence**: 当时的 worktree-merge.acceptance.test.mjs 27 测试中 2 个因路径假设失败（25/27 通过），均为红队路径推测错误而非实现缺陷（该测试文件因绑定 v3.0.0 一次性迁移、长期不在 npm test 内、断言全面腐烂，已于 2026-05-10 删除）
 
 ### [2026-03-25] 符号链接检测 ≠ worktree 检测，防御需多层
 <!-- tags: worktree, knowledge, symlink, fallback, defense-in-depth -->
