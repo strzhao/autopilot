@@ -21,6 +21,7 @@
 - [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → decisions.md
 
 ## Patterns
+- [2026-05-11] tail -c + jq 流式解析必须丢首行 + 走 fail-safe 兜底，否则在长会话下死循环 | tags: autopilot, stop-hook, jq, tail, byte-cut, fail-safe, fail-unsafe, has-pending-subagents, parse-error, detection-function | → patterns.md
 - [2026-05-10] git worktree list --porcelain 第一项稳定为主仓库，按位置跳过优于按路径比对 | tags: git, worktree, porcelain, position-stable, run-anywhere, doctor, autopilot, path-resolution | → patterns.md
 - [2026-05-10] skill 改动应一处真相不重复 N 处文件 | tags: autopilot, skill, single-source-of-truth, drift, integration, sbe, gojko, contract, references | → patterns.md
 - [2026-05-10] frontmatter 加豁免字段是 skill 演进的元任务安全模式 | tags: autopilot, skill, evolution, meta-task, frontmatter, opt-in, historical-exemption, contract-required, setup-sh | → patterns.md

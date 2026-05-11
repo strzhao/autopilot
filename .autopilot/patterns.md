@@ -1,5 +1,14 @@
 # Patterns & Lessons
 
+### [2026-05-11] tail -c + jq 流式解析必须丢首行 + 走 fail-safe 兜底，否则在长会话下死循环
+<!-- tags: autopilot, stop-hook, jq, tail, byte-cut, fail-safe, fail-unsafe, has-pending-subagents, parse-error, detection-function -->
+**Scenario**: stop-hook v3.25.x 用 `tail -c 2097152 $transcript | jq -rs '...'` 检测后台 sub-agent 是否在跑。短会话下 transcript < 2MB 时 tail 直接拿到完整文件，jq 正常工作。但当会话超长（实测 5.93MB transcript），`tail -c` 会从字节偏移 2MB 处直接截断，几乎必然落在 JSON 行中段（实测首行 = `tokens":1,"cache_creation_input_tokens":1447,...`，非合法 JSON）。jq -rs 第一行解析就报 `parse error: Invalid literal at line 1, column 1` 退出非零，函数 `|| return 1` 走错误降级。
+**Lesson**: 两条独立护栏，缺一不可——
+(1) 解析前必须丢弃首行（`tail -c N | tail -n +2`），把字节切的破损行从输入剔除；首行删后剩余 ~(N - 一行) 仍是合法 JSON 流。
+(2) 解析失败时**不能**走"视为无 pending"的 fail-unsafe 路径——这是上次灾难的根源（[2026-05-07] 决策的 Trade-offs 节"transcript 损坏/jq 失败时降级返回 1"被实证为反 pattern）。改为：用 grep 在 raw tail 扫文本字面量 `"status":"async_launched"` / `<status>completed</status>`，launched - completed > 0 即视为 pending（fail-safe）。这样 jq schema 未来再变、tail 切再奇怪，"无限唤醒"灾难不会重演。
+任何在 hook 里跑的"探测函数"（决定是否阻塞 / 是否唤醒 AI），都必须默认 fail-safe，不能 fail-unsafe——错误降级方向就是这类函数的安全分界。
+**Evidence**: v3.25.1 → v3.26.0 升级，error.txt 复现真实 transcript 5.93MB，蓝/红队 ID 在 4.4M offset 处。R1 直接证据：旧版 `tail -c 2097152 $REAL | jq -rs ...` 报 `parse error: Expected value before ',' at line 1, column 1`，新版 `tail -c 4194304 $REAL | tail -n +2 | jq -rs ...` 输出 `2`（正确检测 2 个 async_launched）。R3 端到端对照：同一 stdin 投入旧/新 stop-hook，旧版构造 block JSON 唤醒主 agent（=死循环根因），新版 stdout 空 + stderr "静默等待"（=修复）。新增 `has-pending-subagents.acceptance.test.sh` 13 场景全 PASS（C3/C7/C10b 是 error.txt 三个根因场景）。
+
 ### [2026-05-10] git worktree list --porcelain 第一项稳定为主仓库，按位置跳过优于按路径比对
 <!-- tags: git, worktree, porcelain, position-stable, run-anywhere, doctor, autopilot, path-resolution -->
 **Scenario**: 在仓库内任意位置（主仓库 / linked worktree）运行的脚本，需要遍历"非主仓库"的 worktree。
