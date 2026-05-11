@@ -1,6 +1,6 @@
 ---
 active: true
-phase: "merge"
+phase: "done"
 gate: ""
 iteration: 1
 max_iterations: 30
@@ -12,7 +12,7 @@ fast_mode: false
 brief_file: ""
 next_task: ""
 auto_approve: false
-knowledge_extracted: ""
+knowledge_extracted: "true"
 task_dir: "/Users/stringzhao/workspace/string-claude-code-plugin/.autopilot/requirements/20260511-我第三次遇到后台-agent"
 session_id: 95dbb09b-be85-43de-be36-56534c9f72ea
 started_at: "2026-05-11T13:51:34Z"
@@ -336,4 +336,5 @@ stderr: [has_pending_subagents] jq 检测出 pending=2
 - [2026-05-11T13:58:12Z] design 阶段完成：根因定位为 `tail -c 2097152` 字节截断导致 jq parse error，has_pending_subagents 误判为「无 pending」。设计了 4 改动点的最小修复方案（丢首行 + 扩窗口 + fail-safe 兜底 + 观测日志）。
 - [2026-05-11T13:58:30Z] plan-reviewer 审查 PASS（含 S1-S4 改进建议纳入），用户审批通过，进入 implement。
 - [2026-05-11T14:05:22Z] implement 阶段完成：has_pending_subagents 修复落地（丢首行 + 4MB 窗口 + fail-safe 兜底 + 观测日志），13 场景红队验收 PASS，版本号 3.25.1→3.26.0 三处同步。进入 qa。
-- [2026-05-11T14:08:00Z] QA 全部通过：Wave 1 红队 12/12 + Tier 1 全 lint/语法 + 版本一致；Wave 1.5 R1/R2/R3 全 PASS（R3 关键对照证据：旧版构造 block JSON 唤醒主 agent vs 新版静默等待）。等待用户验收。
+- [2026-05-11T14:08:00Z] QA 全部通过：Wave 1 红队 12/12 + Tier 1 全 lint/语法 + 版本一致；Wave 1.5 R1/R2/R3 全 PASS（R3 关键对照证据：旧版构造 block JSON 唤醒主 agent vs 新版静默等待）。
+- [2026-05-11T14:10:00Z] merge 完成：5235244 修复主体提交 + cbbcabb 知识沉淀（patterns.md + index.md）。autopilot 闭环完成。
