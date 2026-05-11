@@ -153,17 +153,29 @@ compress_qa_report() {
 #       异步路径必须独立判定，因其 tool_result 在启动瞬间就回流（写有
 #       "Async agent launched..." 文本），路径 A 看不到它仍在跑。
 #
+# v3.26.0 关键修复：
+#   - 窗口 2MB → 4MB（长会话覆盖更稳）
+#   - tail -c 后丢弃首行（字节边界几乎必然切在 JSON 行中间，首行半截会让 jq 报
+#     "parse error: Invalid literal at line 1" 进而走错误降级，导致死循环唤醒）
+#   - jq 失败兜底：grep raw tail 文本 "status":"async_launched"，存在则 fail-safe
+#     返回 0（视为 pending），避免重蹈 fail-unsafe 灾难
+#
 # 退出码：0 = 有 pending（同步∪异步）、1 = 无 pending（含错误降级）。
-# 错误降级原则：transcript 解析失败时返回 1（无 pending），让 stop-hook
-# 走原有路径，避免因检测失败导致 autopilot 永远卡死。
 has_pending_subagents() {
     local transcript="$1"
     [ -n "$transcript" ] && [ -f "$transcript" ] || return 1
 
-    # 末尾 2MB：覆盖含大代码内容的 tool_result（单 turn 通常 < 1MB）
+    # 末尾 4MB：覆盖含大代码内容的 tool_result（单 turn 通常 < 1MB），长会话留有余地
+    local raw_tail
+    raw_tail=$(timeout 3 tail -c 4194304 "$transcript" 2>/dev/null) || return 1
+    [ -n "$raw_tail" ] || return 1
+
+    # 丢弃首行：tail -c 在字节边界切，首行几乎必然是半截 JSON 行（实测）。
+    # 边界 case：若丢首行后为空但原始非空（极短 transcript），回退原始数据，
+    # 让 jq 或 grep fail-safe 自己处理。
     local tail_data
-    tail_data=$(timeout 3 tail -c 2097152 "$transcript" 2>/dev/null) || return 1
-    [ -n "$tail_data" ] || return 1
+    tail_data=$(echo "$raw_tail" | tail -n +2)
+    [ -n "$tail_data" ] || tail_data="$raw_tail"
 
     local pending_count
     # shellcheck disable=SC2016
@@ -193,10 +205,38 @@ has_pending_subagents() {
         ($async_launched - $async_completed) as $async_pending
         |
         ($sync_pending | length) + ($async_pending | length)
-    ' 2>/dev/null) || return 1
+    ' 2>/dev/null)
+    local jq_exit=$?
 
-    [[ "$pending_count" =~ ^[0-9]+$ ]] || return 1
-    [ "$pending_count" -gt 0 ] && return 0 || return 1
+    # 成功路径
+    if [ $jq_exit -eq 0 ] && [[ "$pending_count" =~ ^[0-9]+$ ]]; then
+        if [ "$pending_count" -gt 0 ]; then
+            echo "[has_pending_subagents] jq 检测出 pending=$pending_count" >&2
+            return 0
+        else
+            return 1
+        fi
+    fi
+
+    # Fail-safe 兜底（防止 jq schema 变化导致再次死循环）
+    # 用 raw_tail（含首行）扫文本字面量。launched/completed 计数差 > 0 才视为 pending，
+    # 避免已完成场景（两边计数相等）触发不必要的 silent block。
+    local launched_count completed_count
+    launched_count=$(echo "$raw_tail" | grep -c '"status":"async_launched"' 2>/dev/null || echo 0)
+    completed_count=$(echo "$raw_tail" | grep -c '<status>completed</status>' 2>/dev/null || echo 0)
+    # 防御非数字
+    [[ "$launched_count" =~ ^[0-9]+$ ]] || launched_count=0
+    [[ "$completed_count" =~ ^[0-9]+$ ]] || completed_count=0
+
+    if [ "$launched_count" -gt "$completed_count" ]; then
+        echo "[has_pending_subagents] jq 失败，fail-safe 文本检测 launched=$launched_count completed=$completed_count → pending" >&2
+        return 0
+    fi
+
+    if [ $jq_exit -ne 0 ]; then
+        echo "[has_pending_subagents] jq 失败且 fail-safe 文本检测无 pending (launched=$launched_count completed=$completed_count)" >&2
+    fi
+    return 1
 }
 
 # detect_smoke_eligible — 检测当前 diff 是否满足 smoke QA 条件，满足则设置 qa_scope=smoke
