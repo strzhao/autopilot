@@ -1,0 +1,56 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.7",
+  "base_commit_sha": "6bd2d9552f49a00005c1cf49e2911cd4441ae9fe",
+  "prompts": {
+    "971ed437f1354eb2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa080700-a311-4897-b18e-f378a0f462ab",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 24,
+      "overriden_lines": 8,
+      "per_file_stats": {
+        "plugins/autopilot/skills/autopilot/skill.md": {
+          "accepted_lines": 12,
+          "overriden_lines": 7
+        },
+        "claude.md": {
+          "accepted_lines": 12,
+          "overriden_lines": 1
+        }
+      }
+    },
+    "a44b215e914d6d09": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "02440ece-460f-41c7-b34a-521adbf39e53",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 707,
+      "overriden_lines": 7,
+      "per_file_stats": {
+        "plugins/autopilot/skills/autopilot/skill.md": {
+          "accepted_lines": 556,
+          "overriden_lines": 7
+        },
+        "plugins/autopilot/skills/autopilot-project/skill.md": {
+          "accepted_lines": 102
+        },
+        "claude.md": {
+          "accepted_lines": 49
+        }
+      }
+    }
+  }
+}
