@@ -1,0 +1,50 @@
+plugins/autopilot/.claude-plugin/plugin.json
+  7cf321010a1b401a 3
+CLAUDE.md
+  7cf321010a1b401a 14
+.claude-plugin/marketplace.json
+  7cf321010a1b401a 32
+plugins/autopilot/scripts/worktree.mjs
+  7cf321010a1b401a 135-139,337-342
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.7",
+  "base_commit_sha": "07c926cbd84786029d6461ae0efb18361e1cd548",
+  "prompts": {
+    "7cf321010a1b401a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c90631fc-4ac0-4a94-a189-45a5ecf4790d",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 14,
+      "total_deletions": 3,
+      "accepted_lines": 14,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "plugins/autopilot/.claude-plugin/plugin.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/scripts/worktree.mjs": {
+          "additions": 11,
+          "accepted_lines": 11
+        },
+        "CLAUDE.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        ".claude-plugin/marketplace.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        }
+      }
+    }
+  }
+}
