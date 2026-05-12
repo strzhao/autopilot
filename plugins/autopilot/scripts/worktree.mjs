@@ -132,6 +132,11 @@ function applySkipWorktree(worktreePath, relPath) {
 // 旧版兼容：如果 .autopilot 整体是全量 symlink，先把 main 里属于本 worktree 的
 // sessions 子目录暂存到 worktree 内，重建后再放回 sessions/<name>/。
 export function ensureSelectiveAutopilotLayout(mainRoot, worktreePath) {
+  // 防御：mainRoot === worktreePath 时所有 src/dst 同路径，会导致
+  // canDiscard 自我比较为真 → rmSync 真实文件 → symlinkSync 自指。
+  if (realpathSync(mainRoot) === realpathSync(worktreePath)) {
+    throw new Error(`ensureSelectiveAutopilotLayout: mainRoot === worktreePath (${mainRoot})，拒绝执行防自指 symlink`);
+  }
   const apSrc = join(mainRoot, '.autopilot');
   const apDst = join(worktreePath, '.autopilot');
 
@@ -329,6 +334,12 @@ function writeLocalConfig(worktreePath) {
 // ─── REPAIR ───
 function repair(worktreePath) {
   const root = repoRoot(worktreePath);
+  // 防御：拒绝把主仓库当作 worktree 修复，否则 symlink src/dst 同路径会
+  // 制造 .autopilot/<item> -> 自身 的死循环 symlink，并误删真实文件。
+  if (realpathSync(root) === realpathSync(worktreePath)) {
+    log(`⚠ 拒绝 repair：worktreePath (${worktreePath}) 等于主仓库根，操作会破坏 .autopilot`);
+    process.exit(1);
+  }
   log(`→ 修复 worktree: ${worktreePath}`);
 
   const linksFile = join(root, '.autopilot', 'worktree-links');
