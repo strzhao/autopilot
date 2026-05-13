@@ -1,17 +1,21 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <title>Autopilot Plan Review</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Autopilot — 设计方案审批</title>
   <style>
     /*
      * AUTOPILOT PLAN REVIEW TEMPLATE
      *
-     * v3.22+ — markdown 渲染版（marked.min.js 内嵌）
-     * - Design document 用 marked.js 渲染（标题/列表/表格/代码块/链接）
-     * - Feedback textarea
-     * - Three action buttons: approve / revise / abort
-     * - OS-aware light/dark theming
+     * v3.27.0 — premium redesign
+     * - Typography: weight grading / letter-spacing / text-wrap: pretty
+     * - Color: warmer off-white bg / indigo accent / colored shadows
+     * - Layout: max-width 880px / border-radius 16px / larger spacing
+     * - Interactivity: hover translateY / active scale / focus-visible ring
+     * - Buttons: 3-tier (filled emerald / soft amber / ghost)
+     * - Noise overlay via CSS data-uri SVG
+     * - Auto-close after decision (persistent pref via WS pref-update)
      */
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -19,84 +23,148 @@
 
     /* ===== THEME VARIABLES ===== */
     :root {
-      --bg-primary: #f5f5f7;
+      --bg-primary: #fafaf9;
       --bg-secondary: #ffffff;
-      --bg-tertiary: #e5e5e7;
-      --bg-code: #f0f0f3;
-      --border: #d1d1d6;
-      --text-primary: #1d1d1f;
-      --text-secondary: #86868b;
-      --text-tertiary: #aeaeb2;
-      --accent: #0071e3;
-      --accent-hover: #0077ed;
-      --success: #34c759;
-      --warning: #ff9f0a;
-      --error: #ff3b30;
+      --bg-tertiary: #f0efed;
+      --bg-code: #f3f2ef;
+      --border: #e2e1de;
+      --border-inner: rgba(0,0,0,0.06);
+      --text-primary: #0e0e11;
+      --text-secondary: #6b6a72;
+      --text-tertiary: #a09fa8;
+      --accent: #5b67e8;
+      --accent-hover: #4a55d6;
+      --accent-rgb: 91, 103, 232;
+      /* Button colors */
+      --btn-approve-bg: #10b981;
+      --btn-approve-hover: #0da872;
+      --btn-approve-shadow: rgba(16, 185, 129, 0.4);
+      --btn-revise-bg: rgba(245, 158, 11, 0.12);
+      --btn-revise-border: rgba(245, 158, 11, 0.35);
+      --btn-revise-color: #b45309;
+      --btn-revise-hover-bg: rgba(245, 158, 11, 0.2);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      /* Card shadow */
+      --card-shadow: 0 12px 32px -12px rgba(91, 103, 232, 0.18);
     }
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg-primary: #1d1d1f;
-        --bg-secondary: #2d2d2f;
-        --bg-tertiary: #3d3d3f;
-        --bg-code: #242427;
-        --border: #424245;
-        --text-primary: #f5f5f7;
-        --text-secondary: #86868b;
-        --text-tertiary: #636366;
-        --accent: #0a84ff;
-        --accent-hover: #409cff;
+        --bg-primary: #0e0e11;
+        --bg-secondary: #18181c;
+        --bg-tertiary: #222228;
+        --bg-code: #1c1c22;
+        --border: #2e2e36;
+        --border-inner: rgba(255,255,255,0.06);
+        --text-primary: #f2f2f5;
+        --text-secondary: #8b8b96;
+        --text-tertiary: #56565e;
+        --accent: #7b87f0;
+        --accent-hover: #8e99f3;
+        --accent-rgb: 123, 135, 240;
+        --btn-approve-bg: #0d9e6d;
+        --btn-approve-hover: #0bb864;
+        --btn-approve-shadow: rgba(16, 185, 129, 0.35);
+        --btn-revise-bg: rgba(245, 158, 11, 0.10);
+        --btn-revise-border: rgba(245, 158, 11, 0.28);
+        --btn-revise-color: #f0a030;
+        --btn-revise-hover-bg: rgba(245, 158, 11, 0.18);
+        --card-shadow: 0 12px 32px -12px rgba(123, 135, 240, 0.22);
       }
     }
 
+    /* ===== NOISE OVERLAY ===== */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    }
+
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 15px;
+      font-weight: 400;
       background: var(--bg-primary);
       color: var(--text-primary);
       display: flex;
       flex-direction: column;
-      line-height: 1.5;
+      line-height: 1.6;
+      text-wrap: pretty;
     }
 
-    /* ===== FRAME ===== */
+    /* ===== HEADER ===== */
     .header {
       background: var(--bg-secondary);
-      padding: 0.5rem 1.5rem;
+      padding: 0.625rem 1.75rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
-    .header h1 { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
-    .header .status { font-size: 0.7rem; color: var(--success); display: flex; align-items: center; gap: 0.4rem; }
-    .header .status::before { content: ''; width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+    .header h1 {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      letter-spacing: -0.01em;
+    }
+    .header .status {
+      font-size: 0.6875rem;
+      color: var(--success);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 500;
+    }
+    .header .status::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--success);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
 
+    /* ===== MAIN SCROLL AREA ===== */
     .main { flex: 1; overflow-y: auto; }
-    .content-area { padding: 1.5rem 2rem; max-width: 980px; margin: 0 auto; }
+    .content-area {
+      padding: 2.5rem 2rem;
+      max-width: 880px;
+      margin: 0 auto;
+    }
 
     /* ===== DESIGN DOCUMENT ===== */
     .design-section {
       background: var(--bg-secondary);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      margin-bottom: 1.5rem;
+      border-radius: 16px;
+      margin-bottom: 2rem;
       overflow: hidden;
+      box-shadow: var(--card-shadow);
+      /* 1px inner border for glass-edge feel */
+      outline: 1px solid var(--border-inner);
+      outline-offset: -1px;
     }
     .design-section-header {
       background: var(--bg-tertiary);
-      padding: 0.5rem 1rem;
-      font-size: 0.75rem;
-      font-weight: 500;
+      padding: 0.5rem 1.25rem;
+      font-size: 0.6875rem;
+      font-weight: 600;
       color: var(--text-secondary);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
       border-bottom: 1px solid var(--border);
     }
     #design-content {
-      padding: 1.5rem 2rem;
-      font-size: 0.92rem;
-      line-height: 1.65;
+      padding: 1.75rem 2rem;
+      font-size: 0.9125rem;
+      line-height: 1.7;
       color: var(--text-primary);
       overflow-x: auto;
     }
@@ -108,51 +176,52 @@
     #design-content h4,
     #design-content h5,
     #design-content h6 {
-      margin-top: 1.5rem;
-      margin-bottom: 0.6rem;
+      margin-top: 1.75rem;
+      margin-bottom: 0.625rem;
       font-weight: 600;
       line-height: 1.3;
+      letter-spacing: -0.02em;
       color: var(--text-primary);
     }
     #design-content h1:first-child,
     #design-content h2:first-child,
     #design-content h3:first-child { margin-top: 0; }
-    #design-content h1 { font-size: 1.5rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+    #design-content h1 { font-size: 1.5rem; padding-bottom: 0.35rem; border-bottom: 1px solid var(--border); }
     #design-content h2 { font-size: 1.25rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border); }
-    #design-content h3 { font-size: 1.05rem; }
-    #design-content h4 { font-size: 0.95rem; }
-    #design-content p { margin: 0.6rem 0; }
+    #design-content h3 { font-size: 1.075rem; }
+    #design-content h4 { font-size: 0.9375rem; font-weight: 600; }
+    #design-content p { margin: 0.65rem 0; text-wrap: pretty; }
     #design-content ul,
-    #design-content ol { margin: 0.6rem 0 0.6rem 1.6rem; }
-    #design-content li { margin-bottom: 0.25rem; }
+    #design-content ol { margin: 0.65rem 0 0.65rem 1.6rem; }
+    #design-content li { margin-bottom: 0.3rem; }
     #design-content li > ul,
     #design-content li > ol { margin-top: 0.25rem; margin-bottom: 0.25rem; }
     #design-content blockquote {
-      margin: 0.8rem 0;
-      padding: 0.5rem 1rem;
+      margin: 0.9rem 0;
+      padding: 0.55rem 1rem;
       border-left: 3px solid var(--accent);
       background: var(--bg-tertiary);
       color: var(--text-secondary);
-      border-radius: 0 6px 6px 0;
+      border-radius: 0 8px 8px 0;
     }
     #design-content code {
       font-family: ui-monospace, 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
-      font-size: 0.85em;
+      font-size: 0.84em;
       background: var(--bg-code);
       padding: 0.15em 0.4em;
-      border-radius: 4px;
+      border-radius: 5px;
       color: var(--text-primary);
     }
     #design-content pre {
-      margin: 0.8rem 0;
-      padding: 0.9rem 1.1rem;
+      margin: 0.9rem 0;
+      padding: 1rem 1.25rem;
       background: var(--bg-code);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 10px;
       overflow-x: auto;
       font-family: ui-monospace, 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
       font-size: 0.82rem;
-      line-height: 1.55;
+      line-height: 1.6;
     }
     #design-content pre code {
       background: transparent;
@@ -162,19 +231,20 @@
     }
     #design-content table {
       border-collapse: collapse;
-      margin: 0.8rem 0;
+      margin: 0.9rem 0;
       width: 100%;
-      font-size: 0.88rem;
+      font-size: 0.875rem;
     }
     #design-content th,
     #design-content td {
       border: 1px solid var(--border);
-      padding: 0.4rem 0.7rem;
+      padding: 0.45rem 0.75rem;
       text-align: left;
     }
     #design-content th {
       background: var(--bg-tertiary);
       font-weight: 600;
+      font-size: 0.8125rem;
     }
     #design-content tr:nth-child(even) td { background: var(--bg-tertiary); }
     #design-content a {
@@ -185,18 +255,19 @@
     #design-content hr {
       border: 0;
       border-top: 1px solid var(--border);
-      margin: 1rem 0;
+      margin: 1.25rem 0;
     }
     #design-content strong { font-weight: 600; }
     #design-content em { font-style: italic; }
 
     /* ===== FEEDBACK ===== */
-    .feedback-section { margin-bottom: 1.25rem; }
+    .feedback-section { margin-bottom: 1.5rem; }
     .feedback-label {
-      font-size: 0.75rem;
+      font-size: 0.6875rem;
+      font-weight: 600;
       color: var(--text-secondary);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
       margin-bottom: 0.5rem;
     }
     #feedback {
@@ -204,53 +275,252 @@
       min-height: 80px;
       background: var(--bg-secondary);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 0.75rem 1rem;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-size: 0.875rem;
       color: var(--text-primary);
       resize: vertical;
-      transition: border-color 0.15s ease;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
       outline: none;
     }
-    #feedback:focus { border-color: var(--accent); }
+    #feedback:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15);
+    }
     #feedback::placeholder { color: var(--text-tertiary); }
 
-    /* ===== ACTIONS ===== */
-    .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    /* ===== ACTIONS: 3-tier button hierarchy ===== */
+    .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+
+    /* Shared button base */
     button[data-choice] {
-      padding: 0.6rem 1.25rem;
-      border: none;
-      border-radius: 8px;
+      padding: 0.5625rem 1.25rem;
+      border-radius: 9px;
       font-size: 0.875rem;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.15s ease;
+      border: none;
+      outline: none;
+      position: relative;
     }
-    button[data-choice="approve"] { background: var(--success); color: #fff; }
-    button[data-choice="approve"]:hover { opacity: 0.85; }
-    button[data-choice="revise"] { background: var(--warning); color: #fff; }
-    button[data-choice="revise"]:hover { opacity: 0.85; }
-    button[data-choice="abort"] {
-      background: var(--bg-tertiary);
-      color: var(--text-secondary);
-      border: 1px solid var(--border);
+    button[data-choice]:hover { transform: translateY(-1px); }
+    button[data-choice]:active { transform: scale(0.98); }
+    button[data-choice]:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
     }
-    button[data-choice="abort"]:hover { border-color: var(--error); color: var(--error); }
 
-    /* ===== INDICATOR ===== */
+    /* Tier 1: approve — filled emerald primary with colored shadow */
+    button[data-choice="approve"] {
+      background: var(--btn-approve-bg);
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 6px 16px -4px var(--btn-approve-shadow);
+    }
+    button[data-choice="approve"]:hover {
+      background: var(--btn-approve-hover);
+      box-shadow: 0 8px 20px -4px var(--btn-approve-shadow);
+    }
+    button[data-choice="approve"]:active {
+      transform: scale(0.98);
+      box-shadow: 0 2px 8px -2px var(--btn-approve-shadow);
+    }
+
+    /* Tier 2: revise — soft amber tinted */
+    button[data-choice="revise"] {
+      background: var(--btn-revise-bg);
+      color: var(--btn-revise-color);
+      border: 1px solid var(--btn-revise-border);
+    }
+    button[data-choice="revise"]:hover {
+      background: var(--btn-revise-hover-bg);
+    }
+
+    /* Tier 3: abort — ghost text-button */
+    button[data-choice="abort"] {
+      background: transparent;
+      color: var(--text-tertiary);
+      border: 1px solid transparent;
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+    }
+    button[data-choice="abort"]:hover {
+      color: var(--error);
+      border-color: rgba(239, 68, 68, 0.25);
+    }
+
+    /* ===== INDICATOR BAR ===== */
     .indicator-bar {
       background: var(--bg-secondary);
       border-top: 1px solid var(--border);
-      padding: 0.5rem 1.5rem;
+      padding: 0.5rem 1.75rem;
       flex-shrink: 0;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      min-height: 2.75rem;
     }
-    .indicator-bar span { font-size: 0.75rem; color: var(--text-secondary); }
-    .indicator-bar .selected-text { color: var(--accent); font-weight: 500; }
+
+    /* Left: status text */
+    .indicator-bar .indicator-status {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .indicator-bar .indicator-status .selected-text {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* Center: pref toggle group */
+    .pref-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+    .pref-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* Toggle switch */
+    .toggle-wrap {
+      position: relative;
+      display: inline-block;
+      width: 34px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    .toggle-wrap input[type="checkbox"] {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+    }
+    .toggle-wrap input:checked + .toggle-slider {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .toggle-wrap input:checked + .toggle-slider::before {
+      transform: translateX(14px);
+    }
+    .toggle-wrap input:focus-visible + .toggle-slider {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* Right: hint */
+    .indicator-hint {
+      font-size: 0.6875rem;
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    /* ===== SUBMIT OVERLAY ===== */
+    #submit-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: rgba(14, 14, 17, 0.72);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+    }
+    #submit-overlay.visible { display: flex; }
+    .overlay-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2rem 2.5rem;
+      text-align: center;
+      box-shadow: 0 24px 64px -16px rgba(0,0,0,0.35);
+      max-width: 360px;
+      width: 90%;
+    }
+    .overlay-icon {
+      font-size: 2.5rem;
+      line-height: 1;
+      margin-bottom: 0.75rem;
+    }
+    .overlay-title {
+      font-size: 1.0625rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      margin-bottom: 0.375rem;
+    }
+    .overlay-subtitle {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .overlay-close-btn {
+      display: none;
+      margin-top: 1.25rem;
+      padding: 0.5rem 1.5rem;
+      background: var(--btn-approve-bg);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .overlay-close-btn:hover { background: var(--btn-approve-hover); transform: translateY(-1px); }
+    .overlay-close-btn:active { transform: scale(0.98); }
+    .overlay-close-btn.visible { display: inline-block; }
   </style>
 </head>
-<body>
+<body data-auto-close="{{AUTO_CLOSE_PREF}}">
+
+  <!-- Submit overlay (shown after decision) -->
+  <div id="submit-overlay" role="dialog" aria-modal="true" aria-label="决策已提交">
+    <div class="overlay-card">
+      <div class="overlay-icon" id="overlay-icon">✓</div>
+      <div class="overlay-title" id="overlay-title">决策已提交</div>
+      <div class="overlay-subtitle" id="overlay-subtitle">窗口即将关闭…</div>
+      <button class="overlay-close-btn" id="overlay-close-btn" onclick="window.close()">关闭标签页</button>
+    </div>
+  </div>
+
   <div class="header">
     <h1>Autopilot — 设计方案审批</h1>
     <div class="status">等待审批</div>
@@ -274,7 +544,7 @@
         <textarea id="feedback" placeholder="（可选）写下修改意见或评论，选择「修改」时会回传给 Claude"></textarea>
       </div>
 
-      <!-- 按钮 -->
+      <!-- 按钮：三档分级 approve / revise / abort -->
       <div class="actions">
         <button data-choice="approve">通过</button>
         <button data-choice="revise">有修改意见</button>
@@ -284,14 +554,31 @@
     </div>
   </div>
 
+  <!-- Indicator bar: status · pref toggle · hint -->
   <div class="indicator-bar">
-    <span id="indicator-text">请阅读设计文档，然后点击上方按钮作出决策</span>
+    <span class="indicator-status">
+      <span id="indicator-text">请阅读设计文档，然后点击上方按钮作出决策</span>
+    </span>
+    <div class="pref-group">
+      <label class="pref-label" for="auto-close-toggle">决策后自动关闭</label>
+      <label class="toggle-wrap">
+        <input
+          type="checkbox"
+          id="auto-close-toggle"
+          data-pref="auto_close_after_decision"
+          aria-label="决策后自动关闭页面"
+        >
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <span class="indicator-hint">偏好已持久化</span>
   </div>
 
   <!-- marked.min.js（由 launch-plan-review.sh 内嵌注入）-->
   <script>{{MARKED_LIB}}</script>
   <script>
     (function () {
+      /* ── Markdown render ──────────────────────────────────── */
       var rawEl = document.getElementById('design-content-raw');
       var renderEl = document.getElementById('design-content');
       var raw = rawEl ? rawEl.textContent : '';
@@ -299,7 +586,6 @@
         if (typeof marked !== 'undefined' && raw) {
           renderEl.innerHTML = marked.parse(raw);
         } else {
-          // marked 加载失败 → fallback 到 pre 文本
           var pre = document.createElement('pre');
           pre.textContent = raw;
           pre.style.whiteSpace = 'pre-wrap';
@@ -309,6 +595,82 @@
       } catch (e) {
         renderEl.textContent = raw;
       }
+
+      /* ── Auto-close pref init ─────────────────────────────── */
+      var autoCloseInitial = document.body.dataset.autoClose === 'true';
+      var toggleEl = document.getElementById('auto-close-toggle');
+      if (toggleEl) {
+        toggleEl.checked = autoCloseInitial;
+      }
+
+      /* ── Pref toggle → WS pref-update ───────────────────────*/
+      if (toggleEl) {
+        toggleEl.addEventListener('change', function () {
+          var val = toggleEl.checked;
+          if (window.brainstorm && typeof window.brainstorm.send === 'function') {
+            window.brainstorm.send({
+              type: 'pref-update',
+              key: 'auto_close_after_decision',
+              value: val,
+              timestamp: Date.now()
+            });
+          }
+        });
+      }
+
+      /* ── Submit overlay & auto-close logic ───────────────────*/
+      var overlay = document.getElementById('submit-overlay');
+      var overlayIcon = document.getElementById('overlay-icon');
+      var overlayTitle = document.getElementById('overlay-title');
+      var overlaySubtitle = document.getElementById('overlay-subtitle');
+      var overlayCloseBtn = document.getElementById('overlay-close-btn');
+
+      var CHOICE_LABELS = {
+        'approve': { icon: '✓', title: '方案已通过', subtitle: '窗口即将关闭…' },
+        'revise':  { icon: '✎', title: '修改意见已提交', subtitle: '窗口即将关闭…' },
+        'abort':   { icon: '✕', title: '任务已放弃', subtitle: '窗口即将关闭…' }
+      };
+
+      function showOverlay(choice, autoClose) {
+        var labels = CHOICE_LABELS[choice] || { icon: '✓', title: '已提交', subtitle: '' };
+        overlayIcon.textContent = labels.icon;
+        overlayTitle.textContent = labels.title;
+
+        if (autoClose) {
+          overlaySubtitle.textContent = '窗口即将关闭…';
+          overlayCloseBtn.classList.remove('visible');
+          overlay.classList.add('visible');
+
+          // 800ms delay — give WS buffer time to flush before close
+          setTimeout(function () {
+            window.close();
+            // Fallback: if still open after 3s, show manual-close UI
+            setTimeout(function () {
+              overlaySubtitle.textContent = '请手动关闭此标签页';
+              overlayCloseBtn.classList.add('visible');
+            }, 3000);
+          }, 800);
+        } else {
+          overlaySubtitle.textContent = '已提交，可关闭页面';
+          overlayCloseBtn.classList.add('visible');
+          overlay.classList.add('visible');
+        }
+      }
+
+      document.addEventListener('click', function (e) {
+        var target = e.target.closest('[data-choice]');
+        if (!target) return;
+
+        // Read current auto-close state from toggle (not from body dataset,
+        // so we always use the live value even if user just toggled)
+        var autoClose = toggleEl ? toggleEl.checked : (document.body.dataset.autoClose === 'true');
+        var choice = target.dataset.choice;
+
+        // Give helper.js a moment to enqueue the WS send, then show overlay
+        setTimeout(function () {
+          showOverlay(choice, autoClose);
+        }, 50);
+      });
     })();
   </script>
 

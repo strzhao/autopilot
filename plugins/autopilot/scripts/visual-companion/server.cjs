@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const prefs = require('./prefs.cjs');
 
 // ========== WebSocket Protocol (RFC 6455) ==========
 
@@ -231,6 +232,20 @@ function handleMessage(text) {
   }
   touchActivity();
   console.log(JSON.stringify({ source: 'user-event', ...event }));
+  if (event.type === 'pref-update') {
+    // C-ws-message: validate before writing
+    if (
+      typeof event.key === 'string' &&
+      event.key.length >= 1 &&
+      typeof event.value === 'boolean'
+    ) {
+      prefs.setPref(event.key, event.value);
+    } else {
+      console.error('[server.cjs] Ignoring invalid pref-update message:', JSON.stringify(event));
+    }
+    // pref-update does NOT write to events file — orthogonal to choice path
+    return;
+  }
   if (event.choice) {
     const eventsFile = path.join(STATE_DIR, 'events');
     fs.appendFileSync(eventsFile, JSON.stringify(event) + '\n');

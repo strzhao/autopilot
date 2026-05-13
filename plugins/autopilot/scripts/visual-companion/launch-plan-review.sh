@@ -89,15 +89,27 @@ fi
 
 RENDERED_HTML="${CONTENT_DIR}/plan-review.html"
 MARKED_LIB="${SCRIPT_DIR}/marked.min.js"
+PREFS_CJS="${SCRIPT_DIR}/prefs.cjs"
+
+# 读取 auto_close_after_decision 偏好（默认 true）
+AUTO_CLOSE_PREF="true"
+if [[ -f "$PREFS_CJS" ]]; then
+  AUTO_CLOSE_PREF="$(node -e "try { var p=require('${PREFS_CJS}'); console.log(String(p.getPref('auto_close_after_decision', true))); } catch(e) { console.log('true'); }" 2>/dev/null || echo "true")"
+fi
+# 确保只输出 true 或 false
+if [[ "$AUTO_CLOSE_PREF" != "true" && "$AUTO_CLOSE_PREF" != "false" ]]; then
+  AUTO_CLOSE_PREF="true"
+fi
 
 # 用 python3 做可靠的占位符替换（避免 sed 在多行内容时出错）
-python3 - "$TEMPLATE" "$DESIGN_CONTENT" "$RENDERED_HTML" "$MARKED_LIB" <<'PYEOF'
+python3 - "$TEMPLATE" "$DESIGN_CONTENT" "$RENDERED_HTML" "$MARKED_LIB" "$AUTO_CLOSE_PREF" <<'PYEOF'
 import sys, os
 
 template_path = sys.argv[1]
 design_content = sys.argv[2]
 output_path = sys.argv[3]
 marked_lib_path = sys.argv[4]
+auto_close_pref = sys.argv[5]
 
 with open(template_path, 'r', encoding='utf-8') as f:
     tmpl = f.read()
@@ -110,6 +122,7 @@ if os.path.isfile(marked_lib_path):
 
 result = tmpl.replace('{{DESIGN_CONTENT}}', design_content)
 result = result.replace('{{MARKED_LIB}}', marked_lib)
+result = result.replace('{{AUTO_CLOSE_PREF}}', auto_close_pref)
 
 with open(output_path, 'w', encoding='utf-8') as f:
     f.write(result)
