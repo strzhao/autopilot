@@ -27,7 +27,7 @@ PLUGIN_JSON="$REPO_ROOT/plugins/autopilot/.claude-plugin/plugin.json"
 MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
 CLAUDE_MD="$REPO_ROOT/CLAUDE.md"
 
-TARGET_VERSION="3.28.0"
+TARGET_VERSION="3.28.1"
 
 # ── 辅助函数 ─────────────────────────────────────────────────────────────────
 pass() { echo "[PASS] R10: $1"; }
@@ -345,7 +345,7 @@ fi
 pass "C5d: 三处版本号一致（${TARGET_VERSION}）"
 
 # C5e: 版本确实比上一版（v3.21.0）更高
-prev_version="3.27.1"
+prev_version="3.28.0"
 prev_minor=$(echo "$prev_version" | cut -d. -f2)
 curr_minor=$(echo "$plugin_version" | cut -d. -f2)
 prev_major=$(echo "$prev_version" | cut -d. -f1)
