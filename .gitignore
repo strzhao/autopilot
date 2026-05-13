@@ -3,3 +3,6 @@ document/
 node_modules/
 __pycache__/
 *.pyc
+
+# autopilot plan-review 临时渲染 session（per-run 临时目录，含 server.pid/events/plan-review.html，不应入库）
+.autopilot/**/visual/

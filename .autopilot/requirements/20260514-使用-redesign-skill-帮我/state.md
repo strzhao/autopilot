@@ -1,8 +1,8 @@
 ---
 active: true
-phase: "merge"
+phase: "done"
 gate: ""
-iteration: 1
+iteration: 2
 max_iterations: 30
 max_retries: 3
 retry_count: 0
@@ -12,7 +12,7 @@ fast_mode: false
 brief_file: ""
 next_task: ""
 auto_approve: false
-knowledge_extracted: ""
+knowledge_extracted: true
 task_dir: "/Users/stringzhao/workspace/string-claude-code-plugin/.autopilot/requirements/20260514-使用-redesign-skill-帮我"
 session_id: e588a6ef-f8b5-4125-a7b1-66de2f4c146a
 started_at: "2026-05-13T16:05:42Z"
@@ -404,3 +404,6 @@ launch-plan-review.sh 渲染时：
 - [2026-05-14T04:31:00Z] QA 阶段主动修复 Issue 2（测试注释中 v3.22.1 版本号引用，3 处改为 $TARGET_VERSION 引用），重跑 acceptance 全 PASS；Issue 1/3 不阻断且超本次范围，保留
 - [2026-05-14T04:31:00Z] gate → review-accept（等待用户审批进入 merge）
 - [2026-05-14T04:37:00Z] **dogfooding 验收**：用新版（已 redesign + auto-close）的 plan-review HTML 自我审批，用户在浏览器点「通过」无反馈，UI 视觉 + 决策流程通过验收 → phase: merge
+- [2026-05-14T04:40:00Z] commit-agent 落地主 commit `759d701` feat(plan-review): plan review 审批页 redesign 升级 + 提交后自动关闭开关，升级至 v3.27.0
+- [2026-05-14T04:41:00Z] 知识沉淀：decisions.md +1 (per-user 偏好持久化 ~/.autopilot/)、patterns.md +1 (契约占位符同义变体)、index.md +2 索引；单独 commit `bb2d184` docs(knowledge): 沉淀 v3.27.0 plan review redesign 2 条知识
+- [2026-05-14T04:41:00Z] phase: done — autopilot 闭环完成

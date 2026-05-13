@@ -120,9 +120,14 @@ if os.path.isfile(marked_lib_path):
     with open(marked_lib_path, 'r', encoding='utf-8') as f:
         marked_lib = f.read()
 
-result = tmpl.replace('{{DESIGN_CONTENT}}', design_content)
-result = result.replace('{{MARKED_LIB}}', marked_lib)
+# 渲染顺序关键：先替换 template 自己的占位（MARKED_LIB / AUTO_CLOSE_PREF），最后才注入
+# DESIGN_CONTENT。否则若 design 文档自身引用了 `{{MARKED_LIB}}` / `{{AUTO_CLOSE_PREF}}`
+# 等字面量（如契约规约章节），后续 replace 会把这些字面量也一起替换，导致 marked.min.js
+# 被注入到 design content 内，marked.parse() 又把其内嵌的 `'<a href="'+(e=s)+'"'` 等
+# JS 片段当作 markdown 自动链接渲染，生成畸形 <a href>，点击事件触发浏览器 navigate。
+result = tmpl.replace('{{MARKED_LIB}}', marked_lib)
 result = result.replace('{{AUTO_CLOSE_PREF}}', auto_close_pref)
+result = result.replace('{{DESIGN_CONTENT}}', design_content)
 
 with open(output_path, 'w', encoding='utf-8') as f:
     f.write(result)

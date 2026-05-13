@@ -27,7 +27,7 @@ PLUGIN_JSON="$REPO_ROOT/plugins/autopilot/.claude-plugin/plugin.json"
 MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
 CLAUDE_MD="$REPO_ROOT/CLAUDE.md"
 
-TARGET_VERSION="3.27.0"
+TARGET_VERSION="3.27.1"
 
 # ── 辅助函数 ─────────────────────────────────────────────────────────────────
 pass() { echo "[PASS] R10: $1"; }
@@ -345,7 +345,7 @@ fi
 pass "C5d: 三处版本号一致（${TARGET_VERSION}）"
 
 # C5e: 版本确实比上一版（v3.21.0）更高
-prev_version="3.26.1"
+prev_version="3.27.0"
 prev_minor=$(echo "$prev_version" | cut -d. -f2)
 curr_minor=$(echo "$plugin_version" | cut -d. -f2)
 prev_major=$(echo "$prev_version" | cut -d. -f1)
@@ -675,6 +675,81 @@ if ! grep -q "setPref" "$SERVER_CJS"; then
     fail "C10c: server.cjs 不含 setPref 调用（设计要求：pref-update 分支调 prefs.setPref 落盘）"
 fi
 pass "C10c: server.cjs 含 setPref 调用"
+
+# ════════════════════════════════════════════════════════════════════════════
+# 契约 C11：渲染顺序污染防御（v3.27.1 hotfix 引入的回归防御）
+#   背景：launch-plan-review.sh 用 python str.replace 全局替换占位符。
+#   若 `{{DESIGN_CONTENT}}` 先注入，且 design 文档中字面引用了 `{{MARKED_LIB}}` /
+#   `{{AUTO_CLOSE_PREF}}` 等占位符名（如契约规约章节），后续 replace 会把这些字面
+#   也一起替换 → marked.min.js 被重复注入到 design content 内 → marked.parse 把
+#   其内嵌的 `'<a href="'+(e=s)+'"'` JS 片段当 markdown 自动链接渲染 → 生成畸形
+#   <a href> → 用户点击决策按钮时浏览器误触发 navigate 到非法 URL。
+#   修复：调换 replace 顺序，先 MARKED_LIB / AUTO_CLOSE_PREF，最后才 DESIGN_CONTENT。
+# ════════════════════════════════════════════════════════════════════════════
+echo ""
+echo "---- C11: 渲染顺序防污染（design 内占位符字面量保留） ----"
+
+# C11a: 构造含 {{MARKED_LIB}} 字面量的 mock state.md，渲染后断言
+#        - marked.js 特征字符串 `(e=s)` 在 HTML 中只出现 1 次（仅 <script>{{MARKED_LIB}}</script> 注入位置）
+#        - design-content-raw 区内保留 `{{MARKED_LIB}}` 字面量（用 html.escape 后是 `{{MARKED_LIB}}`，{ 不被转义）
+
+c11_tmp_dir="$(mktemp -d /tmp/c11-XXXXXX)"
+c11_tmp_home="$(mktemp -d /tmp/c11-home-XXXXXX)"
+cat > "$c11_tmp_dir/state.md" <<'STATEEOF'
+---
+active: true
+phase: "design"
+---
+## 设计文档
+### 占位符污染回归测试
+本节文档故意包含 `{{MARKED_LIB}}` 字面量，模拟契约规约引用占位符的场景。
+新增 `{{AUTO_CLOSE_PREF}}` 占位符也要在 design content 内出现。
+再来一次 `{{MARKED_LIB}}` 字面量，验证多次出现都保留。
+
+## 实现计划
+- [ ] mock
+STATEEOF
+
+_c11_cleanup() {
+    pkill -f "visual-companion/server.cjs" 2>/dev/null || true
+    rm -rf "$c11_tmp_dir" "$c11_tmp_home"
+}
+trap _c11_cleanup EXIT
+
+# 后台启动 launch-plan-review，等渲染完成（5s 足够）
+HOME="$c11_tmp_home" timeout 5 bash "$LAUNCH_SH" "$c11_tmp_dir" >/dev/null 2>&1 || true
+
+c11_html="$(find "$c11_tmp_dir" -name "plan-review.html" 2>/dev/null | head -1)"
+if [[ -z "$c11_html" || ! -f "$c11_html" ]]; then
+    fail "C11a: 未找到渲染后的 plan-review.html（c11_tmp_dir=$c11_tmp_dir）"
+fi
+
+# C11a: marked.js 特征字符串 `(e=s)` 在渲染后 HTML 中只出现 1 次
+c11_es_count="$(grep -c "(e=s)" "$c11_html" 2>/dev/null || echo 0)"
+if [[ "$c11_es_count" -ne 1 ]]; then
+    fail "C11a: marked.min.js 特征 '(e=s)' 在渲染 HTML 中出现 $c11_es_count 次（期望 1 次）— marked.js 被污染注入到 design content（v3.27.1 修复前的 bug）"
+fi
+pass "C11a: marked.min.js 特征 '(e=s)' 仅出现 1 次（无污染注入）"
+
+# C11b: design content 内的 {{MARKED_LIB}} 字面量保留原样（不被后续 replace 污染）
+#       design-content-raw 是 hidden div，内容已 html.escape，但 { } 不被转义
+if ! grep -qF "{{MARKED_LIB}}" "$c11_html"; then
+    fail "C11b: design content 内的 {{MARKED_LIB}} 字面量未保留（应该保留作为文档字面量展示给用户，不应被 replace 污染）"
+fi
+pass "C11b: design content 内 {{MARKED_LIB}} 字面量保留原样"
+
+# C11c: launch-plan-review.sh 渲染顺序契约 — DESIGN_CONTENT 必须在 MARKED_LIB 之后替换
+if ! awk '
+    /tmpl\.replace.*MARKED_LIB/ { ml_line=NR }
+    /tmpl\.replace.*DESIGN_CONTENT/ || /result\.replace.*DESIGN_CONTENT/ { dc_line=NR }
+    END { exit !(dc_line > ml_line) }
+' "$LAUNCH_SH"; then
+    fail "C11c: launch-plan-review.sh 中 {{DESIGN_CONTENT}} 必须在 {{MARKED_LIB}} 之后替换（v3.27.1 修复的渲染顺序契约）"
+fi
+pass "C11c: launch-plan-review.sh 渲染顺序契约（DESIGN_CONTENT 最后替换）"
+
+trap - EXIT
+_c11_cleanup
 
 # ════════════════════════════════════════════════════════════════════════════
 echo ""
