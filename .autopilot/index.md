@@ -1,6 +1,7 @@
 # Knowledge Index
 
 ## Decisions
+- [2026-05-14] per-user 偏好持久化采用 ~/.autopilot/ 与项目级命名对称 | tags: autopilot, prefs, persistence, user-level, project-level, naming-convention, dotfile | → decisions.md
 - [2026-05-10] auto-fix 中"看似独立的两个 bug"应优先寻找共同上游脆弱点，一处合并修复 | tags: autopilot, qa, auto-fix, root-cause, merge-fix, anti-symptomatic, bash, scripting | → decisions.md
 - [2026-05-10] 契约对齐采用 contract-checker agent + 集中 protocol，而非分散 prompt 铁律 | tags: autopilot, contract, red-team, blue-team, contract-checker, agent, single-source-of-truth, skill-fragility, gojko, sbe, cdc, pact, dbc, contract-protocol | → decisions.md
 - [2026-05-09] 修改脆弱 skill 时遵循"最小集 + 纯追加 + 可独立回滚" | tags: autopilot, skill, fragility, minimal-change, append-only, rollback, tdd-quality, defensive-edit | → decisions.md
@@ -21,6 +22,7 @@
 - [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → decisions.md
 
 ## Patterns
+- [2026-05-14] 契约规约中字段/占位符出现同义变体会让下游实现犹豫 | tags: autopilot, contract, plan-reviewer, placeholder, naming, single-source-of-truth, blue-team, red-team, ambiguity | → patterns.md
 - [2026-05-11] tail -c + jq 流式解析必须丢首行 + 走 fail-safe 兜底，否则在长会话下死循环 | tags: autopilot, stop-hook, jq, tail, byte-cut, fail-safe, fail-unsafe, has-pending-subagents, parse-error, detection-function | → patterns.md
 - [2026-05-10] git worktree list --porcelain 第一项稳定为主仓库，按位置跳过优于按路径比对 | tags: git, worktree, porcelain, position-stable, run-anywhere, doctor, autopilot, path-resolution | → patterns.md
 - [2026-05-10] skill 改动应一处真相不重复 N 处文件 | tags: autopilot, skill, single-source-of-truth, drift, integration, sbe, gojko, contract, references | → patterns.md

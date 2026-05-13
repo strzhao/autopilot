@@ -138,3 +138,10 @@
 **Trade-offs**: 接受语义耦合——「无 brainstorm + 完整 sub-agent 审查」中间档消失。用户对明确小任务必须用 --fast（同时砍审查）；如未来出现"明确意图但需要严格审查"高频需求再单独加 --quick 不晚。
 **Evidence**: v3.20.0→v3.21.0；setup.sh / stop-hook.sh / SKILL.md / state-file-guide.md 同步；3 个现有验收测试更新 + 1 新增 brainstorm-default.acceptance.test.sh（17 assertion / 10 核心契约）。Tier 1.5 三个真实场景（默认 / --fast / --deep 兼容）全 PASS。
 **Lesson**: 当用户提议"默认化某行为 X"时，不要直接照做——先评估 X 当前的使用模式分布，复用现有 escape hatch flag 通常优于新增 flag。本次 plan_mode 字段事实上只有 2 个有效值（""空 / "deep"），是 boolean 用 string 表达，本身就有简化空间——这种"语义冗余字段"重构时可顺势清理为 dead field（保留兼容期防止历史 state.md 解析报错）。关联 9c770a8 形成「Plan Mode 移除 → brainstorm 默认化」决策链，方向一致：把通用流程做减法、把高质量行为提升为默认。
+
+### [2026-05-14] per-user 偏好持久化采用 `~/.autopilot/` 形成与项目级 `.autopilot/` 的命名对称
+<!-- tags: autopilot, prefs, persistence, user-level, project-level, naming-convention, dotfile, single-source-of-truth -->
+**Background**: plan review 浏览器审批引入「提交后自动关闭」开关需要跨多次 autopilot 任务、跨项目、跨 worktree 持久化偏好。candidate 位置三选一：用户级 dotfile / Claude plugin 数据目录 / XDG 规范目录。同时 visual-companion server 每次启动 PORT 随机，浏览器端 localStorage 在 `127.0.0.1:RANDOM_PORT` 之间不能跨源复用，废客户端持久化方案。
+**Choice**: `~/.autopilot/prefs.json` —— 与项目级 `.autopilot/` 知识库形成「per-user 全局偏好 + per-repo 本地知识」的命名对称；单一写入口（Node 端 server 进程通过 `prefs.cjs.setPref` 落盘），损坏 JSON / 文件缺失 / 字段缺失三层 fallback 到默认值，永不让审批 UI 因偏好文件损坏白屏。
+**Alternatives rejected**: (1) `~/.claude/autopilot/prefs.json` — 与 `~/.claude/plugins/cache/` 共一级，cache 同步流程容易把"只读副本"语义覆盖到"可写偏好"，制造同步事故；(2) XDG `~/.config/autopilot/` — macOS 用户对 `~/.config` 习惯弱，对 dotfile 清理工具反而更不兼容；(3) localStorage 浏览器端 — 随机端口让同源策略失效，跨会话不可复用。
+**Trade-offs**: dotfile 在 cloud sync 工具（Dropbox/iCloud）下默认不会同步 `~/.autopilot/`，跨机器需手动 symlink——可接受，偏好本身极简（单 boolean），用户首次访问设一次即可。

@@ -188,3 +188,9 @@
 **Pattern**: 三步决策——(1) 列出 X 当前的所有使用模式（auto / explicit-on / explicit-off / 默认行为）；(2) 检查现有 escape hatch flag 是否能覆盖"opt-out X"语义，如果耦合可接受 → 直接扩展该 flag 语义；(3) 仅当中间档（非 X 但需要某些子项）真实存在高频需求时才新增 flag。
 **Counter-example**: 本次 brainstorm 默认化任务初版方案 B 设计了 --quick 新增 flag，与现有 --fast 中间档差距其实很小（仅 sub-agent 审查严格性差异）；用户在审批时主动提出复用 --fast，方案演进为 B'，flag 数量从 +1 变为 0，决策树从 4→3 档进一步简化。
 **Lesson**: flag 设计的 YAGNI 原则——"假想中间需求"不应作为新 flag 的设计依据。如果未来真出现高频需求再加 flag 也不晚，向前兼容性只在不删字段时存在风险。事实弃用的字段应保留兼容期（不立即删除）以避免历史持久化文件解析错误。
+
+### [2026-05-14] 契约规约中字段/占位符出现同义变体会让下游实现犹豫，必须单一字面量
+<!-- tags: autopilot, contract, plan-reviewer, placeholder, naming, single-source-of-truth, blue-team, red-team, ambiguity -->
+**Scenario**: 设计文档「契约规约」章节描述同一个注入点时给出两个候选占位符名（如 `{{AUTO_CLOSE_PREF}}` 字面字符串 vs `{{AUTO_CLOSE_PREF_CHECKED}}` 仅 checked 属性），即使作者意图是"或选其一"，蓝队读到 "or" 必然犹豫；红队也无法 grep 字面量写出确定性 fail 断言。
+**Lesson**: 契约文档中的字段名 / 占位符名 / 错误码名 / 路由路径必须**单一字面量**，不允许"or 变体"或"等价别名"。如果实际存在多个注入位置，每个位置独立命名（如 `XX_VALUE` 和 `XX_CHECKED_ATTR`），并明确各自的渲染规则；不要让一个变量名在文档里有两种语义。该原则与 contract-protocol.md 的 single-source-of-truth 同源——契约规约本身也是 single source of truth，自身不能漂移。红队应专门加"禁止变体"反向断言（grep `不应出现的变体名` 不命中 fail）做回归防御。
+**Evidence**: 本次 plan-reviewer Agent 在 design 阶段抓到 C-template-placeholders 节里 `{{AUTO_CLOSE_PREF}}` 与 `{{AUTO_CLOSE_PREF_CHECKED}}` 二义性，评为 80-90 级重要问题；收口为唯一 `{{AUTO_CLOSE_PREF}}` 注入到 `<body data-auto-close="...">`，并在红队 acceptance test 加 `C8d: 不含 {{AUTO_CLOSE_PREF_CHECKED}} 等禁止变体占位符` 反向断言做回归防御（plan-review-html.acceptance.test.sh）。如果蓝队按 "or" 实现挑了 `{{AUTO_CLOSE_PREF_CHECKED}}` 路径，contract-checker 会被迫接受（契约本就允许），缺陷会被掩盖到下次 redesign。
