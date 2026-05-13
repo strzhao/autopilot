@@ -54,3 +54,5 @@
 - [2026-04-12] "从缓存同步源码"操作会连带回退不相关的文件改动 | tags: autopilot, cache-sync, regression, stop-hook, source-of-truth | → patterns.md
 - [2026-04-17] SKILL.md 决策树中后置章节会被 AI 跳过 | tags: autopilot, skill, decision-tree, priority, plan-mode, auto-approve | → patterns.md
 - [2026-04-17] Early-exit 守卫阻断后续添加的合法代码路径 | tags: autopilot, stop-hook, guard, early-exit, ordering, knowledge-extracted | → patterns.md
+- [2026-05-14] HTML 模板用 dataset.X 设置 data-* 属性，红队字面 grep 命中失败 → 改 setAttribute | tags: dom-api, dataset, setattribute, acceptance-test, grep-literal, red-team, html-template, autopilot, plan-review | → patterns.md
+- [2026-05-14] 事件委托双 listener 冲突：模板 JS 在 [data-choice] 守卫命中后立即 stopImmediatePropagation | tags: event-delegation, stopimmediatepropagation, click-handler, helper.js, autopilot, plan-review, dual-listener, pollution-defense | → patterns.md
