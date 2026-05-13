@@ -11,12 +11,17 @@
     /*
      * AUTOPILOT PLAN REVIEW TEMPLATE
      *
-     * v3.28.0 — 阅读期刊风
+     * v3.29.0 — 飞阅评论（Feishu-style marginalia comments）
+     * - 顶部 sticky 工具栏：同意 / 反馈 / ⋯ 菜单（含放弃任务 + 自动关闭偏好）
+     * - 右侧 320px marginalia 评论面板；narrowscreen < 1100px 折叠抽屉
+     * - 选区浮动「💬 + 评论」按钮，锚点 data-block-id="b-N"
+     * - WS payload 含 comments[] + feedback 字段（D1 向后兼容）
+     * - D5b: stopImmediatePropagation 阻断 helper.js 双重触发
+     *
+     * 保留 v3.28.0：
      * - stringzhao color system: 墨 / 纸 / 雾 / 烟 / 炭 / 苔 / 琥 / 朱 / 天
-     * - Typography: serif headlines + serif body (Crimson Pro + Noto Serif SC) + Inter UI
-     * - Reading-feel: 680px column, 1.75 line-height, vertical rhythm, end mark
-     * - Three-tier buttons: sage approve / amber-outline revise / vermillion-text abort
-     * - Auto-close after decision (persistent pref via WS pref-update)
+     * - Typography: Crimson Pro + Noto Serif SC + Inter
+     * - Paper texture, end mark, drop cap, editorial table styles
      */
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -111,62 +116,240 @@
       body::before { mix-blend-mode: screen; opacity: 0.3; }
     }
 
-    /* ===== Masthead (top strip) ===== */
-    .header {
-      position: relative;
-      z-index: 2;
-      padding: 1rem 1.8rem 0.9rem;
-      max-width: 1400px;
-      width: 100%;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    /* ===== Toolbar (top sticky) ===== */
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(247, 246, 241, 0.88);
+      backdrop-filter: blur(10px) saturate(130%);
+      -webkit-backdrop-filter: blur(10px) saturate(130%);
       border-bottom: 1px solid var(--rule);
-      flex-shrink: 0;
+      padding: 0.65rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
     }
-    .header h1 {
+    @media (prefers-color-scheme: dark) {
+      .toolbar { background: rgba(24, 24, 21, 0.88); }
+    }
+
+    .toolbar-title {
       font-family: 'Inter', system-ui, sans-serif;
       font-size: 0.72rem;
       font-weight: 600;
       letter-spacing: 0.22em;
       text-transform: uppercase;
       color: var(--charcoal);
-    }
-    .header .status {
-      font-family: 'Inter', system-ui, sans-serif;
-      font-size: 0.72rem;
-      letter-spacing: 0.04em;
-      color: var(--smoke);
-      display: flex;
-      align-items: center;
-      gap: 0.55rem;
-    }
-    .header .status::before {
-      content: '';
-      width: 7px;
-      height: 7px;
-      background: var(--sage);
-      border-radius: 50%;
-      box-shadow: 0 0 0 3px var(--sage-mist);
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    /* ===== Article column ===== */
-    .main {
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Toolbar buttons base */
+    .toolbar-actions button,
+    .btn-approve,
+    .btn-revise {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      padding: 0.48rem 1.1rem;
+      outline: none;
+      letter-spacing: 0.01em;
+      transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .toolbar-actions button:focus-visible,
+    .btn-approve:focus-visible,
+    .btn-revise:focus-visible {
+      outline: 2px solid var(--sage);
+      outline-offset: 2px;
+    }
+
+    /* Approve — filled sage */
+    .btn-approve {
+      background: var(--sage);
+      color: var(--paper-soft);
+      box-shadow: 0 4px 12px -4px var(--shadow-sage),
+                  inset 0 1px 0 rgba(255,255,255,0.16);
+    }
+    .btn-approve:hover {
+      background: var(--sage-deep);
+      transform: translateY(-1px);
+      box-shadow: 0 7px 18px -4px var(--shadow-sage);
+    }
+    .btn-approve:active { transform: translateY(0) scale(0.97); }
+
+    /* Revise — amber outline */
+    .btn-revise {
+      background: transparent;
+      color: var(--amber);
+      border-color: var(--amber);
+    }
+    .btn-revise:hover {
+      background: var(--amber-mist);
+      transform: translateY(-1px);
+    }
+    .btn-revise:active { transform: translateY(0) scale(0.97); }
+
+    /* toolbar shake animation for empty-feedback guard */
+    @keyframes toolbar-shake {
+      0%, 100% { transform: translateX(0); }
+      20%       { transform: translateX(-4px); }
+      40%       { transform: translateX(4px); }
+      60%       { transform: translateX(-3px); }
+      80%       { transform: translateX(3px); }
+    }
+    .btn-revise.shake { animation: toolbar-shake 0.35s ease; }
+
+    /* ===== Toolbar menu (⋯) ===== */
+    .toolbar-menu {
+      position: relative;
+    }
+    #more-menu-trigger {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 1.1rem;
+      font-weight: 400;
+      cursor: pointer;
+      border: 1px solid var(--rule);
+      border-radius: 7px;
+      background: transparent;
+      color: var(--charcoal);
+      padding: 0.3rem 0.65rem;
+      outline: none;
+      transition: background 0.15s ease, color 0.15s ease;
+      line-height: 1.4;
+    }
+    #more-menu-trigger:hover {
+      background: var(--mist);
+      color: var(--ink);
+    }
+    #more-menu-trigger:focus-visible {
+      outline: 2px solid var(--sage);
+      outline-offset: 2px;
+    }
+
+    .dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 190px;
+      background: var(--paper-soft);
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      box-shadow: 0 8px 24px -4px var(--shadow-soft),
+                  0 2px 8px -2px var(--shadow-soft);
+      padding: 0.4rem 0;
+      z-index: 20;
+    }
+    .dropdown[hidden] { display: none; }
+
+    .dropdown-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.85rem;
+      font-weight: 400;
+      padding: 0.5rem 1rem;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--ink-2);
+      transition: background 0.1s ease;
+    }
+    .dropdown-item:hover { background: var(--mist); }
+    .dropdown-item-danger { color: var(--vermillion); }
+    .dropdown-item-danger:hover { background: rgba(217, 79, 61, 0.07); }
+
+    .dropdown-divider {
+      height: 1px;
+      background: var(--rule);
+      margin: 0.3rem 0;
+    }
+
+    .dropdown-pref {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.5rem 1rem;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.83rem;
+      color: var(--charcoal);
+      cursor: pointer;
+    }
+    .dropdown-pref:hover { background: var(--mist); }
+    .dropdown-pref input[type="checkbox"] {
+      accent-color: var(--sage);
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    /* ===== Toast notification ===== */
+    #toast {
+      position: fixed;
+      top: 3.8rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(-8px);
+      background: var(--ink);
+      color: var(--paper-soft);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.83rem;
+      padding: 0.55rem 1.2rem;
+      border-radius: 999px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 100;
+      white-space: nowrap;
+    }
+    #toast.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    @media (prefers-color-scheme: dark) {
+      #toast { background: var(--mist-deep); color: var(--ink); }
+    }
+
+    /* ===== Reading layout grid ===== */
+    .reading-layout {
       position: relative;
       z-index: 1;
       flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-    .content-area {
+      display: grid;
+      grid-template-columns: 1fr 320px;
       max-width: 1400px;
       width: 100%;
       margin: 0 auto;
-      padding: 1.5rem 1.8rem 1rem;
+      padding: 1.5rem 1.2rem 1.5rem 1.8rem;
+      gap: 1.5rem;
+      align-items: start;
+    }
+    @media (max-width: 1100px) {
+      .reading-layout {
+        grid-template-columns: 1fr;
+        padding: 1.5rem 1.2rem;
+      }
     }
 
-    /* ===== Article title block ===== */
+    /* ===== Article area ===== */
+    #design-content-wrap {
+      min-width: 0;
+      max-width: 960px;
+    }
+
     .design-section-header {
       font-family: 'Inter', system-ui, sans-serif;
       font-size: 0.66rem;
@@ -187,7 +370,6 @@
     }
 
     /* ===== Design content (rendered markdown) — reading optimized ===== */
-    .design-section { background: transparent; }
     #design-content {
       color: var(--ink);
       font-size: 16.5px;
@@ -409,200 +591,167 @@
       margin-left: 0.4em;
     }
 
-    /* ===== Feedback (marginalia) ===== */
-    .feedback-section {
-      margin-top: 2.2rem;
-      padding-top: 1.4rem;
-      border-top: 1px solid var(--rule);
+    /* Highlight anchor block on comment hover */
+    [data-block-id].anchor-highlight {
+      background: rgba(58, 125, 104, 0.06);
+      border-radius: 3px;
+      outline: 1.5px dashed var(--sage-light);
+      outline-offset: 2px;
     }
-    .feedback-label {
-      font-family: 'Crimson Pro', 'Noto Serif SC', serif;
-      font-style: italic;
-      font-size: 0.95rem;
-      color: var(--charcoal);
-      margin-bottom: 0.7rem;
+
+    /* ===== Comments pane (marginalia) ===== */
+    #comments-pane {
+      position: relative;
+      min-height: 40px;
     }
-    .feedback-label::before {
-      content: '— ';
-      color: var(--smoke-faint);
+    @media (max-width: 1100px) {
+      #comments-pane {
+        border-top: 1px solid var(--rule);
+        padding-top: 1rem;
+      }
     }
-    #feedback {
-      width: 100%;
-      min-height: 92px;
+
+    /* comment cards absolute in pane on wide, static on narrow */
+    .comment-card {
       background: var(--paper-soft);
       border: 1px solid var(--rule);
-      border-radius: 6px;
-      padding: 0.9rem 1.1rem;
+      border-radius: 9px;
+      padding: 0.75rem 0.9rem 0.65rem;
+      box-shadow: 0 2px 8px -2px var(--shadow-soft);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.82rem;
+      color: var(--ink-2);
+      transition: box-shadow 0.15s ease;
+    }
+    .comment-card:hover {
+      box-shadow: 0 4px 14px -4px var(--shadow-soft);
+    }
+
+    @media (min-width: 1101px) {
+      .comment-card {
+        position: absolute;
+        width: 100%;
+        left: 0;
+      }
+    }
+    @media (max-width: 1100px) {
+      .comment-card {
+        margin-bottom: 0.75rem;
+      }
+    }
+
+    /* new vs saved state */
+    .comment-card[data-state="new"] {
+      border-color: var(--sage-light);
+      box-shadow: 0 0 0 2px var(--sage-mist), 0 2px 8px -2px var(--shadow-soft);
+    }
+
+    .comment-quote {
       font-family: 'Crimson Pro', 'Noto Serif SC', serif;
-      font-size: 1rem;
-      line-height: 1.6;
+      font-style: italic;
+      font-size: 0.88rem;
+      color: var(--charcoal);
+      border-left: 2px solid var(--sage);
+      padding-left: 0.55rem;
+      margin-bottom: 0.5rem;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .comment-text {
+      width: 100%;
+      min-height: 64px;
+      background: transparent;
+      border: 1px solid var(--rule);
+      border-radius: 5px;
+      padding: 0.45rem 0.6rem;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.82rem;
       color: var(--ink);
       resize: vertical;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
       outline: none;
+      transition: border-color 0.15s ease;
+      line-height: 1.5;
     }
-    #feedback:focus {
+    .comment-text:focus {
       border-color: var(--sage);
-      box-shadow: 0 0 0 3px var(--sage-mist);
+      background: var(--paper-soft);
     }
-    #feedback::placeholder {
-      color: var(--smoke-faint);
-      font-style: italic;
+    .comment-text::placeholder { color: var(--smoke-faint); }
+
+    .comment-card[data-state="saved"] .comment-text {
+      background: var(--paper);
+      color: var(--ink-2);
+      border-color: var(--rule-soft);
+      cursor: default;
+      resize: none;
     }
 
-    /* ===== Actions ===== */
-    .actions {
-      margin-top: 1.4rem;
+    .comment-actions {
       display: flex;
-      gap: 0.7rem;
-      align-items: center;
-      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      justify-content: flex-end;
     }
-    .actions button {
+
+    .comment-save,
+    .comment-delete {
       font-family: 'Inter', system-ui, sans-serif;
-      font-size: 0.88rem;
+      font-size: 0.75rem;
       font-weight: 500;
+      padding: 0.3rem 0.7rem;
+      border-radius: 5px;
       cursor: pointer;
       border: 1px solid transparent;
-      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
       outline: none;
-      letter-spacing: 0.01em;
+      transition: all 0.12s ease;
     }
-    .actions button:focus-visible {
-      outline: 2px solid var(--sage);
-      outline-offset: 3px;
-    }
-
-    /* Approve — filled sage, primary */
-    button[data-choice="approve"] {
-      padding: 0.75rem 1.5rem;
-      border-radius: 8px;
+    .comment-save {
       background: var(--sage);
       color: var(--paper-soft);
-      box-shadow: 0 6px 18px -6px var(--shadow-sage),
-                  inset 0 1px 0 rgba(255,255,255,0.16);
-    }
-    button[data-choice="approve"]:hover {
-      background: var(--sage-deep);
-      transform: translateY(-1px);
-      box-shadow: 0 10px 24px -6px var(--shadow-sage),
-                  inset 0 1px 0 rgba(255,255,255,0.2);
-    }
-    button[data-choice="approve"]:active { transform: translateY(0) scale(0.98); }
-
-    /* Revise — amber outline */
-    button[data-choice="revise"] {
-      padding: 0.75rem 1.3rem;
-      border-radius: 8px;
-      background: transparent;
-      color: var(--amber);
-      border-color: var(--amber);
-    }
-    button[data-choice="revise"]:hover {
-      background: var(--amber-mist);
-      transform: translateY(-1px);
-    }
-    button[data-choice="revise"]:active { transform: translateY(0) scale(0.98); }
-
-    /* Abort — vermillion text-only */
-    button[data-choice="abort"] {
-      padding: 0.75rem 0.6rem;
-      background: transparent;
-      color: var(--smoke);
-      font-style: italic;
-      text-decoration: underline;
-      text-underline-offset: 4px;
-      text-decoration-thickness: 1px;
-      text-decoration-color: var(--smoke-faint);
-    }
-    button[data-choice="abort"]:hover {
-      color: var(--vermillion);
-      text-decoration-color: var(--vermillion);
-    }
-
-    /* ===== Indicator bar (footer) ===== */
-    .indicator-bar {
-      position: relative;
-      z-index: 2;
-      flex-shrink: 0;
-      max-width: 1400px;
-      width: 100%;
-      margin: 1.2rem auto 0;
-      padding: 0.9rem 1.8rem 1.2rem;
-      border-top: 1px solid var(--rule);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 1.2rem;
-      flex-wrap: wrap;
-    }
-    .indicator-status {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-family: 'Crimson Pro', 'Noto Serif SC', serif;
-      font-style: italic;
-      font-size: 0.86rem;
-      color: var(--charcoal);
-    }
-    #indicator-text { color: var(--charcoal); }
-    .indicator-status .selected-text { color: var(--sage); font-style: normal; font-weight: 500; }
-    .pref-group {
-      display: flex;
-      align-items: center;
-      gap: 0.7rem;
-      font-family: 'Inter', system-ui, sans-serif;
-      font-size: 0.78rem;
-      color: var(--smoke);
-    }
-    .pref-label { cursor: pointer; }
-    .toggle-wrap {
-      position: relative;
-      display: inline-block;
-      width: 34px;
-      height: 19px;
-      cursor: pointer;
-    }
-    .toggle-wrap input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    .toggle-slider {
-      position: absolute;
-      inset: 0;
-      background: var(--mist);
-      border: 1px solid var(--rule);
-      border-radius: 99px;
-      transition: background 0.2s, border-color 0.2s;
-    }
-    .toggle-slider::before {
-      content: '';
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 13px;
-      height: 13px;
-      background: var(--paper-soft);
-      border-radius: 50%;
-      transition: transform 0.2s;
-      box-shadow: 0 1px 3px var(--shadow-soft);
-    }
-    .toggle-wrap input:checked + .toggle-slider {
-      background: var(--sage);
       border-color: var(--sage);
     }
-    .toggle-wrap input:checked + .toggle-slider::before {
-      transform: translateX(15px);
+    .comment-save:hover { background: var(--sage-deep); }
+    .comment-delete {
+      background: transparent;
+      color: var(--smoke);
+      border-color: var(--rule);
     }
-    .toggle-wrap input:focus-visible + .toggle-slider {
-      box-shadow: 0 0 0 3px var(--sage-mist);
+    .comment-delete:hover {
+      color: var(--vermillion);
+      border-color: var(--vermillion-soft);
     }
-    .indicator-hint {
-      font-family: 'Crimson Pro', 'Noto Serif SC', serif;
-      font-style: italic;
-      font-size: 0.78rem;
-      color: var(--smoke-faint);
+
+    /* hide save when card is saved, show edit button */
+    .comment-card[data-state="saved"] .comment-save { display: none; }
+    .comment-card[data-state="new"]   .comment-save { display: inline-block; }
+
+    /* ===== Floating comment trigger ===== */
+    #floating-comment-trigger {
+      position: fixed;
+      background: var(--sage);
+      color: var(--paper-soft);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 0.35rem 0.8rem;
+      border-radius: 999px;
+      box-shadow: 0 4px 12px -4px var(--shadow-sage);
+      cursor: pointer;
+      z-index: 50;
+      user-select: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      white-space: nowrap;
+    }
+    #floating-comment-trigger[hidden] {
+      display: none;
+    }
+    #floating-comment-trigger:hover {
+      background: var(--sage-deep);
+      transform: translateY(-1px);
+    }
+    #floating-comment-trigger:active {
+      transform: scale(0.97);
     }
 
     /* ===== Submit Overlay ===== */
@@ -683,6 +832,30 @@
     }
     .overlay-close-btn:active { transform: scale(0.98); }
     .overlay-close-btn.visible { display: inline-block; }
+
+    /* ===== Narrow-screen comments drawer ===== */
+    @media (max-width: 1100px) {
+      #comments-drawer-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 0.82rem;
+        color: var(--charcoal);
+        cursor: pointer;
+        margin-bottom: 0.6rem;
+        background: none;
+        border: none;
+        padding: 0;
+      }
+      #comments-drawer-toggle::before {
+        content: '💬';
+        font-size: 1rem;
+      }
+    }
+    @media (min-width: 1101px) {
+      #comments-drawer-toggle { display: none; }
+    }
   </style>
 </head>
 <body data-auto-close="{{AUTO_CLOSE_PREF}}">
@@ -697,67 +870,61 @@
     </div>
   </div>
 
-  <div class="header">
-    <h1>Autopilot · Plan Review</h1>
-    <div class="status">等待审批</div>
-  </div>
+  <!-- Toast notification -->
+  <div id="toast" role="status" aria-live="polite"></div>
 
-  <div class="main">
-    <div class="content-area">
+  <!-- Floating comment trigger (shown on text selection within #design-content) -->
+  <div id="floating-comment-trigger" hidden>💬 + 评论</div>
 
-      <!-- Raw markdown 容器（隐藏，由 launch-plan-review.sh 替换占位）-->
+  <!-- Sticky toolbar (C4) -->
+  <header class="toolbar" role="toolbar">
+    <h1 class="toolbar-title">Autopilot · Plan Review</h1>
+    <div class="toolbar-actions">
+      <button class="btn-approve" data-choice="approve">同意</button>
+      <button class="btn-revise"  data-choice="revise">反馈</button>
+    </div>
+    <div class="toolbar-menu">
+      <button id="more-menu-trigger" aria-label="更多" aria-expanded="false">⋯</button>
+      <div id="more-menu" class="dropdown" hidden>
+        <button data-choice="abort" class="dropdown-item dropdown-item-danger">放弃任务</button>
+        <div class="dropdown-divider"></div>
+        <label class="dropdown-pref">
+          <input type="checkbox" id="auto-close-toggle" data-pref="auto_close_after_decision">
+          决策后自动关闭
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <!-- Reading layout: article + marginalia -->
+  <main class="reading-layout">
+    <article id="design-content-wrap">
+      <div class="design-section-header">设计文档 &amp; 实现计划</div>
+      <!-- Raw markdown (hidden; replaced by launch-plan-review.sh) -->
       <div id="design-content-raw" hidden>{{DESIGN_CONTENT}}</div>
+      <!-- Rendered design content -->
+      <div id="design-content"></div>
+    </article>
 
-      <!-- 渲染后的设计文档 -->
-      <div class="design-section">
-        <div class="design-section-header">设计文档 &amp; 实现计划</div>
-        <div id="design-content"></div>
-      </div>
+    <!-- Marginalia comments pane -->
+    <aside id="comments-pane">
+      <button id="comments-drawer-toggle">评论（<span id="comment-count">0</span>）</button>
+    </aside>
+  </main>
 
-      <!-- 反馈 -->
-      <div class="feedback-section">
-        <div class="feedback-label">修改意见（可选）</div>
-        <textarea id="feedback" placeholder="（可选）写下评论、批评，或想要的调整..."></textarea>
-      </div>
-
-      <!-- 按钮：三档分级 approve / revise / abort -->
-      <div class="actions">
-        <button data-choice="approve">通过</button>
-        <button data-choice="revise">有修改意见</button>
-        <button data-choice="abort">放弃任务</button>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Indicator bar: status · pref toggle · hint -->
-  <div class="indicator-bar">
-    <span class="indicator-status">
-      <span id="indicator-text">阅读完毕，请作出决策</span>
-    </span>
-    <div class="pref-group">
-      <label class="pref-label" for="auto-close-toggle">决策后自动关闭</label>
-      <label class="toggle-wrap">
-        <input
-          type="checkbox"
-          id="auto-close-toggle"
-          data-pref="auto_close_after_decision"
-          aria-label="决策后自动关闭页面"
-        >
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-    <span class="indicator-hint">偏好已持久化</span>
-  </div>
-
-  <!-- marked.min.js（由 launch-plan-review.sh 内嵌注入）-->
+  <!-- marked.min.js (injected by launch-plan-review.sh) -->
   <script>{{MARKED_LIB}}</script>
   <script>
     (function () {
-      /* ── Markdown render ──────────────────────────────────── */
-      var rawEl = document.getElementById('design-content-raw');
+      'use strict';
+
+      /* ─────────────────────────────────────────────────────────────────────
+       * Phase 2.1 — Markdown render + inject data-block-id (C3)
+       * ───────────────────────────────────────────────────────────────────── */
+      var rawEl    = document.getElementById('design-content-raw');
       var renderEl = document.getElementById('design-content');
       var raw = rawEl ? rawEl.textContent : '';
+
       try {
         if (typeof marked !== 'undefined' && raw) {
           renderEl.innerHTML = marked.parse(raw);
@@ -772,14 +939,25 @@
         renderEl.textContent = raw;
       }
 
-      /* ── Auto-close pref init ─────────────────────────────── */
+      /* Inject data-block-id to direct block children (C3) */
+      var BLOCK_TAGS = ['H1','H2','H3','H4','H5','H6','P','UL','OL','BLOCKQUOTE','PRE','TABLE','HR','DIV'];
+      var blockCounter = 1;
+      Array.prototype.forEach.call(renderEl.children, function (child) {
+        if (BLOCK_TAGS.indexOf(child.tagName) !== -1) {
+          child.dataset.blockId = 'b-' + (blockCounter++);
+        }
+      });
+
+      /* ─────────────────────────────────────────────────────────────────────
+       * Phase 2 utils — auto-close pref init
+       * ───────────────────────────────────────────────────────────────────── */
       var autoCloseInitial = document.body.dataset.autoClose === 'true';
       var toggleEl = document.getElementById('auto-close-toggle');
       if (toggleEl) {
         toggleEl.checked = autoCloseInitial;
       }
 
-      /* ── Pref toggle → WS pref-update ───────────────────────*/
+      /* Pref toggle → WS pref-update */
       if (toggleEl) {
         toggleEl.addEventListener('change', function () {
           var val = toggleEl.checked;
@@ -794,29 +972,30 @@
         });
       }
 
-      /* ── Submit overlay & auto-close logic ───────────────────*/
-      var overlay = document.getElementById('submit-overlay');
-      var overlayIcon = document.getElementById('overlay-icon');
-      var overlayTitle = document.getElementById('overlay-title');
+      /* ─────────────────────────────────────────────────────────────────────
+       * Overlay helpers (shared across decide + overlay close)
+       * ───────────────────────────────────────────────────────────────────── */
+      var overlay        = document.getElementById('submit-overlay');
+      var overlayIcon    = document.getElementById('overlay-icon');
+      var overlayTitle   = document.getElementById('overlay-title');
       var overlaySubtitle = document.getElementById('overlay-subtitle');
       var overlayCloseBtn = document.getElementById('overlay-close-btn');
 
       var CHOICE_LABELS = {
-        'approve': { icon: '❧', title: '方案已通过', subtitle: '窗口即将关闭…' },
+        'approve': { icon: '❧', title: '方案已通过',   subtitle: '窗口即将关闭…' },
         'revise':  { icon: '✎', title: '修改意见已提交', subtitle: '窗口即将关闭…' },
-        'abort':   { icon: '✕', title: '任务已放弃', subtitle: '窗口即将关闭…' }
+        'abort':   { icon: '✕', title: '任务已放弃',   subtitle: '窗口即将关闭…' }
       };
 
       function showOverlay(choice, autoClose) {
         var labels = CHOICE_LABELS[choice] || { icon: '❧', title: '已提交', subtitle: '' };
-        overlayIcon.textContent = labels.icon;
-        overlayTitle.textContent = labels.title;
+        overlayIcon.textContent    = labels.icon;
+        overlayTitle.textContent   = labels.title;
 
         if (autoClose) {
           overlaySubtitle.textContent = '窗口即将关闭…';
           overlayCloseBtn.classList.remove('visible');
           overlay.classList.add('visible');
-
           setTimeout(function () {
             window.close();
             setTimeout(function () {
@@ -831,17 +1010,310 @@
         }
       }
 
+      /* ─────────────────────────────────────────────────────────────────────
+       * Toast
+       * ───────────────────────────────────────────────────────────────────── */
+      var toastEl = document.getElementById('toast');
+      var _toastTimer = null;
+      function showToast(msg, durationMs) {
+        durationMs = durationMs || 2800;
+        toastEl.textContent = msg;
+        toastEl.classList.add('visible');
+        clearTimeout(_toastTimer);
+        _toastTimer = setTimeout(function () {
+          toastEl.classList.remove('visible');
+        }, durationMs);
+      }
+
+      /* ─────────────────────────────────────────────────────────────────────
+       * Phase 2.4 — Comment state management
+       * ───────────────────────────────────────────────────────────────────── */
+      var commentsPane   = document.getElementById('comments-pane');
+      var commentCounter = 0;
+      var commentCountEl = document.getElementById('comment-count');
+
+      function updateCommentCount() {
+        var n = commentsPane.querySelectorAll('.comment-card').length;
+        if (commentCountEl) commentCountEl.textContent = n;
+      }
+
+      /* Get anchor block from a DOM node (walks up to find data-block-id) */
+      function getAnchorBlock(node) {
+        var el = (node.nodeType === 3) ? node.parentElement : node;
+        while (el && el !== renderEl) {
+          if (el.dataset && el.dataset.blockId) return el;
+          el = el.parentElement;
+        }
+        return null;
+      }
+
+      /* Compute top offset for a comment card (anchor-align + cascade) */
+      function positionCards() {
+        if (window.innerWidth <= 1100) return; // narrow: static flow
+        var cards = Array.prototype.slice.call(commentsPane.querySelectorAll('.comment-card'));
+        var paneRect = commentsPane.getBoundingClientRect();
+        var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        var paneAbsTop = paneRect.top + scrollTop;
+
+        var cursor = 0;
+        cards.forEach(function (card) {
+          var anchorId = card.dataset.anchor;
+          var anchorEl = anchorId ? document.querySelector('[data-block-id="' + anchorId + '"]') : null;
+          var desired = 0;
+          if (anchorEl) {
+            var ar = anchorEl.getBoundingClientRect();
+            desired = (ar.top + scrollTop) - paneAbsTop;
+          }
+          var top = Math.max(desired, cursor);
+          card.style.top = top + 'px';
+          cursor = top + card.offsetHeight + 8;
+        });
+      }
+
+      window.addEventListener('scroll', positionCards, { passive: true });
+      window.addEventListener('resize', positionCards, { passive: true });
+
+      /* Create a new comment card */
+      function createCommentCard(anchorId, quoteText) {
+        commentCounter++;
+        var cid = 'c-' + commentCounter;
+
+        var card = document.createElement('div');
+        card.className = 'comment-card';
+        card.setAttribute('data-anchor', anchorId);
+        card.setAttribute('data-state', 'new');
+        card.setAttribute('data-comment-id', cid);
+
+        var quoteEl = document.createElement('div');
+        quoteEl.className = 'comment-quote';
+        quoteEl.textContent = '"' + (quoteText.length > 80 ? quoteText.slice(0, 80) + '…' : quoteText) + '"';
+
+        var textArea = document.createElement('textarea');
+        textArea.className   = 'comment-text';
+        textArea.placeholder = '添加评论…';
+        textArea.rows        = 3;
+
+        var actionsDiv = document.createElement('div');
+        actionsDiv.className = 'comment-actions';
+
+        var saveBtn = document.createElement('button');
+        saveBtn.className   = 'comment-save';
+        saveBtn.textContent = '保存';
+
+        var deleteBtn = document.createElement('button');
+        deleteBtn.className   = 'comment-delete';
+        deleteBtn.textContent = '删除';
+
+        actionsDiv.appendChild(saveBtn);
+        actionsDiv.appendChild(deleteBtn);
+
+        card.appendChild(quoteEl);
+        card.appendChild(textArea);
+        card.appendChild(actionsDiv);
+
+        commentsPane.appendChild(card);
+        updateCommentCount();
+        positionCards();
+
+        /* Focus textarea after layout */
+        setTimeout(function () { textArea.focus(); }, 30);
+
+        /* Highlight anchor on card hover */
+        var anchorEl = anchorId ? document.querySelector('[data-block-id="' + anchorId + '"]') : null;
+        card.addEventListener('mouseenter', function () {
+          if (anchorEl) anchorEl.classList.add('anchor-highlight');
+        });
+        card.addEventListener('mouseleave', function () {
+          if (anchorEl) anchorEl.classList.remove('anchor-highlight');
+        });
+
+        /* Save */
+        saveBtn.addEventListener('click', function () {
+          if (!textArea.value.trim()) {
+            textArea.focus();
+            return;
+          }
+          card.setAttribute('data-state', 'saved');
+          textArea.readOnly   = true;
+          positionCards();
+        });
+
+        /* Delete */
+        deleteBtn.addEventListener('click', function () {
+          if (anchorEl) anchorEl.classList.remove('anchor-highlight');
+          card.remove();
+          updateCommentCount();
+          positionCards();
+        });
+
+        return card;
+      }
+
+      /* ─────────────────────────────────────────────────────────────────────
+       * Phase 2.2 — selectionchange → floating trigger (C5)
+       * ───────────────────────────────────────────────────────────────────── */
+      var floatTrigger  = document.getElementById('floating-comment-trigger');
+      var _selDebounce  = null;
+      var _lastAnchorId = null;
+      var _lastQuote    = '';
+
+      function updateFloatingTrigger() {
+        var sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+          floatTrigger.hidden = true;
+          return;
+        }
+        var range = sel.getRangeAt(0);
+        if (!renderEl.contains(range.commonAncestorContainer)) {
+          floatTrigger.hidden = true;
+          return;
+        }
+        /* Find anchor block — use the start container (飞书策略) */
+        var anchorBlock = getAnchorBlock(range.startContainer);
+        _lastAnchorId   = anchorBlock ? anchorBlock.dataset.blockId : 'b-1';
+        _lastQuote      = sel.toString().trim().slice(0, 200);
+
+        /* Position trigger below selection bounding rect */
+        var rect = range.getBoundingClientRect();
+        var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        floatTrigger.style.top  = (rect.bottom + scrollTop + 8) + 'px';
+        floatTrigger.style.left = Math.max(8, rect.left + (rect.width / 2) - 50) + 'px';
+        floatTrigger.hidden = false;
+      }
+
+      document.addEventListener('selectionchange', function () {
+        clearTimeout(_selDebounce);
+        _selDebounce = setTimeout(updateFloatingTrigger, 100);
+      });
+
+      /* Hide on ESC */
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          floatTrigger.hidden = true;
+        }
+      });
+
+      /* Hide when clicking outside design-content and not the trigger itself */
+      document.addEventListener('mousedown', function (e) {
+        if (!renderEl.contains(e.target) && e.target !== floatTrigger) {
+          floatTrigger.hidden = true;
+        }
+      });
+
+      /* ─────────────────────────────────────────────────────────────────────
+       * Phase 2.3 — Float trigger click → create comment card
+       * ───────────────────────────────────────────────────────────────────── */
+      floatTrigger.addEventListener('click', function () {
+        floatTrigger.hidden = true;
+        window.getSelection().removeAllRanges();
+        createCommentCard(_lastAnchorId || 'b-1', _lastQuote || '（无选区）');
+      });
+
+      /* ─────────────────────────────────────────────────────────────────────
+       * Phase 2.6 — ⋯ menu toggle
+       * ───────────────────────────────────────────────────────────────────── */
+      var moreMenuTrigger = document.getElementById('more-menu-trigger');
+      var moreMenu        = document.getElementById('more-menu');
+
+      moreMenuTrigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var isOpen = !moreMenu.hidden;
+        moreMenu.hidden = isOpen;
+        moreMenuTrigger.setAttribute('aria-expanded', String(!isOpen));
+      });
+
+      document.addEventListener('click', function (e) {
+        if (!moreMenu.hidden && !moreMenu.contains(e.target) && e.target !== moreMenuTrigger) {
+          moreMenu.hidden = true;
+          moreMenuTrigger.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      /* ─────────────────────────────────────────────────────────────────────
+       * Phase 2.5 — Decision handler: [data-choice] click
+       * D5b: stopImmediatePropagation right after the [data-choice] guard,
+       *      so helper.js's later-registered [data-choice] listener never
+       *      runs (would otherwise send a duplicate WS frame without
+       *      comments). Placing it BEFORE the closest+guard would also
+       *      block all other helper.js click logic, which we don't want.
+       * ───────────────────────────────────────────────────────────────────── */
       document.addEventListener('click', function (e) {
         var target = e.target.closest('[data-choice]');
         if (!target) return;
 
-        var autoClose = toggleEl ? toggleEl.checked : (document.body.dataset.autoClose === 'true');
+        /* D5b: run immediately after guard — see comment above */
+        e.stopImmediatePropagation();
+
         var choice = target.dataset.choice;
 
+        /* Close ⋯ menu if open */
+        moreMenu.hidden = true;
+        moreMenuTrigger.setAttribute('aria-expanded', 'false');
+
+        /* Abort: require confirmation */
+        if (choice === 'abort') {
+          if (!window.confirm('放弃任务？该 autopilot 流程将终止。')) return;
+        }
+
+        /* Revise: require at least one comment OR non-empty feedback */
+        if (choice === 'revise') {
+          var savedCards = commentsPane.querySelectorAll('.comment-card[data-state="saved"]');
+          /* no feedback textarea in new UI, so check comments only */
+          if (savedCards.length === 0) {
+            var reviseBtn = document.querySelector('.btn-revise');
+            if (reviseBtn) {
+              reviseBtn.classList.remove('shake');
+              /* force reflow to restart animation */
+              void reviseBtn.offsetWidth;
+              reviseBtn.classList.add('shake');
+              reviseBtn.addEventListener('animationend', function () {
+                reviseBtn.classList.remove('shake');
+              }, { once: true });
+            }
+            showToast('请先添加至少一条评论再提交反馈');
+            return;
+          }
+        }
+
+        /* Collect saved comments (C6) */
+        var comments = [];
+        var savedCards2 = commentsPane.querySelectorAll('.comment-card[data-state="saved"]');
+        Array.prototype.forEach.call(savedCards2, function (card) {
+          var quoteEl   = card.querySelector('.comment-quote');
+          var textEl    = card.querySelector('.comment-text');
+          var anchorId  = card.dataset.anchor || 'b-1';
+          var quoteText = quoteEl ? quoteEl.textContent.replace(/^"|"$/g, '') : '';
+          var commentText = textEl ? textEl.value : '';
+          comments.push({
+            anchor : anchorId,
+            quote  : quoteText.slice(0, 200),
+            text   : commentText
+          });
+        });
+
+        /* Build payload (C2) */
+        var payload = {
+          type      : 'click',
+          text      : target.textContent.trim(),
+          choice    : choice,
+          feedback  : '',
+          comments  : comments,
+          id        : null,
+          timestamp : Date.now()
+        };
+
+        /* Send via WS (window.brainstorm injected by helper.js) */
+        if (window.brainstorm && typeof window.brainstorm.send === 'function') {
+          window.brainstorm.send(payload);
+        }
+
+        /* Show overlay */
+        var autoClose = toggleEl ? toggleEl.checked : (document.body.dataset.autoClose === 'true');
         setTimeout(function () {
           showOverlay(choice, autoClose);
         }, 50);
       });
+
     })();
   </script>
 
