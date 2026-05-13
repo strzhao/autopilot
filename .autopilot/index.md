@@ -22,6 +22,7 @@
 - [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → decisions.md
 
 ## Patterns
+- [2026-05-14] 多占位符模板 str.replace 顺序敏感：原始用户内容占位必须最后替换 | tags: template, str-replace, render-order, placeholder, pollution, marked-js, latent-bug | → patterns.md
 - [2026-05-14] 契约规约中字段/占位符出现同义变体会让下游实现犹豫 | tags: autopilot, contract, plan-reviewer, placeholder, naming, single-source-of-truth, blue-team, red-team, ambiguity | → patterns.md
 - [2026-05-11] tail -c + jq 流式解析必须丢首行 + 走 fail-safe 兜底，否则在长会话下死循环 | tags: autopilot, stop-hook, jq, tail, byte-cut, fail-safe, fail-unsafe, has-pending-subagents, parse-error, detection-function | → patterns.md
 - [2026-05-10] git worktree list --porcelain 第一项稳定为主仓库，按位置跳过优于按路径比对 | tags: git, worktree, porcelain, position-stable, run-anywhere, doctor, autopilot, path-resolution | → patterns.md

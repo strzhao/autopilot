@@ -194,3 +194,13 @@
 **Scenario**: 设计文档「契约规约」章节描述同一个注入点时给出两个候选占位符名（如 `{{AUTO_CLOSE_PREF}}` 字面字符串 vs `{{AUTO_CLOSE_PREF_CHECKED}}` 仅 checked 属性），即使作者意图是"或选其一"，蓝队读到 "or" 必然犹豫；红队也无法 grep 字面量写出确定性 fail 断言。
 **Lesson**: 契约文档中的字段名 / 占位符名 / 错误码名 / 路由路径必须**单一字面量**，不允许"or 变体"或"等价别名"。如果实际存在多个注入位置，每个位置独立命名（如 `XX_VALUE` 和 `XX_CHECKED_ATTR`），并明确各自的渲染规则；不要让一个变量名在文档里有两种语义。该原则与 contract-protocol.md 的 single-source-of-truth 同源——契约规约本身也是 single source of truth，自身不能漂移。红队应专门加"禁止变体"反向断言（grep `不应出现的变体名` 不命中 fail）做回归防御。
 **Evidence**: 本次 plan-reviewer Agent 在 design 阶段抓到 C-template-placeholders 节里 `{{AUTO_CLOSE_PREF}}` 与 `{{AUTO_CLOSE_PREF_CHECKED}}` 二义性，评为 80-90 级重要问题；收口为唯一 `{{AUTO_CLOSE_PREF}}` 注入到 `<body data-auto-close="...">`，并在红队 acceptance test 加 `C8d: 不含 {{AUTO_CLOSE_PREF_CHECKED}} 等禁止变体占位符` 反向断言做回归防御（plan-review-html.acceptance.test.sh）。如果蓝队按 "or" 实现挑了 `{{AUTO_CLOSE_PREF_CHECKED}}` 路径，contract-checker 会被迫接受（契约本就允许），缺陷会被掩盖到下次 redesign。
+
+### [2026-05-14] 多占位符模板 str.replace 顺序敏感：原始用户内容占位必须最后替换
+<!-- tags: template, str-replace, render-order, placeholder, pollution, marked-js, latent-bug, defense, regression -->
+**Scenario**: 模板渲染用 `tmpl.replace('{{A}}', ...).replace('{{B}}', ...).replace('{{C}}', ...)` 链式全局替换多个占位符。当某个占位符的"值"（特别是"原始用户内容"如 markdown 文档、用户输入）字面引用了**其他占位符的名字**（例如契约规约文档自身讨论模板占位符），且这个占位符在替换链中被**先**注入，则后续 replace 会把注入内容里的字面量也一起替换 → 重复注入 / 越权替换。在 plan-review 场景中，design content 引用了 `{{MARKED_LIB}}` 字面量 3 次，被先注入后，下一步 `replace('{{MARKED_LIB}}', marked_lib)` 把全部 4 处（1 真占位 + 3 字面）全替换 → marked.min.js 被重复注入 3 倍体积到 design content 内 → marked.parse() 把其内嵌的 `'<a href="'+(e=s)+'"'` JS 片段当 markdown 自动链接渲染 → 生成畸形 `<a href="'+(e=s)+'">` → 用户点决策按钮时浏览器误触 navigate 到非法 URL。
+**Lesson**: 多占位符 template 渲染必须遵守**单一替换顺序契约**——
+(1) "**原始用户内容**"占位（markdown 文档 / 用户输入 / 富文本）**永远最后替换**，且替换后**不再有其它 replace 步骤**；
+(2) 系统注入占位（库代码、配置值、boolean 字面）放在用户内容之前完成；
+(3) 若必须支持任意顺序，切换到**单次扫描**的 template engine（`string.Template`、`format_map`、Jinja2 等），避免链式 `str.replace` 的相互污染；
+(4) **acceptance test 必须含反向断言**——构造 design 内嵌占位符字面量的 mock 用例，校验渲染后这些字面量保留 + 系统占位只注入 1 次（特征字符串计数）。该 bug 是 latent 多版本（自 v3.22 引入 marked.js 起就存在），只有本次任务的设计文档元讨论占位符才首次触发。
+**Evidence**: 现象 = 浏览器点击「通过」按钮后误 navigate 到 `http://localhost:59177/'+(e=s)+'`。证据链：`grep -c '(e=s)' /tmp/rendered.html` = 4（修复前），= 1（修复后，仅 marked.min.js 源码内）；HTML 文件体积 186KB → 80KB（减少 ≈3 倍 marked.js）。修复 `launch-plan-review.sh` python 渲染顺序：`{{MARKED_LIB}}` → `{{AUTO_CLOSE_PREF}}` → `{{DESIGN_CONTENT}}`（design content 最后注入）。回归防御 `plan-review-html.acceptance.test.sh` 新增 C11a/b/c 三个断言：marked 特征 `(e=s)` 计数 = 1 + design 内 `{{MARKED_LIB}}` 字面保留 + 渲染顺序 awk 校验。v3.27.0 → v3.27.1 hotfix（756a1ce）。该 pattern 关联 [2026-05-14] 契约规约中字段/占位符同义变体（前者是契约文档内命名一致，后者是渲染层面替换污染，互补）。
