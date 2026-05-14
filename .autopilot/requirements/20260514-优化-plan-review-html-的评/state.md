@@ -1,8 +1,8 @@
 ---
 active: true
-phase: "merge"
+phase: "done"
 gate: ""
-iteration: 5
+iteration: 6
 max_iterations: 30
 max_retries: 3
 retry_count: 1
@@ -12,7 +12,7 @@ fast_mode: false
 brief_file: ""
 next_task: ""
 auto_approve: false
-knowledge_extracted: ""
+knowledge_extracted: "true"
 qa_scope: ""
 task_dir: "/Users/stringzhao/workspace/string-claude-code-plugin/.autopilot/requirements/20260514-优化-plan-review-html-的评"
 session_id: 9d73d87e-7364-4540-9a93-cac634dc12cd
@@ -611,3 +611,9 @@ XSS / 内存泄漏 / 占位符回归 / fallback / 版本号 全部 ✅。
 - [2026-05-14T00:00:00Z] auto-fix: 红队测试本地重跑 36/36 ✅；retry_count: 0→1；qa_scope: selective；phase → qa
 - [2026-05-14T00:00:00Z] qa: 轮次 2 selective 重跑 — Tier 0 36/36 ✅；Tier 1.5 E=8/N=8 通过；Tier 2 Section A A3/A13 复核 ✅；qa-reviewer 检出 Phase 2.5 checklist 残留旧措辞已内联修复
 - [2026-05-14T00:00:00Z] qa: gate → review-accept，等待用户审批合并
+- [2026-05-14T00:00:00Z] 用户浏览器端到端验收：连续选 2 段文字加 2 条评论 → 点「反馈」→ shell stdout 含 comments[]（anchor=b-4 quote="浮动按钮" / anchor=b-6 quote="同意 / 反馈"），协议向后兼容 ✅
+- [2026-05-14T00:00:00Z] 用户 /autopilot approve，phase: merge
+- [2026-05-14T00:00:00Z] merge: commit-agent 提交 4d42d4c "feat(plan-review): 新增飞阅评论效果 + 顶部 sticky 工具栏，升级至 v3.29.0"
+- [2026-05-14T00:00:00Z] merge: 知识沉淀 2 条 pattern（dataset.X vs setAttribute / 事件委托双 listener stopImmediatePropagation），commit 01416d8；index.md 同步
+- [2026-05-14T00:00:00Z] merge: git push 完成；CI Unit Tests ✅；ShellCheck Lint ❌ pre-existing（SC2034 in plan-review-html.acceptance.test.sh:600/617，承自 ef8df2d 起，本次未引入新 shell 改动）
+- [2026-05-14T00:00:00Z] merge: phase → done
