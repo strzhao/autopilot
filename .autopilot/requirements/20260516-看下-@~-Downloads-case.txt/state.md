@@ -1,8 +1,8 @@
 ---
 active: true
-phase: "merge"
+phase: "done"
 gate: ""
-iteration: 1
+iteration: 2
 max_iterations: 30
 max_retries: 3
 retry_count: 0
@@ -12,7 +12,7 @@ fast_mode: false
 brief_file: ""
 next_task: ""
 auto_approve: false
-knowledge_extracted: ""
+knowledge_extracted: "true"
 task_dir: "/Users/stringzhao/workspace/string-claude-code-plugin/.autopilot/requirements/20260516-看下-@~-Downloads-case.txt"
 session_id: 48b2f3f1-afc8-45c7-88a1-cc14690d897b
 started_at: "2026-05-16T10:22:44Z"
@@ -143,7 +143,7 @@ Fast Mode（`qa_scope: "smoke"`）下：
 - [x] 任务 2: 修改 `plugins/autopilot/skills/autopilot/SKILL.md` `#### Wave 2` 输入列表（line 410-414），新增 Tier 1.5 原始输出项
 - [x] 任务 3: 修改 `plugins/autopilot/skills/autopilot/references/qa-reviewer-prompt.md`（line 17-20 + line 33-42），新增 Tier 1.5 ⚠️ 独立审查
 - [x] 任务 4: 纯文档 trace 验证（场景 1-5，QA 阶段执行）✅ 5/5 通过
-- [ ] 任务 5: 版本号升级与提交（commit Agent 按 CLAUDE.md「升级时必须全部同步」处理）
+- [x] 任务 5: 版本号升级与提交（commit Agent 完成，3.29.0 → 3.30.0，commit c7dde07）
 
 ### 领域 Skill 委托
 
@@ -311,3 +311,4 @@ plugins/autopilot/skills/autopilot/SKILL.md             | 17 ++++++++++++++---
 - [2026-05-16T10:55:00Z] 用户审批通过。phase → implement。并行启动蓝队（精确 Edit 3 处）+ 红队（纯文本验收检查清单，因改动是 skill 文档非代码）
 - [2026-05-16T11:05:00Z] 蓝队完成 3 处精确 Edit（SKILL.md +14 -3 / qa-reviewer-prompt.md +2 -0），git diff 与设计文档完全匹配，无偏差。红队产出 59 条验收检查清单（A 文件结构/B-D 改动内容/E 场景 trace/F 反模式/G 不改动）。phase → qa
 - [2026-05-16T11:15:00Z] QA 完成。Wave 1.5 五场景 trace 全 ✅；qa-reviewer Section A/C 全 ✅，Ready to merge: Yes；越界检查 git diff 仅命中 2 个目标文件。步骤 3 自我应用空转 → gate: review-accept，等待用户合并审批
+- [2026-05-16T11:25:00Z] 用户审批合并通过。commit c7dde07 (v3.30.0)，版本号同步 3 处（plugin.json / marketplace.json / CLAUDE.md 索引表）。知识沉淀 1 条决策到 decisions.md + index.md。phase → done
