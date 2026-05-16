@@ -597,7 +597,6 @@ trap '_c9c_cleanup' EXIT
 # 我们只关心 CONTENT_DIR 中渲染后的 plan-review.html 是否正确替换了占位符
 # 先导出 CONTENT_DIR 让 launch-plan-review.sh 用（若其支持环境变量覆盖），否则读默认路径
 export HOME="$tmp_home_c9c"
-LAUNCH_SCRIPT="$LAUNCH_SH"
 
 # 以 timeout 5 跑脚本，收集到 plan-review.html 路径
 # launch-plan-review.sh 通常把 html 写到 $CONTENT_DIR 或脚本同目录临时目录
@@ -613,8 +612,7 @@ fi
 
 # 用 timeout 5 运行脚本（阻塞部分会被 timeout 中断）
 # 捕获 stdout/stderr；脚本超时时 exit=124，launch-plan-review.sh 期待 TASK_DIR 参数（不是 state.md 文件路径）
-c9c_exit=0
-c9c_output="$(HOME="$tmp_home_c9c" timeout 5 bash "$LAUNCH_SH" "$tmp_state_c9c" 2>&1)" || c9c_exit=$?
+c9c_output="$(HOME="$tmp_home_c9c" timeout 5 bash "$LAUNCH_SH" "$tmp_state_c9c" 2>&1)" || true
 
 # 搜索渲染后的 plan-review.html：优先在 tmp_state_c9c 下（--project-dir 模式），再搜 /tmp
 c9c_rendered_html="$(find "$tmp_state_c9c" -name "plan-review.html" 2>/dev/null | head -1)"
