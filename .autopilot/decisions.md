@@ -1,3 +1,12 @@
+### [2026-05-16] 改 QA ⚠️/❌ 判定规则时必须枚举所有合法标记来源 + 强制复盘机制
+<!-- tags: autopilot, qa, judgement, warning, false-acquit, plan-reviewer, blocker, defensive-design, anti-rationalization, tier-1.5, tier-3.5 -->
+**Background**: case.txt 复盘揭示 little-ant garden 项目 3 个真实 bug（?level=N URL 跳关 / DecorationPiece onClick 断裂 / jsdom useSearchParams null）在 QA 阶段都被 Tier 1.5 e2e 超时暴露，却被编排器自我合理化为 ⚠️「结构性超时」绕过 auto-fix。autopilot SKILL.md 三个缺陷共享同一根因：⚠️ 标记没有独立校验。设计方案最初是「判定行改为 全部 ✅（仅基础设施类 ⚠️）」，plan-reviewer 抓到 BLOCKER：会把 Tier 3.5 性能保障的合法 ⚠️（line 362 既有降级设计）误升级为 ❌，违反现有设计。
+**Choice**: (1) 在 `#### 结果判定` 前置检查新增「步骤 3 — Tier 1.5 ⚠️ 复盘」强制对每个 ⚠️ 写辩解 + 对照表三分类（环境/功能/无法辩解）；(2) 步骤 3 显式声明遍历范围严格限定为 Tier 1.5，明列其他 Tier (0/1/3/3.5/4) 都不参与；(3) 判定行括号文字明示双合法 ⚠️ 来源（Tier 1.5 基础设施类 ⚠️ 或 Tier 3.5 性能保障 ⚠️），不能用"基础设施类"一个标签兜底；(4) qa-reviewer prompt 加第 6 项做独立复核（Standard 模式双层防线）；(5) Fast Mode 单层防线（仅改动 1 生效）作为可接受取舍写入风险表。
+**Alternatives rejected**: (1) 判定行用单一"基础设施类 ⚠️"兜底（plan-reviewer BLOCKER-1 — Tier 3.5 不属于"基础设施类"语义，会被对照表"无法清晰辩解"分支吞噬升级为 ❌）；(2) 只改 SKILL.md 不改 qa-reviewer prompt（缺第二道独立复核，编排器自我合理化无人监督）；(3) 在 Fast Mode 内联自审里也加 Tier 1.5 ⚠️ 复盘（第 4 处改动，超出"最小化"承诺；case.txt 复盘场景本身是 standard 模式）。
+**Trade-offs**: 改动从 1 处扩到 3 处（约 15 行新增），但换得 ⚠️ 滥用必须显式辩解 + 双层独立校验。Fast Mode 失去 qa-reviewer 校验作为单层防线代价，可被未来「step 3 也加到 fast smoke 自审清单」迭代弥补。
+**Evidence**: case.txt 末尾用户 3 缺陷列表 + plan-reviewer 初审 BLOCKER-1（置信度 95：「对照表是闭集但不完备，Tier 3.5 性能 ⚠️ 落入'无法清晰辩解 → 默认 ❌'」）+ SKILL.md line 362 既有降级原文 + 复审 PASS + QA 五场景 trace（场景 5 专测 Tier 3.5 ⚠️ 豁免回归 ✅）。
+**Lesson**: 改 QA 判定行 / 标记规则前，**必须先枚举所有合法 ⚠️ 来源**（用 grep `⚠️\|降级\|N/A` 扫全 SKILL.md），任何「✅ 允许 ⚠️」的兜底措辞都要白名单化、不能用模糊的语义分类做闭集。"AI 自我合理化"是结构性反模式，光靠教育（references 里的防合理化指南）无效，必须在工作流里加强制检查点（步骤 3）+ 独立审核（qa-reviewer 第 6 项）。每轮重做、不跨轮复用辩解 — 配合 stop-hook 压缩历史的现实约束。
+
 ### [2026-05-10] auto-fix 中"看似独立的两个 bug"应优先寻找共同上游脆弱点，一处合并修复
 <!-- tags: autopilot, qa, auto-fix, root-cause, merge-fix, anti-symptomatic, bash, scripting -->
 **Background**: QA 第 1 轮在 doctor SKILL.md Dim 8 worktree 健康抽查段同时发现 2 个独立失败：场景 5（脚本 exit=1 违反退出码 0 契约）+ 场景 8（在 worktree 内 MAIN_ROOT 错指）。表面看是两个独立 bug，可分别 fix。

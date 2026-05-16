@@ -1,6 +1,7 @@
 # Knowledge Index
 
 ## Decisions
+- [2026-05-16] 改 QA ⚠️/❌ 判定规则时必须枚举所有合法标记来源 + 强制复盘机制 | tags: autopilot, qa, judgement, warning, false-acquit, plan-reviewer, blocker, defensive-design, anti-rationalization, tier-1.5, tier-3.5 | → decisions.md
 - [2026-05-14] per-user 偏好持久化采用 ~/.autopilot/ 与项目级命名对称 | tags: autopilot, prefs, persistence, user-level, project-level, naming-convention, dotfile | → decisions.md
 - [2026-05-10] auto-fix 中"看似独立的两个 bug"应优先寻找共同上游脆弱点，一处合并修复 | tags: autopilot, qa, auto-fix, root-cause, merge-fix, anti-symptomatic, bash, scripting | → decisions.md
 - [2026-05-10] 契约对齐采用 contract-checker agent + 集中 protocol，而非分散 prompt 铁律 | tags: autopilot, contract, red-team, blue-team, contract-checker, agent, single-source-of-truth, skill-fragility, gojko, sbe, cdc, pact, dbc, contract-protocol | → decisions.md
