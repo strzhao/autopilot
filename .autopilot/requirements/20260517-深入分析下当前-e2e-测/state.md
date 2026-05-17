@@ -1,6 +1,6 @@
 ---
 active: true
-phase: "merge"
+phase: "done"
 gate: ""
 iteration: 3
 max_iterations: 30
@@ -12,7 +12,7 @@ fast_mode: false
 brief_file: ""
 next_task: ""
 auto_approve: false
-knowledge_extracted: ""
+knowledge_extracted: "true"
 task_dir: "/Users/stringzhao/workspace/string-claude-code-plugin/.autopilot/requirements/20260517-深入分析下当前-e2e-测"
 session_id: 8a27966d-2ce5-4534-93b0-cf560671ea32
 started_at: "2026-05-16T17:28:50Z"
@@ -494,3 +494,6 @@ QA 阶段将逐项执行清单。
 - [2026-05-17T03:20:00Z] Wave 1 ✅：文件存在 + 字面契约 6 正/7 反 + 版本同步 + SKILL.md 未改 + 4 prompt 纯追加 + 不变量保留
 - [2026-05-17T03:25:00Z] Wave 1.5 ✅：9 场景结构性验证全过（端到端冒烟以蓝队产出内容审阅替代）
 - [2026-05-17T03:30:00Z] qa-reviewer 96 分 Ready to merge: Yes（2 Minor 边缘场景改进留给后续迭代）
+- [2026-05-17T03:45:00Z] Merge 审批通过 → commit 741d2c9: feat(autopilot): 红队/审查链路全链路引入 Mutation-Survival 自检，防止 Tautological Test 漏报，升级至 v3.31.0
+- [2026-05-17T03:50:00Z] 知识沉淀完成：decisions.md +1 条（业界对齐命名）+ patterns.md +1 条（doc-only QA 降级）+ index.md 同步，独立 commit
+- [2026-05-17T03:52:00Z] phase: done
