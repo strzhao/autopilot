@@ -12,13 +12,13 @@
 - `qa_scope`: 选择性重跑标记，AI 更新；可选值：`"smoke"`（diff 小或 fast_mode 触发，跳过 Wave 2 qa-reviewer）/ `"selective"`（auto-fix 后只重跑失败 Tier）/ `""`（默认全量 QA）
 - `next_task`: 下一个就绪任务 ID（项目模式 merge 阶段写入，触发 auto-chain）
 - `knowledge_extracted`: 知识提取完成标记，AI 在 merge 阶段设为 `"true"`（有新增）或 `"skipped"`（无新增）。stop-hook 的 phase=done 守卫检查此字段，缺失或空值会回滚到 merge
+- `fast_mode`: 三态字段。`""`（默认/未定）/`"true"`（fast）/`"false"`（standard）。setup.sh 的 `--fast` / `--standard` flag 时直接写入；为空时 AI 在启动流程步骤 2 中按自适应规则写回（bug 修复/小改动→true，新功能/重构→false，不确定→false），写入后整个生命周期不再修改
 
 - `html_review`: 可选布尔值（默认 false）。设为 `true` 时，design 阶段步骤 4 启用 HTML 浏览器评审路径（自动打开浏览器渲染设计文档 + 反馈输入 + 通过/修改/放弃按钮），优先级高于环境变量 `AUTOPILOT_HTML_REVIEW=1`。不设置或为 false 时走默认 AskUserQuestion + preview 路径。
 
 **stop-hook 管理（AI 只读）**：
 - `iteration`: 当前迭代次数，stop-hook 自动递增
 - `auto_approve`: auto-chain 时为 true，失败回退为 false
-- `fast_mode`: 默认 false；`/autopilot --fast` 时 setup.sh 设 true；stop-hook `detect_smoke_eligible` 在 diff 超阈值时降级为 false。AI 只读，不应直接修改
 
 **setup.sh 创建（AI 不修改）**：
 - `max_iterations`: 最大迭代次数（默认 30）

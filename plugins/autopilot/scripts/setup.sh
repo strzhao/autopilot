@@ -76,7 +76,8 @@ autopilot — AI 自动驾驶工程套件
 
 选项:
   --deep                    已废弃（行为同默认）。旧版深度设计模式的兼容保留。
-  --fast                    快速模式（跳过 brainstorm 交互探索 + 简化审查，适用于明确小任务）
+  --fast                    强制快速模式（跳过 brainstorm + 审批 + contract-checker + qa-reviewer，红蓝/QA 核心保留）
+  --standard                强制完整模式（覆盖 AI 自适应判断，走完整 6-Agent 链路）
   --project                 强制项目模式（跳过复杂度检测）
   --single                  强制单任务模式（跳过复杂度检测）
   --max-iterations <n>      最大迭代次数 (默认: 30)
@@ -374,6 +375,10 @@ while [[ $# -gt 0 ]]; do
             FAST_MODE_OVERRIDE="true"
             shift
             ;;
+        --standard)
+            FAST_MODE_OVERRIDE="false"
+            shift
+            ;;
         *)
             PROMPT_PARTS+=("$1")
             shift
@@ -449,7 +454,7 @@ max_retries: $MAX_RETRIES
 retry_count: 0
 mode: "${MODE_OVERRIDE}"
 plan_mode: "${PLAN_MODE_OVERRIDE}"
-fast_mode: ${FAST_MODE_OVERRIDE:-false}
+fast_mode: ${FAST_MODE_OVERRIDE:-}
 brief_file: ""
 next_task: ""
 auto_approve: false
@@ -496,10 +501,13 @@ elif [[ "$MODE_OVERRIDE" == "project" ]]; then
     PHASE_FLOW="design → 复杂度检测 → 架构设计 → DAG 创建 → done"
 elif [[ "$FAST_MODE_OVERRIDE" == "true" ]]; then
     DISPLAY_GOAL="$GOAL"
-    PHASE_FLOW="design (fast) → 审批 → implement → qa (smoke) → merge"
-else
+    PHASE_FLOW="design (fast，跳过审批) → implement (无 contract-checker) → qa (smoke) → merge"
+elif [[ "$FAST_MODE_OVERRIDE" == "false" ]]; then
     DISPLAY_GOAL="$GOAL"
     PHASE_FLOW="design → 审批 → implement → qa → 审批 → merge"
+else
+    DISPLAY_GOAL="$GOAL"
+    PHASE_FLOW="AI 自适应判断 fast/standard → design → ..."
 fi
 
 cat <<EOF

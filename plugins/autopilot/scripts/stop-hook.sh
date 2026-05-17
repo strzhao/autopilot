@@ -241,10 +241,9 @@ has_pending_subagents() {
 
 # detect_smoke_eligible — 检测当前 diff 是否满足 smoke QA 条件，满足则设置 qa_scope=smoke
 #
-# 触发路径：
-#   路径 A — fast_mode=true 且 diff ≤ 100 行 / ≤ 8 文件且无依赖变更 → smoke
-#   路径 B — fast_mode=true 但 diff 太大或含依赖 → 降级 fast_mode=false
-#   路径 C — 标准模式 diff ≤ 30 行 AND ≤ 3 文件且无依赖变更 → smoke
+# 触发路径（v3.32.0+：fast_mode=true 不再因 diff 大小降级，相信用户/AI 判断）：
+#   路径 A — fast_mode=true → 直接 smoke（无视 diff 大小/依赖变更）
+#   路径 B — 标准模式 diff ≤ 30 行 AND ≤ 3 文件且无依赖变更 → smoke
 #
 # $1（可选）：mock diff 文件路径（红队测试用）。生产留空时跑 `git diff --stat HEAD`。
 # 副作用：通过 set_field / append_changelog 修改全局 STATE_FILE 状态文件
@@ -279,21 +278,14 @@ detect_smoke_eligible() {
     local fast_mode
     fast_mode=$(get_field fast_mode || true)
 
-    # 路径 A — fast_mode=true 且全部阈值内（≤100行/≤8文件/无依赖）→ smoke + 保持 fast_mode
-    if [[ "$fast_mode" == "true" ]] && [[ "$has_deps" -eq 0 ]] && [[ "${diff_lines:-999}" -le 100 ]] && [[ "${diff_files:-999}" -le 8 ]]; then
+    # 路径 A — fast_mode=true → 无视 diff 大小直接 smoke（用户/AI 显式选 fast，相信判断）
+    if [[ "$fast_mode" == "true" ]]; then
         set_field "qa_scope" '"smoke"'
-        append_changelog "stop-hook: fast_mode=true 且 diff 在阈值内（${diff_lines}行/${diff_files}文件），启用 smoke QA"
+        append_changelog "stop-hook: fast_mode=true（${diff_lines}行/${diff_files}文件/含依赖=${has_deps}），启用 smoke QA"
         return 0
     fi
 
-    # 路径 B — fast_mode=true 但任一阈值超出（行/文件/依赖）→ 降级 fast_mode
-    if [[ "$fast_mode" == "true" ]] && { [[ "${diff_lines:-0}" -gt 100 ]] || [[ "${diff_files:-0}" -gt 8 ]] || [[ "$has_deps" -eq 1 ]]; }; then
-        set_field "fast_mode" "false"
-        append_changelog "stop-hook: fast_mode 降级（${diff_lines}行/${diff_files}文件/含依赖=${has_deps}），QA 走全量"
-        return 0
-    fi
-
-    # 路径 C — 标准模式：严格阈值，diff ≤ 30 行 AND ≤ 3 文件 AND 无依赖
+    # 路径 B — 标准模式：严格阈值，diff ≤ 30 行 AND ≤ 3 文件 AND 无依赖
     if [[ "$has_deps" -eq 0 ]] && [[ "${diff_lines:-999}" -le 30 ]] && [[ "${diff_files:-999}" -le 3 ]]; then
         set_field "qa_scope" '"smoke"'
         append_changelog "stop-hook: 自动检测 diff 体积小（${diff_lines}行/${diff_files}文件），启用 smoke QA"
@@ -562,7 +554,7 @@ if [[ "$PHASE" == "design" ]]; then
     if [[ "$AUTO_APPROVE" == "true" ]]; then
         PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. auto_approve=true: 直接写设计文档到状态文件. ⚠️ 必须使用 Agent 工具启动 plan-reviewer sub-agent (model: sonnet) 审查设计方案, 参见 references/plan-reviewer-prompt.md. 审查通过则推进到 implement; 失败则设 auto_approve: false 回退到正常审批流程. 按照 autopilot skill 的 Phase: design 指引执行."
     elif [[ "$FAST_MODE" == "true" ]]; then
-        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述, fast_mode=true: 跳过 brainstorm Q&A 交互探索，只用 1 个 Explore agent 探索代码, 不启动 scenario-generator Agent, 不启动 plan-reviewer Agent — 将设计文档写入状态文件后按 references/plan-reviewer-prompt.md 中的 6 维度自审（需求完整性/技术可行性/任务分解/验证方案/风险/范围控制）, 自审通过后使用 AskUserQuestion 请求用户审批. 详见 SKILL.md Fast Mode 快速路径章节. 按照 autopilot skill 的 Phase: design 指引执行."
+        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述, fast_mode=true: 砍所有 plan-review 类节点（红蓝对抗 / QA Wave 1+1.5 是核心，保留不变）. design 阶段: 跳过 brainstorm Q&A，只用 1 个 Explore agent 探索代码，不启动 scenario-generator / plan-reviewer Agent — 设计文档写入状态文件后按 references/plan-reviewer-prompt.md 6 维度自审（需求完整性/技术可行性/任务分解/验证方案/风险/范围控制）；自审通过后**直接设 phase: implement**（跳过 AskUserQuestion 审批，fast 信任 AI 判断）；自审失败修正一次，仍失败才回退 AskUserQuestion 交用户. implement 阶段: blue/red-team 双 Agent 照常启动，**跳过 contract-checker Agent**. 详见 SKILL.md Fast Mode 快速路径章节. 按照 autopilot skill 的 Phase: design 指引执行."
     else
         # 默认含 brainstorm 探索流程（原 deep 行为）。plan_mode=="deep" 的历史 state.md 同样走此分支（兼容期）
         PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. 默认执行含 brainstorm 的交互探索流程（参见 references/brainstorm-guide.md），包括项目上下文探索、视觉伴侣征求、逐个澄清问题(AskUserQuestion 逐个澄清)、提出 2-3 种方案. 探索完成后将设计文档写入状态文件. ⚠️ 必须使用 Agent 工具启动 plan-reviewer sub-agent (model: sonnet) 审查设计方案, 参见 references/plan-reviewer-prompt.md. 审查通过后使用 AskUserQuestion 请求用户审批. 产出物写入 task_dir: $(get_field 'task_dir'). 按照 autopilot skill 的 Phase: design 指引执行."
