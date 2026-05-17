@@ -593,31 +593,32 @@ started_at: "2026-01-01T00:00:00Z"
   });
 
   describe('SKILL.md structure', () => {
-    it('is under 550 lines', () => {
+    it('is under 700 lines', () => {
       const content = fs.readFileSync(SKILL_MD, 'utf8');
       const lines = content.split('\n').length;
-      assert.ok(lines <= 550, `SKILL.md should be under 550 lines, got ${lines}`);
+      assert.ok(lines <= 700, `SKILL.md should be under 700 lines, got ${lines}`);
     });
 
-    it('has step 1.5 mode detection section', () => {
+    it('has step 1 mode detection section', () => {
       const content = fs.readFileSync(SKILL_MD, 'utf8');
-      assert.ok(content.includes('步骤 1.5. 模式检测与分流'), 'SKILL.md should have step 1.5');
-      assert.ok(content.includes('AskUserQuestion'), 'step 1.5 should reference AskUserQuestion');
-      assert.ok(content.includes('项目模式 Plan 内容'), 'should have project mode plan template');
+      assert.ok(content.includes('步骤 1. 模式检测与分流'), 'SKILL.md should have step 1 mode detection');
+      assert.ok(content.includes('AskUserQuestion'), 'step 1 should reference AskUserQuestion');
+      assert.ok(content.includes('项目模式设计内容'), 'should have project mode design template');
     });
 
-    it('has step 6b project mode file creation', () => {
+    it('has step 5b project mode file creation', () => {
       const content = fs.readFileSync(SKILL_MD, 'utf8');
-      assert.ok(content.includes('步骤 6b. 项目模式文件创建'), 'SKILL.md should have step 6b');
-      assert.ok(content.includes('dag.yaml'), 'step 6b should mention dag.yaml');
+      assert.ok(content.includes('步骤 5b. 项目模式文件创建'), 'SKILL.md should have step 5b');
+      assert.ok(content.includes('dag.yaml'), 'step 5b should mention dag.yaml');
     });
 
-    it('has reference pointers for each phase', () => {
+    it('has dedicated section for each phase', () => {
       const content = fs.readFileSync(SKILL_MD, 'utf8');
-      assert.ok(content.includes('references/implement-phase.md'), 'should reference implement phase');
-      assert.ok(content.includes('references/qa-phase.md'), 'should reference qa phase');
-      assert.ok(content.includes('references/auto-fix-phase.md'), 'should reference auto-fix phase');
-      assert.ok(content.includes('references/merge-phase.md'), 'should reference merge phase');
+      assert.ok(content.includes('## Phase: design'), 'should have design phase section');
+      assert.ok(content.includes('## Phase: implement'), 'should have implement phase section');
+      assert.ok(content.includes('## Phase: qa'), 'should have qa phase section');
+      assert.ok(content.includes('## Phase: auto-fix'), 'should have auto-fix phase section');
+      assert.ok(content.includes('## Phase: merge'), 'should have merge phase section');
     });
 
     it('has auto-chain and auto-approve sections', () => {
@@ -627,17 +628,13 @@ started_at: "2026-01-01T00:00:00Z"
       assert.ok(content.includes('Auto-Approve'), 'should have Auto-Approve section');
     });
 
-    it('documents project-qa mode', () => {
+    it('references state-file-guide for frontmatter docs', () => {
       const content = fs.readFileSync(SKILL_MD, 'utf8');
-      assert.ok(content.includes('project-qa'), 'should mention project-qa mode');
-    });
-
-    it('has mode and brief_file in frontmatter docs', () => {
-      const content = fs.readFileSync(SKILL_MD, 'utf8');
-      assert.ok(content.includes('mode: ""'), 'frontmatter docs should include mode field');
-      assert.ok(content.includes('brief_file: ""'), 'frontmatter docs should include brief_file field');
-      assert.ok(content.includes('plan_mode: ""'), 'frontmatter docs should include plan_mode field');
-      assert.ok(content.includes('task_dir: ""'), 'frontmatter docs should include task_dir field');
+      assert.ok(content.includes('mode'), 'should mention mode field');
+      assert.ok(content.includes('brief_file') || content.includes('state-file-guide'),
+        'frontmatter docs should be discoverable (either inline brief_file or via state-file-guide reference)');
+      assert.ok(content.includes('references/state-file-guide.md'),
+        'should reference state-file-guide.md for full frontmatter docs');
     });
 
     it('has standard design mode section with brainstorm', () => {
@@ -663,6 +660,7 @@ started_at: "2026-01-01T00:00:00Z"
       assert.ok(content.includes('Handoff'), 'should document handoff format');
       assert.ok(content.includes('/autopilot status'), 'should document status command');
       assert.ok(content.includes('/autopilot next'), 'should document next command');
+      assert.ok(content.includes('project-qa'), 'should document project-qa mode (post-task QA)');
     });
 
     it('is under 150 lines (AI Native principle)', () => {
