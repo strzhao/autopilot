@@ -26,7 +26,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 
 BRAINSTORM_SKILL_MD="$REPO_ROOT/plugins/autopilot/skills/autopilot-brainstorm/SKILL.md"
-BRAINSTORM_REF_DIR="$REPO_ROOT/plugins/autopilot/skills/autopilot-brainstorm/references"
 VISUAL_COMPANION_NEW="$REPO_ROOT/plugins/autopilot/skills/autopilot-brainstorm/references/visual-companion-guide.md"
 
 AUTOPILOT_SKILL_MD="$REPO_ROOT/plugins/autopilot/skills/autopilot/SKILL.md"
