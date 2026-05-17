@@ -1,6 +1,7 @@
 # Knowledge Index
 
 ## Decisions
+- [2026-05-17] brainstorm 抽离为独立 skill：解决"指令优先级"而非"主 SKILL 行数" | tags: autopilot, brainstorm, skill-extraction, indication-priority, references-postpone, hard-gate, superpowers, design-prediction | → decisions.md
 - [2026-05-17] skill 引入新概念优先业界对齐命名，禁止自创术语 | tags: autopilot, skill, naming, terminology, industry-alignment, llm-friendly, mutation-testing, tautological-test, semantic-anchor, prompt-engineering | → decisions.md
 - [2026-05-16] 改 QA ⚠️/❌ 判定规则时必须枚举所有合法标记来源 + 强制复盘机制 | tags: autopilot, qa, judgement, warning, false-acquit, plan-reviewer, blocker, defensive-design, anti-rationalization, tier-1.5, tier-3.5 | → decisions.md
 - [2026-05-14] per-user 偏好持久化采用 ~/.autopilot/ 与项目级命名对称 | tags: autopilot, prefs, persistence, user-level, project-level, naming-convention, dotfile | → decisions.md
@@ -24,6 +25,7 @@
 - [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → decisions.md
 
 ## Patterns
+- [2026-05-17] 设计阶段量化承诺（行数 / token 数 / 性能数）必须 grep 验证而非估算 | tags: autopilot, design, prediction, quantitative-commitment, grep-verify, estimate-bias, plan-reviewer, skill-extraction | → patterns.md
 - [2026-05-17] documentation-only 变更的 QA 降级模式：Tier 1/3.5 N/A、Tier 1.5 用产出审阅替代浏览器冒烟 | tags: autopilot, qa, documentation-only, markdown, tier-1.5, smoke-test, content-review, prompt-engineering, fallback | → patterns.md
 - [2026-05-14] 多占位符模板 str.replace 顺序敏感：原始用户内容占位必须最后替换 | tags: template, str-replace, render-order, placeholder, pollution, marked-js, latent-bug | → patterns.md
 - [2026-05-14] 契约规约中字段/占位符出现同义变体会让下游实现犹豫 | tags: autopilot, contract, plan-reviewer, placeholder, naming, single-source-of-truth, blue-team, red-team, ambiguity | → patterns.md
