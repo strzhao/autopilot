@@ -34,6 +34,7 @@
 4. **执行步骤**：用户/调用方的操作序列
 5. **预期结果**：可观察的成功标志
 6. **验证层级**：UI / API / CLI / Config
+7. **Observable State Transitions (OST)**：场景中每次"用户交互/状态变化"步骤之后，可被外部观察到的状态变化（aria-state / 进度数字 / 类名 / 文本内容 / 计数变化）。这是后续测试编写者写"Mutation-Survival 抗性"断言的依据。纯渲染类场景填 "N/A"。详情参 `references/test-mutation-survival.md`。
 
 ## 输出格式
 
@@ -45,6 +46,7 @@
 - 执行步骤：{步骤列表}
 - 预期结果：{可观察的结果}
 - 验证层级：{层级}
+- Observable State Transitions: {每次用户交互后可观察到的状态变化列表，纯渲染场景填 "N/A"}
 
 （按重要性排序，Happy Path 优先）
 ```

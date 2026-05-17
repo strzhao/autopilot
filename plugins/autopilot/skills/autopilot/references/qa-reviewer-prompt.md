@@ -105,6 +105,15 @@
    - `expect(result).toBeTruthy()` 用于本应有具体结构的对象（设计文档声明了字段名）
    - `expect(arr.length).toBeGreaterThan(0)` 用于本应有具体内容的列表（设计文档声明了元素）
 
+4. **Tautological / Mutation-Survival 反模式（BLOCKER，置信度 90+）**
+
+   对包含用户交互（click / input / submit）的测试文件，逐项检查：
+   - 每次"用户交互"调用后是否至少有 1 个断言验证**仅由该交互产生**的可观察状态变化（aria-state / 计数 / 类名 / 文本）？
+   - 测试最终断言的元素/属性是否**仅在功能正确时**才出现/匹配？（断言 stable element visible → 反模式）
+   - `waitForTimeout(N)` 后的断言是否仅检查页面初始状态即满足的条件？
+
+   命中任一 → 该测试无法 kill No-op mutation，BLOCKER。详情参 `references/test-mutation-survival.md`。
+
 ## 输出格式
 
 ### Section A — 设计符合性

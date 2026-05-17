@@ -22,6 +22,9 @@
 | `try { ... } catch { /* skip */ }` 替代失败断言 | 异常吞掉 = 测试无意义 |
 | `// 蓝队未实现，先跳过` 注释 + soft skip | TDD 红灯本应失败；让它失败 |
 | 测试文件全部用 `test.skip` / `it.skip` | 用 `expect.fail` 留 TODO 注释，不要假装跑 |
+| `click → wait → click → 最终断言 stable 元素 visible` 链 | 对 no-op 实现也通过——失去发现 bug 能力（业界称 Tautological Test） |
+
+**Mutation-Survival 自检铁律**（反 no-op）：测试涉及"用户交互/状态变化"（click / input / submit / dispatch）时，**必须**在每个交互断言后过 Mental Mutation 5 问（No-op / Conditional Flip / Boundary / Return-Value / State-Update Skip），并选择能 kill 至少 No-op mutation 的断言。详情参 `references/test-mutation-survival.md`。
 
 **核心原则**：红队测试是"对实现的契约断言"，不是"对实现状态的容错代码"。每个测试用例**必须**包含强断言（`assert.*`、`expect.*` 等），失败时必须挂掉测试。
 

@@ -30,6 +30,7 @@
 5. **风险与边界**：关键风险是否识别？缓解策略是否具体可执行？
 6. **范围控制**：子任务 ≤8？有无与目标无关的"顺手改进"？
 7. **契约完整性**（仅当 frontmatter `contract_required: true` 且设计文档应有 `## 契约规约` 时检查）：契约规约存在 ✓，边界值用 DbC 谓词 `≤`/`≥` ✓，字段名代码标记 ✓，错误码枚举名 ✓。详细规则参 references/contract-protocol.md。任一缺失 → BLOCKER (≥91)。
+8. **Mutation-Survival 抗性**（仅当变更涉及用户交互且有 E2E/集成/交互测试场景时检查）：验证方案的真实测试场景是否对每个"用户交互"步骤声明了 Observable State Transitions？所有交互场景仅断言终态/stable 元素 visible → BLOCKER（≥91）。详情参 `references/test-mutation-survival.md`。
 
 ## 置信度
 - 91-100（BLOCKER）：确定导致失败，必须报告
