@@ -1,3 +1,12 @@
+### [2026-05-17] skill 引入新概念优先业界对齐命名，禁止自创术语
+<!-- tags: autopilot, skill, naming, terminology, industry-alignment, llm-friendly, mutation-testing, tautological-test, semantic-anchor, prompt-engineering -->
+**Background**: autopilot e2e 优化任务首版方案命名为「反 no-op 自检」（中文自创 framing），preview 给用户审批时被用户驳回："我有很多概念并不理解"。深度业界调研后发现：同一概念在业内已有正式命名（Coulman 2016 "Tautological Test" / PIT-Stryker "Mutation Testing" / "Observable State Transition"），且这些术语在 sub-agent 训练语料中高频出现，识别度远高于自创词。
+**Choice**: 重命名为「Mutation-Survival 自检（反 no-op）」，主标题用业界术语 + 括注中文 framing。reference 文件名 `test-mutation-survival.md` 而非 `test-no-op-resistance.md`，3 类反/正模式名（Stable Element Assertion / Observable State Transition / Negative Path Verification）全部业界对齐。Mental Mutation 5 问的 5 个 mutation 类型严格采用 PIT/Stryker mutator 命名（No-op / Conditional Flip / Boundary / Return-Value / State-Update Skip）。
+**Alternatives rejected**: (1) 纯自创中文命名「反 no-op 自检」—— sub-agent 训练语料无 anchor，理解需逐字读 prompt 全文；用户也需被科普才能审批，AskUserQuestion 被驳回是直接证据。(2) 纯英文学术术语「Tautological Test Resistance」—— 中文用户阅读门槛过高，违反全局 CLAUDE.md「首选语言中文」。(3) 自创中文 + 英文括注「反空操作自检 (Anti-Tautological)」—— 中文翻译"空操作"对应 "no-op" 而非 "tautological"，语义错配。
+**Trade-offs**: 业界术语首次出现时仍需对用户做 1 次科普（本次用了 case.txt 实际代码 before/after 对照表），但科普成本低于"使用自创术语 + 每次 sub-agent 调用都从 0 解释"。reference 文件中保留 5 类业界证据脚注（Coulman / arXiv / Meta / Playwright）增强术语可追溯性。
+**Evidence**: 首版 AskUserQuestion preview 用「反 no-op 自检 / Tautological Test / Observable State Transitions」三个术语堆叠，用户驳回；改用 case.txt 完整代码做 5 个概念 before/after 科普后审批通过。业界证据：arXiv 2506.02954 MutGen / arXiv 2410.10628 LLM 测试 smell / Meta InfoQ 2026/01 / Coulman 2016 / Playwright 官方文档 5 处 SOTA 都用相同命名。final commit 741d2c9 reference 文件名 + prompt 字面契约全部业界对齐。
+**Lesson**: prompt 工程的"命名一致性"不止是单一真相源（一处真相不重复 N 处文件），还包括"与 LLM 训练语料锚点对齐"——业界术语是免费的语义压缩，自创词是 prompt token 的浪费且推理负担。决策路径：引入新概念前先做业界 1-2 轮搜索（找 SOTA paper + 主流工具 mutator 命名 + 经典 anti-pattern 文献），存在公认术语即采纳；缺失才考虑自创。同时面向中文用户：业界术语作主标题、中文 framing 作括注，不要倒置。
+
 ### [2026-05-16] 改 QA ⚠️/❌ 判定规则时必须枚举所有合法标记来源 + 强制复盘机制
 <!-- tags: autopilot, qa, judgement, warning, false-acquit, plan-reviewer, blocker, defensive-design, anti-rationalization, tier-1.5, tier-3.5 -->
 **Background**: case.txt 复盘揭示 little-ant garden 项目 3 个真实 bug（?level=N URL 跳关 / DecorationPiece onClick 断裂 / jsdom useSearchParams null）在 QA 阶段都被 Tier 1.5 e2e 超时暴露，却被编排器自我合理化为 ⚠️「结构性超时」绕过 auto-fix。autopilot SKILL.md 三个缺陷共享同一根因：⚠️ 标记没有独立校验。设计方案最初是「判定行改为 全部 ✅（仅基础设施类 ⚠️）」，plan-reviewer 抓到 BLOCKER：会把 Tier 3.5 性能保障的合法 ⚠️（line 362 既有降级设计）误升级为 ❌，违反现有设计。

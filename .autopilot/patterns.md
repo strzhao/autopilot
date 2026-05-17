@@ -1,5 +1,16 @@
 # Patterns & Lessons
 
+### [2026-05-17] documentation-only 变更的 QA 降级模式：Tier 1/3.5 N/A、Tier 1.5 用产出审阅替代浏览器冒烟
+<!-- tags: autopilot, qa, documentation-only, markdown, tier-1.5, smoke-test, content-review, prompt-engineering, fallback -->
+**Scenario**: autopilot 任务的输出全部是 markdown prompt / reference 文件（无 .ts/.js/.py 可执行代码、无 dev server、无 API endpoint、无 UI 渲染），但任务被声明 contract_required: true 且有 9 个验收场景，必须走完整 QA 流程。Wave 1 的 tsc / lint / build / bundle-size 全部 N/A，Wave 1.5 真实场景验证无 dev server 可启动。
+**Lesson**: QA 流程对 documentation-only 变更应做以下结构性降级，不能因"无可执行代码"跳过 QA 或全标 N/A 蒙混：
+- **Wave 1 Tier 1（基础验证）**：替换为"字面契约 grep -F 严格正向+反向、引用串完整性、版本号同步、纯追加 deletions=0 验证"。语言工具链不适用即 N/A，不是 ❌。
+- **Wave 1 Tier 4（回归）**：替换为"现有铁律/章节/不变量字面保留验证"（grep 原版关键词必须命中、`git diff SKILL.md` 必须为空）。
+- **Wave 1.5 真实场景验证**：用"Read 蓝队完整产出做内容审阅"替代"启动浏览器/curl"。每个验收场景对应一段 Read，记录"证据 = 蓝队文件 X 第 Y 节包含 Z 段落"，等价于浏览器场景的"点击 X 后看到 Y"。
+- **必须标注 deferred 而非 PASS** 当某个场景确实无法通过 Read 完全验证时（如"模拟 sub-agent 收到新 prompt 后输出行为"）—— deferred 是合规结果，PASS 不是。
+- **qa-reviewer Section A/B/C 仍照常启动**：纯 markdown 项目的 Section B 关注 markdown 结构 / prompt 工程清晰度 / 链接完整性 / 业界证据可追溯性，而非 OWASP / SQL 注入。
+**Evidence**: 本次任务 7 个修改文件 + 1 个新建（reference）+ 0 行可执行代码。Tier 1 tsc/lint/build 全标 N/A 但 Tier 0+Tier 4 给出 17 条正反向 grep 验证；Wave 1.5 9 场景全部以"Read test-mutation-survival.md 第 N 节 / Read 4 prompt 改动 diff" 为证据；qa-reviewer Section B 按 markdown 维度审查，0 Critical / 0 Important / 2 Minor。最终评分 96/100、Ready to merge: Yes。本模式可迁移至任何 prompt-only / docs-only / 配置-only 任务。
+
 ### [2026-05-11] tail -c + jq 流式解析必须丢首行 + 走 fail-safe 兜底，否则在长会话下死循环
 <!-- tags: autopilot, stop-hook, jq, tail, byte-cut, fail-safe, fail-unsafe, has-pending-subagents, parse-error, detection-function -->
 **Scenario**: stop-hook v3.25.x 用 `tail -c 2097152 $transcript | jq -rs '...'` 检测后台 sub-agent 是否在跑。短会话下 transcript < 2MB 时 tail 直接拿到完整文件，jq 正常工作。但当会话超长（实测 5.93MB transcript），`tail -c` 会从字节偏移 2MB 处直接截断，几乎必然落在 JSON 行中段（实测首行 = `tokens":1,"cache_creation_input_tokens":1447,...`，非合法 JSON）。jq -rs 第一行解析就报 `parse error: Invalid literal at line 1, column 1` 退出非零，函数 `|| return 1` 走错误降级。
