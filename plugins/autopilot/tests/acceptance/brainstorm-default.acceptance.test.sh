@@ -5,17 +5,18 @@
 # 设计文档来源：
 #   .autopilot/requirements/20260508-我本意是希望把-brainsto/state.md § 推荐方案：方案 B' 详细设计
 #
-# 10 个核心契约（对照表序号）：
+# 11 个核心契约（对照表序号）：
 #   1.  决策树 3 档：auto_approve / fast_mode / 默认（SKILL.md 决策树区域优先级条目数 <= 3）
 #   2.  默认含 brainstorm：stop-hook.sh design else 分支 PROMPT 含 "brainstorm" 关键词
 #   3.  --fast 跳过 brainstorm：stop-hook.sh fast_mode 分支 PROMPT 含跳过 brainstorm 语义
 #   4.  --fast 砍 sub-agent：fast_mode 分支 PROMPT 含 "scenario-generator" 且含 "plan-reviewer"
 #   5.  --deep deprecation：setup.sh --deep 分支体内含 echo 到 stderr 的 deprecation 提示
 #   6.  --deep 不分流：stop-hook.sh 中不存在 PLAN_MODE.*==.*"deep" 分支判断
-#   7.  brainstorm-guide.md 存在
+#   7.  brainstorm-guide.md 不得存在（已被 autopilot-brainstorm skill 取代）
 #   8.  deep-design-guide.md 不存在
-#   9.  SKILL.md 引用一致：不再含 "deep-design-guide.md"
-#  10.  版本一致 v3.22.1（plugin.json + marketplace.json + CLAUDE.md 三处）
+#   9.  SKILL.md 引用一致：含 Skill: "autopilot-brainstorm" 且不含 brainstorm-guide.md
+#  10.  autopilot-brainstorm/SKILL.md 存在且含 <HARD-GATE>
+#  11.  版本一致 v3.33.0（plugin.json + marketplace.json + CLAUDE.md 三处）
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -29,7 +30,7 @@ PLUGIN_JSON="$REPO_ROOT/plugins/autopilot/.claude-plugin/plugin.json"
 MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
 CLAUDE_MD="$REPO_ROOT/CLAUDE.md"
 
-TARGET_VERSION="3.23.0"
+TARGET_VERSION="3.33.0"
 
 # ── 辅助函数 ─────────────────────────────────────────────────────────────────
 pass() { echo "[PASS] R9: $1"; }
@@ -180,14 +181,14 @@ fi
 pass "契约6: stop-hook.sh 中不存在 PLAN_MODE.*==.*\"deep\" 分支判断"
 
 # ════════════════════════════════════════════════════════════════════════════
-# 契约 7：brainstorm-guide.md 文件存在
+# 契约 7：brainstorm-guide.md 文件不得存在（已被 autopilot-brainstorm skill 取代）
 # ════════════════════════════════════════════════════════════════════════════
 
 BRAINSTORM_GUIDE="$REFERENCES_DIR/brainstorm-guide.md"
-if [[ ! -f "$BRAINSTORM_GUIDE" ]]; then
-    fail "契约7: references/brainstorm-guide.md 不存在（设计要求将 deep-design-guide.md 改名为 brainstorm-guide.md）"
+if [[ -f "$BRAINSTORM_GUIDE" ]]; then
+    fail "契约7: references/brainstorm-guide.md 仍然存在（应已删除，brainstorm 已抽离为独立 skill）"
 fi
-pass "契约7: references/brainstorm-guide.md 存在"
+pass "契约7: references/brainstorm-guide.md 已删除（brainstorm 抽离为独立 skill）"
 
 # ════════════════════════════════════════════════════════════════════════════
 # 契约 8：deep-design-guide.md 不存在（已被 brainstorm-guide.md 替代）
@@ -200,34 +201,55 @@ fi
 pass "契约8: references/deep-design-guide.md 已不存在（改名完成）"
 
 # ════════════════════════════════════════════════════════════════════════════
-# 契约 9：SKILL.md 引用一致 — 不再含 "deep-design-guide.md" 字符串
+# 契约 9：SKILL.md 引用一致 — 含 Skill: "autopilot-brainstorm" 字面字符串 且 不含 brainstorm-guide.md
 # ════════════════════════════════════════════════════════════════════════════
 
 if grep -q "deep-design-guide\.md" "$SKILL_FILE"; then
-    fail "契约9: SKILL.md 仍含 deep-design-guide.md 引用（应全部替换为 brainstorm-guide.md）"
+    fail "契约9: SKILL.md 仍含 deep-design-guide.md 引用（应已删除）"
 fi
-pass "契约9: SKILL.md 不再含 deep-design-guide.md 引用"
+pass "契约9a: SKILL.md 不再含 deep-design-guide.md 引用"
 
-# 额外正向验证：SKILL.md 应含 brainstorm-guide.md 引用（替换后一致性）
-if ! grep -q "brainstorm-guide\.md" "$SKILL_FILE"; then
-    fail "契约9: SKILL.md 不含 brainstorm-guide.md 引用（改名后应更新所有引用）"
+# 正向验证：SKILL.md 必须含 Skill: "autopilot-brainstorm" 委托字面字符串
+if ! grep -q 'Skill: "autopilot-brainstorm"' "$SKILL_FILE"; then
+    fail "契约9: SKILL.md 不含 Skill: \"autopilot-brainstorm\" 字面字符串（应委托 brainstorm skill）"
 fi
-pass "契约9: SKILL.md 已含 brainstorm-guide.md 引用（引用一致性通过）"
+pass "契约9b: SKILL.md 含 Skill: \"autopilot-brainstorm\" 委托字符串"
+
+# 负向验证：SKILL.md 不得含 brainstorm-guide.md（已删除，新 skill 取代）
+if grep -q "brainstorm-guide\.md" "$SKILL_FILE"; then
+    fail "契约9: SKILL.md 仍含 brainstorm-guide.md 引用（应已删除，使用 skill 委托替代）"
+fi
+pass "契约9c: SKILL.md 不含 brainstorm-guide.md 引用（引用一致性通过）"
 
 # ════════════════════════════════════════════════════════════════════════════
-# 契约 10：版本一致 v3.22.1（plugin.json + marketplace.json + CLAUDE.md 三处）
+# 契约 10：autopilot-brainstorm/SKILL.md 存在且含 <HARD-GATE> 字符串
 # ════════════════════════════════════════════════════════════════════════════
 
-# 10a: plugin.json
+BRAINSTORM_SKILL_FILE="$REPO_ROOT/plugins/autopilot/skills/autopilot-brainstorm/SKILL.md"
+if [[ ! -f "$BRAINSTORM_SKILL_FILE" ]]; then
+    fail "契约10: plugins/autopilot/skills/autopilot-brainstorm/SKILL.md 不存在（应已创建独立 brainstorm skill）"
+fi
+pass "契约10a: autopilot-brainstorm/SKILL.md 存在"
+
+if ! grep -q '<HARD-GATE>' "$BRAINSTORM_SKILL_FILE"; then
+    fail "契约10: autopilot-brainstorm/SKILL.md 不含 <HARD-GATE> 字符串（强语言标识必须存在）"
+fi
+pass "契约10b: autopilot-brainstorm/SKILL.md 含 <HARD-GATE> 字符串"
+
+# ════════════════════════════════════════════════════════════════════════════
+# 契约 11：版本一致 v3.33.0（plugin.json + marketplace.json + CLAUDE.md 三处）
+# ════════════════════════════════════════════════════════════════════════════
+
+# 11a: plugin.json
 plugin_version=$(grep '"version"' "$PLUGIN_JSON" \
     | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' \
     | head -1)
 if [[ "$plugin_version" != "$TARGET_VERSION" ]]; then
-    fail "契约10: plugin.json 版本 '$plugin_version' != 期望 '$TARGET_VERSION'"
+    fail "契约11: plugin.json 版本 '$plugin_version' != 期望 '$TARGET_VERSION'"
 fi
-pass "契约10a: plugin.json 版本 = $TARGET_VERSION"
+pass "契约11a: plugin.json 版本 = $TARGET_VERSION"
 
-# 10b: marketplace.json autopilot 条目
+# 11b: marketplace.json autopilot 条目
 marketplace_version=$(python3 -c "
 import json
 data = json.load(open('$MARKETPLACE_JSON'))
@@ -238,24 +260,24 @@ for p in plugins:
         break
 " 2>/dev/null || true)
 
-[[ -n "$marketplace_version" ]] || fail "契约10: marketplace.json 中找不到 autopilot 条目的 version 字段"
+[[ -n "$marketplace_version" ]] || fail "契约11: marketplace.json 中找不到 autopilot 条目的 version 字段"
 if [[ "$marketplace_version" != "$TARGET_VERSION" ]]; then
-    fail "契约10: marketplace.json autopilot 版本 '$marketplace_version' != 期望 '$TARGET_VERSION'"
+    fail "契约11: marketplace.json autopilot 版本 '$marketplace_version' != 期望 '$TARGET_VERSION'"
 fi
-pass "契约10b: marketplace.json autopilot 版本 = $TARGET_VERSION"
+pass "契约11b: marketplace.json autopilot 版本 = $TARGET_VERSION"
 
-# 10c: CLAUDE.md 插件索引表
+# 11c: CLAUDE.md 插件索引表
 if ! grep -E "autopilot" "$CLAUDE_MD" | grep -qE "v${TARGET_VERSION}|${TARGET_VERSION}"; then
-    fail "契约10: CLAUDE.md 插件索引表 autopilot 行未找到版本 v${TARGET_VERSION}"
+    fail "契约11: CLAUDE.md 插件索引表 autopilot 行未找到版本 v${TARGET_VERSION}"
 fi
-pass "契约10c: CLAUDE.md 插件索引表 autopilot 行版本 = v${TARGET_VERSION}"
+pass "契约11c: CLAUDE.md 插件索引表 autopilot 行版本 = v${TARGET_VERSION}"
 
-# 10d: 三处版本完全一致
+# 11d: 三处版本完全一致
 if [[ "$plugin_version" != "$marketplace_version" ]]; then
-    fail "契约10: plugin.json($plugin_version) 与 marketplace.json($marketplace_version) 版本不一致"
+    fail "契约11: plugin.json($plugin_version) 与 marketplace.json($marketplace_version) 版本不一致"
 fi
-pass "契约10d: 三处版本号一致 (${TARGET_VERSION})"
+pass "契约11d: 三处版本号一致 (${TARGET_VERSION})"
 
 # ════════════════════════════════════════════════════════════════════════════
-echo "[OK ] R9 brainstorm-default — 全部断言通过（10 个核心契约验收完毕）"
+echo "[OK ] R9 brainstorm-default — 全部断言通过（11 个核心契约验收完毕）"
 exit 0

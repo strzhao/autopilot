@@ -1,6 +1,6 @@
 # Visual Companion 使用指南
 
-在 Deep Design 模式中，浏览器端视觉伴侣用于展示 mockup、图表和视觉选项。
+在 brainstorm 需求探索阶段，浏览器端视觉伴侣用于展示 mockup、图表和视觉选项。
 
 ## 启动
 

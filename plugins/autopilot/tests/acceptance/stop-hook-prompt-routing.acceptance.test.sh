@@ -120,10 +120,12 @@ if [[ -z "$else_brainstorm" ]]; then
 fi
 pass "stop-hook.sh 默认（else）分支 PROMPT 含 brainstorm 关键词 — 正确"
 
-if ! grep -qE 'AskUserQuestion 逐个澄清|AskUserQuestion.*澄清' "$STOP_HOOK"; then
-    fail "stop-hook.sh 默认（else）分支 PROMPT 未含 AskUserQuestion 逐个澄清（B' 方案要求交互式 Q&A）"
+# v3.33.0: brainstorm 抽离为独立 skill，stop-hook else 分支改为委托 autopilot-brainstorm skill
+# 不再直接含 AskUserQuestion 逐个澄清，改为验证含 autopilot-brainstorm 委托语义
+if ! grep -qE 'autopilot-brainstorm|Skill.*autopilot-brainstorm' "$STOP_HOOK"; then
+    fail "stop-hook.sh 默认（else）分支 PROMPT 未含 autopilot-brainstorm 委托语义（v3.33.0 要求委托 brainstorm skill）"
 fi
-pass "stop-hook.sh 默认（else）分支 PROMPT 含 AskUserQuestion 逐个澄清 — 正确"
+pass "stop-hook.sh 默认（else）分支 PROMPT 含 autopilot-brainstorm 委托语义 — 正确"
 
 # (c) PLAN_MODE 变量保留（兼容期 get_field 调用），但不再有独立分支
 plan_mode_branch=$(grep -n 'PLAN_MODE.*==.*"deep"' "$STOP_HOOK" | head -1 | cut -d: -f1)

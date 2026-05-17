@@ -640,8 +640,7 @@ started_at: "2026-01-01T00:00:00Z"
     it('has standard design mode section with brainstorm', () => {
       const content = fs.readFileSync(SKILL_MD, 'utf8');
       assert.ok(content.includes('brainstorm'), 'SKILL.md should have brainstorm section');
-      assert.ok(content.includes('brainstorm-guide.md'), 'should reference brainstorm guide');
-      assert.ok(content.includes('visual-companion-guide.md'), 'should reference visual companion guide');
+      assert.ok(content.includes('Skill: "autopilot-brainstorm"'), 'should delegate to autopilot-brainstorm skill');
     });
 
     it('has artifact archiving in merge phase', () => {

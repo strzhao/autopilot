@@ -17,7 +17,7 @@ MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
 CLAUDE_MD="$REPO_ROOT/CLAUDE.md"
 AUTOPILOT_README="$REPO_ROOT/plugins/autopilot/README.md"
 
-TARGET_VERSION="3.23.0"
+TARGET_VERSION="3.33.0"
 
 fail() {
     echo "[FAIL] R8: $1" >&2
@@ -112,7 +112,7 @@ fi
 pass "版本号格式合法（语义版本 ${plugin_version}）"
 
 # ── 断言 7：版本号确实比上一版（3.16.0）更高 ─────────────────────────────────
-prev_version="3.16.0"
+prev_version="3.32.0"
 # 简单比较：提取 minor 版本号
 prev_minor=$(echo "$prev_version" | cut -d. -f2)
 curr_minor=$(echo "$plugin_version" | cut -d. -f2)
@@ -131,7 +131,7 @@ elif [[ "$curr_major" -eq "$prev_major" ]] && [[ "$curr_minor" -eq "$prev_minor"
 fi
 
 if [[ $is_greater -eq 0 ]]; then
-    fail "版本 $plugin_version 不高于上一版 ${prev_version}（设计要求从 3.16.0 升级到 3.17.0）"
+    fail "版本 $plugin_version 不高于上一版 ${prev_version}（设计要求从 3.32.0 升级到 3.33.0）"
 fi
 pass "版本 $plugin_version > $prev_version — 版本升级方向正确"
 
