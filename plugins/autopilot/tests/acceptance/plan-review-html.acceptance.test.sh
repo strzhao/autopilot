@@ -27,7 +27,7 @@ PLUGIN_JSON="$REPO_ROOT/plugins/autopilot/.claude-plugin/plugin.json"
 MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
 CLAUDE_MD="$REPO_ROOT/CLAUDE.md"
 
-TARGET_VERSION="3.28.1"
+TARGET_VERSION="3.33.0"
 
 # ── 辅助函数 ─────────────────────────────────────────────────────────────────
 pass() { echo "[PASS] R10: $1"; }
@@ -154,16 +154,18 @@ rm -rf "$test_dir_c1" "$timeout_dir" "$test_dir_revise" "$test_dir_abort"
 
 # ════════════════════════════════════════════════════════════════════════════
 # 契约 C2：plan-review-template.html 静态结构
-#   设计文档：textarea#feedback + 三个 data-choice 按钮 (approve/revise/abort)
+#   设计文档（v3.29+）：飞阅评论（marginalia）UI + 三个 data-choice 按钮 (approve/revise/abort)
+#   旧版 textarea#feedback 已被 .comment-card / #comments-pane 系统替代，
+#   WS payload 仍含 feedback 字段（值固定为空，向后兼容），真实反馈走 comments[]
 # ════════════════════════════════════════════════════════════════════════════
 echo ""
 echo "---- C2: plan-review-template.html 静态结构 ----"
 
-# C2a: textarea#feedback 存在
-if ! grep -qi 'id="feedback"\|id=.feedback.' "$PLAN_REVIEW_HTML"; then
-    fail "C2a: plan-review-template.html 不含 textarea#feedback（设计要求: id=\"feedback\"）"
+# C2a: marginalia 评论输入元素存在（v3.29 用 .comment-card / #comments-pane 替代旧 textarea#feedback）
+if ! grep -qiE 'comment-card|comments-pane|comment-text' "$PLAN_REVIEW_HTML"; then
+    fail "C2a: plan-review-template.html 不含 marginalia 评论输入元素（设计要求 v3.29+: .comment-card / #comments-pane / .comment-text 之一）"
 fi
-pass "C2a: 含 id=\"feedback\" 元素"
+pass "C2a: 含 marginalia 评论输入元素（.comment-card / #comments-pane / .comment-text）"
 
 # C2b: data-choice="approve" 按钮存在
 if ! grep -qi 'data-choice="approve"\|data-choice=.approve.' "$PLAN_REVIEW_HTML"; then

@@ -14,7 +14,7 @@
 - `knowledge_extracted`: 知识提取完成标记，AI 在 merge 阶段设为 `"true"`（有新增）或 `"skipped"`（无新增）。stop-hook 的 phase=done 守卫检查此字段，缺失或空值会回滚到 merge
 - `fast_mode`: 三态字段。`""`（默认/未定）/`"true"`（fast）/`"false"`（standard）。setup.sh 的 `--fast` / `--standard` flag 时直接写入；为空时 AI 在启动流程步骤 2 中按自适应规则写回（bug 修复/小改动→true，新功能/重构→false，不确定→false），写入后整个生命周期不再修改
 
-- `html_review`: 可选布尔值（默认 false）。设为 `true` 时，design 阶段步骤 4 启用 HTML 浏览器评审路径（自动打开浏览器渲染设计文档 + 反馈输入 + 通过/修改/放弃按钮），优先级高于环境变量 `AUTOPILOT_HTML_REVIEW=1`。不设置或为 false 时走默认 AskUserQuestion + preview 路径。
+- `html_review`: 布尔值（默认 false）。设为 `true` 时，design 阶段步骤 4 启用 HTML 浏览器评审路径（自动打开浏览器渲染设计文档 + 反馈输入 + 通过/修改/放弃按钮）。setup.sh 创建任务时若环境变量 `AUTOPILOT_HTML_REVIEW=1` 则自动写入 `true`，否则写 `false`；用户可手动编辑该字段覆盖（编辑生效需在下一次步骤 4 判定时读到）。
 
 **stop-hook 管理（AI 只读）**：
 - `iteration`: 当前迭代次数，stop-hook 自动递增

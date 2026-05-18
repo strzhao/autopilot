@@ -196,6 +196,7 @@ create_brief_state_file() {
     local max_iterations="${3:-30}"
     local max_retries="${4:-3}"
     local auto_approve="${5:-false}"
+    local html_review="${6:-false}"
 
     local brief_content
     brief_content=$(head -100 "$brief_file")
@@ -255,6 +256,7 @@ task_dir: "$TASK_DIR"
 session_id: $session_id
 started_at: "$(now_iso)"
 contract_required: true
+html_review: $html_review
 ---
 
 ## 目标

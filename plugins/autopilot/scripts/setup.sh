@@ -437,9 +437,12 @@ fi
 TASK_SLUG=$(generate_task_slug "$GOAL")
 setup_requirement_dir "$TASK_SLUG"
 
+# 环境变量同步到 frontmatter：开启 HTML 评审路径只看 html_review 一处
+HTML_REVIEW=$([[ "${AUTOPILOT_HTML_REVIEW:-}" == "1" ]] && echo "true" || echo "false")
+
 # Brief 模式：从任务简报文件启动
 if [[ -n "$BRIEF_FILE" ]]; then
-    create_brief_state_file "$BRIEF_FILE" "$SESSION_ID" "$MAX_ITERATIONS" "$MAX_RETRIES" "false"
+    create_brief_state_file "$BRIEF_FILE" "$SESSION_ID" "$MAX_ITERATIONS" "$MAX_RETRIES" "false" "$HTML_REVIEW"
 
 else
     # 正常模式状态文件
@@ -463,6 +466,7 @@ task_dir: "$TASK_DIR"
 session_id: $SESSION_ID
 started_at: "$(now_iso)"
 contract_required: true
+html_review: $HTML_REVIEW
 ---
 
 ## 目标

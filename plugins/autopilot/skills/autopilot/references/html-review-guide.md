@@ -4,12 +4,9 @@
 
 ## 路径选择（4a）
 
-优先级从高到低：
-1. state.md frontmatter `html_review: true`（任务级）
-2. 环境变量 `AUTOPILOT_HTML_REVIEW=1`（会话级）
-3. 默认 `false`
+唯一开关：state.md frontmatter `html_review: true` → 走 4c HTML 评审，否则走 4b 默认 AskUserQuestion。
 
-任意一项为 true → 走 4c HTML 评审；否则走 4b 默认 AskUserQuestion。
+环境变量 `AUTOPILOT_HTML_REVIEW=1` 由 setup.sh 在创建任务时一次性同步到 frontmatter；用户视角仍是「export 完启动 autopilot 即可开 HTML 评审」。已存在的任务想中途切换：直接编辑 state.md 的 `html_review` 字段。
 
 ## 4b. 默认 AskUserQuestion + preview 路径
 
