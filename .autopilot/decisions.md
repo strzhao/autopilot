@@ -172,3 +172,12 @@
 **Trade-offs**: 主 SKILL 实际净减 **2 行**（644→642），距离设计预估 ~64 行偏差 32 倍 —— **预估错误根因**：brainstorm-guide.md 89 行内容从未内嵌主 SKILL，本来就是独立 reference 文件，主 SKILL 中只有 4 行引用链接。R3 acceptance test（<600 行）持续 FAIL 属 pre-existing 红线，未本次解决，作为 follow-up 任务记录。
 **Lesson**: 抽 skill 有 2 个独立价值维度需分别评估：(1) **指令优先级**（description 触发 + HARD-GATE 让 AI 全神贯注）—— brainstorm 抽离对此有效；(2) **主 SKILL token / 行数节约** —— 仅当被抽内容真实占据主 SKILL 行数时才有效。若被抽内容已是 reference 文件（只在主 SKILL 留链接），抽 skill 对维度 (2) 几乎零贡献。设计阶段判断"抽 skill 能减多少行"必须 **grep 计行**（grep `references/X.md` 出现位置 + 估实际占行）而非按 reference 文件大小估算。本次预估失准未被 plan-reviewer 捕获，因为审查只看"任务列表完整性"不验证"行数预估准确性"—— 未来 plan-reviewer 可加一条："设计承诺的量化指标（行数 / 性能数 / token 数）是否有可执行的事前验证命令？"
 **Evidence**: 17 个文件 +921/-141；新 skill `autopilot-brainstorm/SKILL.md` 100 行；主 SKILL 644→642（净减 2）；红队 acceptance 17/17 PASS（C1-C10 + B1-B4）；contract-checker PASS（mismatches 空）。commit `7b003c0`。R3 follow-up：deep 削主 SKILL 需走原方案 C 抽全 phase 文件（design 段 164 行 → 步骤 3+4+5b 共 80 行可抽），保守减 ~67 行可跨过 600 红线，激进减 ~100 行到 ~540 行。
+
+### [2026-05-19] plan-review HTML 演进走"扩展点"路径而非改 SKILL.md
+<!-- tags: autopilot, plan-review, skill-fragility, extension-point, decoupling, html-template, sso-isolation, launch-script -->
+**Background**: 用户提需求"优化 plan review html，左侧增加目录"时强调"skill 非常脆弱，最小化改动"。探索发现 SKILL.md 调用 `launch-plan-review.sh` 仅一处 Bash 命令；`launch-plan-review.sh` 自治完成 server 启动、内容提取、HTML 渲染、浏览器打开、决策等待、server 关闭全流程；HTML 模板本身是独立资产。
+**Choice**: 把 plan-review HTML 体系视为"扩展点架构"——HTML/CSS/JS 演进（包括加 TOC、改阅读体验、调样式）一律只动 `plan-review-template.html` 一个文件，不触碰 SKILL.md / launch-plan-review.sh / helper.js / server.cjs / frame-template.html / prefs.cjs。设计阶段把这条作为契约规约「副作用清单」明确入档，红队产出独立断言（验收场景 9）证明 `git diff --name-only` 仅含目标文件。
+**Alternatives rejected**: (1) 服务端预生成 TOC 注入（Python 端 markdown 解析）—— 改动 launch-plan-review.sh 引入新依赖，扩大耦合面；(2) 把 TOC 逻辑拆到独立 JS 文件让 launch-script 注入 —— 模板已采用全内联（内嵌 marked.min.js + 样式 + JS），新建外部依赖反而打破现有内聚约定。
+**Trade-offs**: 单文件容易膨胀（本次 1321→1652 行 +334），可读性靠 CSS 分段注释维护；但相比触碰多个 skill 资产带来的脆性风险（SKILL.md 改一行重写整段、launch-script 协议变更需同步红队全部）这种集中度是值得的。
+**Lesson**: 设计 skill 时，把"易变的 UI / 表达层"通过"自治脚本入口"与 skill 主流程隔离，是降低 skill 脆性的有效架构手段。需求落到 UI 层时，skill 改动半径应该是 0；只在 UI 调用协议变化（脚本签名、stdout 格式）时才触及 skill。判断方式：对照 SKILL.md 中调用入口的 Bash 命令，如果新需求不改变命令的输入/输出契约，那么 skill 改动量应当为 0。
+**Evidence**: commit `9b936f6`，`git diff --name-only HEAD~1` 仅含 `plan-review-template.html` + 新增红队测试 + 版本同步文件 + .autopilot 流程产物。SKILL.md / launch-plan-review.sh / helper.js / server.cjs / frame-template.html / prefs.cjs / marked.min.js 均 0 行改动。验收场景 9 红队 31 个 grep 断言全 PASS。
