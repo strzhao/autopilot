@@ -1,0 +1,33 @@
+.autopilot/requirements/20260519-优化-plan-review-html-里的/state.md
+  56f8fcfcdafc7244 2-4,15,449-451
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.7",
+  "base_commit_sha": "7ea87f2e6e59ecf4ab76ace1da10a13ffd6f0c96",
+  "prompts": {
+    "56f8fcfcdafc7244": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a86e35dd-a921-4577-8dff-4f0e2abd5e99",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 5,
+      "accepted_lines": 7,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        ".autopilot/active": {
+          "deletions": 1
+        },
+        ".autopilot/requirements/20260519-优化-plan-review-html-里的/state.md": {
+          "additions": 7,
+          "deletions": 4,
+          "accepted_lines": 7
+        }
+      }
+    }
+  }
+}
