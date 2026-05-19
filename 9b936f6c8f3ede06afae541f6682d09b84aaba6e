@@ -1,0 +1,63 @@
+.autopilot/requirements/20260519-优化-plan-review-html-里的/brainstorm.md
+  56f8fcfcdafc7244 1-107
+.claude-plugin/marketplace.json
+  56f8fcfcdafc7244 31-32
+plugins/autopilot/scripts/visual-companion/plan-review-template.html
+  56f8fcfcdafc7244 332-333,340-345,866-1014,1055,1057-1066,1081-1083,1121-1281
+plugins/autopilot/tests/acceptance/plan-review-toc.acceptance.test.sh
+  56f8fcfcdafc7244 1-336
+plugins/autopilot/.claude-plugin/plugin.json
+  56f8fcfcdafc7244 3-4
+CLAUDE.md
+  56f8fcfcdafc7244 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.7",
+  "base_commit_sha": "9b936f6c8f3ede06afae541f6682d09b84aaba6e",
+  "prompts": {
+    "56f8fcfcdafc7244": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a86e35dd-a921-4577-8dff-4f0e2abd5e99",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 782,
+      "total_deletions": 8,
+      "accepted_lines": 782,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "plugins/autopilot/.claude-plugin/plugin.json": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 2
+        },
+        "CLAUDE.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/scripts/visual-companion/plan-review-template.html": {
+          "additions": 334,
+          "deletions": 3,
+          "accepted_lines": 334
+        },
+        ".claude-plugin/marketplace.json": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 2
+        },
+        ".autopilot/requirements/20260519-优化-plan-review-html-里的/brainstorm.md": {
+          "additions": 107,
+          "accepted_lines": 107
+        },
+        "plugins/autopilot/tests/acceptance/plan-review-toc.acceptance.test.sh": {
+          "additions": 336,
+          "accepted_lines": 336
+        }
+      }
+    }
+  }
+}
