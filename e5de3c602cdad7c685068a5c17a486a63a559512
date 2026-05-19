@@ -1,0 +1,44 @@
+plugins/autopilot/skills/autopilot/SKILL.md
+  282140b5346dd29a 30,68
+plugins/autopilot/skills/autopilot/references/state-file-guide.md
+  282140b5346dd29a 15
+plugins/autopilot/skills/autopilot/references/design-modes.md
+  282140b5346dd29a 58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.7",
+  "base_commit_sha": "e5de3c602cdad7c685068a5c17a486a63a559512",
+  "prompts": {
+    "282140b5346dd29a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7a95c862-0892-441e-956c-66bd5b8de3e4",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 5,
+      "accepted_lines": 4,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "plugins/autopilot/skills/autopilot/references/design-modes.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/skills/autopilot/references/state-file-guide.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/skills/autopilot/SKILL.md": {
+          "additions": 3,
+          "deletions": 3,
+          "accepted_lines": 2
+        }
+      }
+    }
+  }
+}
