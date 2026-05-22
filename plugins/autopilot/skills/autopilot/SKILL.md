@@ -311,9 +311,9 @@ preview: |
 
 #### Wave 1 — 命令执行（并行）
 
-**在同一轮响应中发出多个 Bash 工具调用**，所有命令独立运行、互不依赖：
+**在同一轮响应中发出多个 Bash 工具调用**，所有命令独立运行、互不依赖。**例外**：Tier 3.5 因依赖 Tier 3 dev server，在 Tier 3 完成后第二轮启动，不与 Tier 3 同轮；其余 Tier（0/1/3/4）同轮并行。
 
-**Tier 0: 红队验收测试**（最高优先级）
+**Tier 0: 红队验收测试**（最高判定权重 — 失败=实现偏离设计；执行上与 Tier 1 同轮并行）
 - 运行所有 `.acceptance.test` 文件（从状态文件 `## 红队验收测试` 读取列表）
 - 失败意味着实现未满足设计要求
 - 红队未生成测试时，降级为 Wave 2 中 AI 逐项人工验证
@@ -323,6 +323,7 @@ preview: |
 **Tier 3: 集成验证**（条件性）：Dev server 启动、API 端点验证、导入完整性
 
 **Tier 3.5: 性能保障验证**（条件性，需同时满足以下条件才触发）：
+- **启动时机**：等 Tier 3 完成后第二轮启动，**不与 Tier 3 同轮**（依赖 Tier 3 启动的 dev server）。
 - 项目是前端/全栈（有 next.config / vite.config / webpack.config + build 产出 HTML）
 - 本次变更涉及前端代码（git diff 包含 .tsx/.vue/.svelte/.css/前端组件文件）
 - 至少有一个性能工具就位（Lighthouse CI / Playwright 性能断言 / size-limit）
@@ -373,6 +374,8 @@ Wave 1 完成后统计 Tier 0+1 ❌ 数量：≥3 → 跳过 Wave 1.5/2 直接 a
 > 防合理化指南见 references/anti-rationalization.md（仅在你想跳过测试/重做时阅读）。
 
 #### Wave 2 — qa-reviewer Agent 审查（单 Agent，合并两类审查）
+
+> 注：Tier 2 编号已合并入本段 qa-reviewer Agent，详见 [2026-05-07] sub-agent token 优化决策。
 
 **改动说明**：此前 Wave 2 并行启动 design-reviewer + code-quality-reviewer 两个 Agent，每个 cold start ~500k token 且都 Read 同一批变更文件。合并为 1 个 qa-reviewer Agent 后节省 ~1M token / run。
 
