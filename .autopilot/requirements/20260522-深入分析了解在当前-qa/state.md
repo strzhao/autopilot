@@ -1,8 +1,8 @@
 ---
 active: true
-phase: "merge"
+phase: "done"
 gate: "review-accept"
-iteration: 1
+iteration: 2
 max_iterations: 30
 max_retries: 3
 retry_count: 0
@@ -12,7 +12,7 @@ fast_mode: true
 brief_file: ""
 next_task: ""
 auto_approve: false
-knowledge_extracted: ""
+knowledge_extracted: "true"
 task_dir: "/Users/stringzhao/workspace/string-claude-code-plugin/.autopilot/requirements/20260522-深入分析了解在当前-qa"
 session_id: f65f7020-7c80-4673-8dde-27e7fb4e112f
 started_at: "2026-05-22T15:32:17Z"
