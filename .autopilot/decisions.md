@@ -1,3 +1,12 @@
+### [2026-05-23] 改 SKILL.md 前必须用 Skill Authoring Best Practice 5 条原则筛改进
+<!-- tags: autopilot, skill, best-practice, anti-pseudo-optimization, refactor-discipline, terminology-network, reference-chain, false-improvement -->
+**Background**: 用户启动 autopilot 任务"分析 QA 阶段顺序/并行度合理性"。fast 模式 design 阶段编排器初版方案识别 10 个改进点（P1-P10），含拆 Wave 1a/1b/1c、删 Wave 1.5 术语、合并三段前置、qa_scope 表格化、合并判定步骤等"看似优雅"的重构。HTML 评审 round 1 用户反馈"skill 优化非常难，容易劣化，要谨慎"。读 document/skill_best_practices.md 后，用 5 条原则（Concise / Smart / Consistent / Freedom / Over-org）逐项重审，**10 个改进点中 7 个被识别为伪优化**，最终仅保留 3 项最小变动（+3 行）。
+**Choice**: 把"5 条原则筛改进"写入 [[skill-optimization-caution]] 记忆，并把判定矩阵作为 design 阶段重审模板：(1) Concise — 改动是否真的"去除已知信息"？格式变换（bullet↔表格）不算；(2) Smart — 是否解决"AI 不懂"？还是只让人类阅读更舒服？(3) Consistent — 改名/合并是否打破现有术语网络（红队 grep / 历史决策原文引用）？(4) Freedom — QA 判定是 low-freedom，合并简化检查清单 = AI 漏步骤；(5) Over-org — 引入新层级（Wave 1a/1b/1c）增加阅读维度，除非真有依赖矛盾否则不拆。每个改进点过 5 维矩阵，触犯任一条即视为伪优化。
+**Alternatives rejected**: (1) 跟随首版 10 项改动方案 — 拆 Wave 1a/1b/1c 引入新术语层（违反 Consistent + Over-org）、合并步骤 1+2 让 AI 跳过格式检查（违反 Freedom）、删 Wave 1.5 术语断 [2026-05-16] 历史决策原文引用链（违反 Consistent）；(2) 只用"减少行数"作单一指标 — qa_scope 4 行 → 表格 7 行不是简化（违反 Concise 本质）；(3) 把重审作为 plan-reviewer Agent 第 7 维 — 拉远反馈链路，best practice 适合 fast 模式编排器内联自审而非另起 Agent。
+**Trade-offs**: 设计阶段需多读 ~45KB 的 best practice 文档（首次进入此领域时），但换得对 SKILL.md 的改动从激进 +15 行重构降为保守 +3 行修复；避免引入"看似合理实则破坏术语网络/引用链/进程局部性"的劣化。代价：用户期望的"简化"诉求被部分驳回（如删 Wave 1.5 术语），需在评审时清晰解释"为什么不做"。
+**Evidence**: 本次 P2/P3/P4/P6/P7/P8/P10 全部因 5 条原则筛除（state.md 重审矩阵记录每项触犯的维度）。最终 diff 仅 5 增 2 减全在 Phase: qa 区域；QA 10 个 Tier 1.5 场景中 7 个是"不变量护栏"（验证 9 个 Wave/Tier 术语、3 段独立前置、3 步判定、qa_scope 三档、⚠️ 复盘对照表均完整保留），全部 PASS。Phase: auto-fix 零改动。commit 2dd7557 v3.34.1。
+**Lesson**: SKILL.md 的每条措辞往往与多份历史决策、红队测试 grep、跨阶段引用绑定，**改名/合并/重组多数是伪优化**，会断引用链/破坏术语网络/触发 AI 跳步骤。Claude 天然倾向于看到"冗余/不优雅"就提议重构，必须用 best practice 5 维矩阵作为外部检查点强制筛选。真正值得改的特征：修复事实矛盾、消除真实歧义、补充注脚澄清、删除真正死代码；其他 90% 的"优化提议"都属于格式偏好/术语重命名/过度组织，应主动放弃。同族条目：[[skill-minimal-change-append-only]]（[2026-05-09]）侧重单次改动的最小集原则，本条侧重事前用 5 条原则筛全部候选改动。
+
 ### [2026-05-17] skill 引入新概念优先业界对齐命名，禁止自创术语
 <!-- tags: autopilot, skill, naming, terminology, industry-alignment, llm-friendly, mutation-testing, tautological-test, semantic-anchor, prompt-engineering -->
 **Background**: autopilot e2e 优化任务首版方案命名为「反 no-op 自检」（中文自创 framing），preview 给用户审批时被用户驳回："我有很多概念并不理解"。深度业界调研后发现：同一概念在业内已有正式命名（Coulman 2016 "Tautological Test" / PIT-Stryker "Mutation Testing" / "Observable State Transition"），且这些术语在 sub-agent 训练语料中高频出现，识别度远高于自创词。

@@ -1,6 +1,7 @@
 # Knowledge Index
 
 ## Decisions
+- [2026-05-23] 改 SKILL.md 前必须用 Skill Best Practice 5 条原则筛改进 | tags: autopilot, skill, best-practice, anti-pseudo-optimization, refactor-discipline, terminology-network, reference-chain, false-improvement | → decisions.md
 - [2026-05-19] plan-review HTML 演进走"扩展点"路径而非改 SKILL.md | tags: autopilot, plan-review, skill-fragility, extension-point, decoupling, html-template, sso-isolation, launch-script | → decisions.md
 - [2026-05-17] brainstorm 抽离为独立 skill：解决"指令优先级"而非"主 SKILL 行数" | tags: autopilot, brainstorm, skill-extraction, indication-priority, references-postpone, hard-gate, superpowers, design-prediction | → decisions.md
 - [2026-05-17] skill 引入新概念优先业界对齐命名，禁止自创术语 | tags: autopilot, skill, naming, terminology, industry-alignment, llm-friendly, mutation-testing, tautological-test, semantic-anchor, prompt-engineering | → decisions.md
@@ -26,6 +27,7 @@
 - [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → decisions.md
 
 ## Patterns
+- [2026-05-23] SKILL.md 重构任务的 Tier 1.5 必须含"不变量护栏" grep 场景 | tags: autopilot, qa, tier-1.5, skill-refactor, invariant-guard, grep-pattern, terminology-network, reference-chain, false-improvement, anti-pseudo-optimization | → patterns.md
 - [2026-05-19] 静态 HTML 模板的 Tier 1.5 用 Chrome DevTools MCP + file:// 直接 evaluate_script | tags: autopilot, qa, tier-1.5, smoke-test, html-template, chrome-devtools-mcp, file-protocol, server-bypass | → patterns.md
 - [2026-05-17] 设计阶段量化承诺（行数 / token 数 / 性能数）必须 grep 验证而非估算 | tags: autopilot, design, prediction, quantitative-commitment, grep-verify, estimate-bias, plan-reviewer, skill-extraction | → patterns.md
 - [2026-05-17] documentation-only 变更的 QA 降级模式：Tier 1/3.5 N/A、Tier 1.5 用产出审阅替代浏览器冒烟 | tags: autopilot, qa, documentation-only, markdown, tier-1.5, smoke-test, content-review, prompt-engineering, fallback | → patterns.md

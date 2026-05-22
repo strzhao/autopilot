@@ -1,5 +1,34 @@
 # Patterns & Lessons
 
+### [2026-05-23] SKILL.md 重构任务的 Tier 1.5 必须含"不变量护栏" grep 场景
+<!-- tags: autopilot, qa, tier-1.5, skill-refactor, invariant-guard, grep-pattern, terminology-network, reference-chain, false-improvement, anti-pseudo-optimization -->
+**Scenario**: autopilot 任务对 SKILL.md 做"小幅改动 + 主动放弃大量伪优化"型重构（如 v3.34.1 仅 +3 行修改但显式放弃了 7 项被 best practice 筛除的伪优化）。如果 Tier 1.5 只验证"改动是否落地"（正向场景），无法防止下一轮其他 AI 编排器误以为某条被放弃的改动是"还没做完"而重新引入劣化（如下次直接拆 Wave 1a/1b/1c）。
+**Lesson**: 当任务性质是"重构现有 SKILL.md / 简化文档结构 / 改流程顺序"时，Tier 1.5 场景必须**正反双面覆盖**——既验证改动落地，也设"不变量护栏"防止伪优化引入劣化：
+- **术语网络保留**：枚举改动涉及章节的所有现有术语（Wave 1 / Wave 1.5 / Wave 2 / Tier 0-4 等），逐个 `rtk grep -cE "<term>"` 命中 ≥1 次。改名/删名即 ❌。
+- **段落独立性保留**：现状若有 N 个独立标题段（如三段"前置"），grep `^#### 前置：` 必须命中 N 次。合并即 ❌。
+- **判定步骤数保留**：现状若有 K 步检查清单，grep `\*\*步骤 [1-K] —` 必须命中 K 次。合并即 ❌。
+- **历史决策引用链保留**：grep 改动相关章节中曾被 `[YYYY-MM-DD]` 决策原文引用的术语字面，必须仍命中。
+- **不动章节零改动**：`git diff SKILL.md | grep "^@@"` 输出的 hunk 范围必须全部落在目标 Phase 行号区间内（如本次 L287-426 Phase: qa），其余 Phase 区域 hunk 数 == 0。
+**实施模板**（在设计文档"真实测试场景"区直接套用）：
+```
+S-INV-1 [独立] — 术语网络完整保留
+执行: 依次 `rtk grep -cE "Wave 1\b"` 等 N 个术语
+预期: 每个 ≥1 次
+
+S-INV-2 [独立] — 三段独立性保留
+执行: `rtk grep -nE "^#### 前置：|^##### 前置：" SKILL.md`
+预期: 命中 3 处独立标题
+
+S-INV-3 [独立] — 步骤数保留
+执行: `rtk grep -nE "\*\*步骤 [123] —"`
+预期: 命中 3 个独立步骤标记
+
+S-INV-4 — 不动章节零改动
+执行: `git diff SKILL.md` 看 hunk 行号
+预期: 全部在目标 Phase 区间内
+```
+**Evidence**: v3.34.1 本轮 10 个 Tier 1.5 场景中 7 个是不变量护栏（S4 术语网络 9 个/S5 三段前置/S6 三步判定/S7 auto-fix 零改动/S8 qa_scope 三档/S9 ⚠️ 复盘对照表/S10 早期判定阈值），全部 PASS。验证了 best practice 重审时筛除的 7 项伪优化（拆 Wave 1a/1b/1c、合并步骤、删 Wave 1.5、合并前置、qa_scope 表格化、应有场景类型前移、失败聚类）一项未被误引入。配合 [[skill-best-practice-5-dimensions]]（[2026-05-23] decisions）形成"设计前筛 + 测试时护栏"的双层防伪优化机制。
+
 ### [2026-05-17] documentation-only 变更的 QA 降级模式：Tier 1/3.5 N/A、Tier 1.5 用产出审阅替代浏览器冒烟
 <!-- tags: autopilot, qa, documentation-only, markdown, tier-1.5, smoke-test, content-review, prompt-engineering, fallback -->
 **Scenario**: autopilot 任务的输出全部是 markdown prompt / reference 文件（无 .ts/.js/.py 可执行代码、无 dev server、无 API endpoint、无 UI 渲染），但任务被声明 contract_required: true 且有 9 个验收场景，必须走完整 QA 流程。Wave 1 的 tsc / lint / build / bundle-size 全部 N/A，Wave 1.5 真实场景验证无 dev server 可启动。
