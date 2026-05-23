@@ -4,5 +4,7 @@ node_modules/
 __pycache__/
 *.pyc
 
+# autopilot: knowledge/ 入库共享，runtime/ 不入库
+.autopilot/runtime/
 # autopilot plan-review 临时渲染 session（per-run 临时目录，含 server.pid/events/plan-review.html，不应入库）
 .autopilot/**/visual/

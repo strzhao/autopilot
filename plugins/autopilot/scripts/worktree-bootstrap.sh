@@ -22,9 +22,9 @@ CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // ""' 2>/dev/null) || CWD=""
 # 不在 worktree（.git 是目录而非文件）→ silent exit
 [ -f "$CWD/.git" ] || exit 0
 
-# 新模式（选择性 symlink）：.autopilot 是真实目录 + sessions/ 子目录存在 + node_modules + local-config.json → 已配好
+# 新模式（选择性 symlink + 二级分层 v3.35）：.autopilot 是真实目录 + runtime/sessions/ 子目录存在 + node_modules + local-config.json → 已配好
 # local-config.json 写 dev 端口配置；缺失会让 dev server 抢占默认端口造成冲突
-if [ -d "$CWD/.autopilot/sessions" ] && [ ! -L "$CWD/.autopilot" ] \
+if [ -d "$CWD/.autopilot/runtime/sessions" ] && [ ! -L "$CWD/.autopilot" ] \
    && [ -d "$CWD/node_modules" ] && [ -f "$CWD/local-config.json" ]; then
     exit 0
 fi

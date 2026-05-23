@@ -170,7 +170,7 @@ describe('autopilot project mode', () => {
       runSetup('普通目标', tmpDir);
       const state = readStateFile(tmpDir);
       const taskDir = getField(state, 'task_dir');
-      assert.ok(taskDir && taskDir.includes('.autopilot/requirements/'), `task_dir should point to requirements dir, got: ${taskDir}`);
+      assert.ok(taskDir && taskDir.includes('.autopilot/runtime/requirements/'), `task_dir should point to requirements dir, got: ${taskDir}`);
     });
   });
 

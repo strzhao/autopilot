@@ -23,7 +23,7 @@ description: 当用户需要提交代码、运行 git commit、或说"提交"时
 
 autopilot-commit 有两种调用场景，需要智能判断并跳过多余步骤：
 
-- **主链路模式**：当前项目根目录存在 `.autopilot/autopilot.local.md` 且 phase 为 `"merge"` → 代码已通过五层 QA，跳过 Phase 1.5（代码优化）、Bugfix 验证、代码理解测验。再优化可能破坏已验证状态。在 worktree 中时，检查 worktree 根目录的 `.autopilot/autopilot.local.md`。
+- **主链路模式**：当前项目根目录存在活跃 autopilot 状态文件（`.autopilot/runtime/active.ptr` 指向的 `.autopilot/runtime/requirements/<slug>/state.md`，worktree 中位于 `.autopilot/runtime/sessions/<name>/requirements/<slug>/state.md`）且 phase 为 `"merge"` → 代码已通过五层 QA，跳过 Phase 1.5（代码优化）、Bugfix 验证、代码理解测验。再优化可能破坏已验证状态。
 - **独立模式**：其他所有情况 → 执行完整流程。
 
 ## 工作框架
@@ -150,6 +150,19 @@ chore: 升级依赖版本
 - 跳过：纯代码修改（bug fix/重构/性能优化）、样式/测试/注释、CLAUDE.md 已在改动中
 - 更新原则：最小改动、保持风格、事实优先（不写计划中的功能）
 - 如果 `.autopilot/` 存在且有新增内容，确认 CLAUDE.md 中有对知识库目录的提及
+
+**c) `.autopilot/` 知识库变更检查（始终执行，无论模式）**
+
+无论主链路还是独立模式，本子任务都必须运行。目的是让 `.autopilot/knowledge/` 下的知识沉淀**主动浮现**到 commit 决策流，避免 AI 在 `git status` 满屏改动中遗漏掉知识库的更新。
+
+执行步骤：
+
+1. 运行 `git status --porcelain .autopilot/knowledge/`，列出该目录下所有未 staged / 未 commit 的改动
+2. 若有改动 → 逐项 Read 改动文件（`decisions.md` / `patterns.md` / `index.md` / `domains/*.md`），判断是有效知识沉淀还是误编辑
+3. 默认 stage 并随本次主提交一并 commit；若发现内容不属于本次任务（如他人遗留草稿），单独询问用户
+4. 同时检查 `git status --porcelain .autopilot/runtime/` **必须为空**（runtime/ 应由 `.gitignore` 拦截）。若非空 → 警告：`.gitignore` 缺少 `.autopilot/runtime/` 规则或有误入库历史，建议运行 `/autopilot doctor` 排查
+
+> 这条规则与 Layer 1（`.gitignore` 拓扑拦截）和 Layer 3（doctor Dim 12 巡检）共同构成三层防御。
 
 **b) 版本号升级** — 当 commit type 为 `feat`/`fix`/`perf` 时：
 - `feat` → minor 升级（1.2.x → 1.3.0），breaking change → major 升级

@@ -264,15 +264,15 @@ describe('create stdout protocol', { skip: !process.env.RUN_INTEGRATION }, () =>
 // ===========================================================================
 // 6. ensureSelectiveAutopilotLayout — tracked-dir 残留 symlink 清理
 //
-//    设计契约：
-//    - SHARED_AUTOPILOT_ITEMS 中含 'requirements'
-//    - 若 dst 是 symlink 且 main 将 .autopilot/requirements tracked 为目录(dir)
+//    设计契约（v3.35 二级分层后）：
+//    - SHARED_AUTOPILOT_ITEMS 中含 'runtime/requirements'
+//    - 若 dst 是 symlink 且 main 将 .autopilot/runtime/requirements tracked 为目录(dir)
 //      → 清除 symlink，改用 git checkout 恢复为真实目录
 //    - 幂等；不抛错；exit 0
 // ===========================================================================
 describe('ensureSelectiveAutopilotLayout — tracked-dir 残留清理', () => {
   // ---------------------------------------------------------------------------
-  // Helper: 创建带 .autopilot/requirements/ 提交的主仓库，返回 { mainRoot }
+  // Helper: 创建带 .autopilot/runtime/requirements/ 提交的主仓库，返回 { mainRoot }
   // ---------------------------------------------------------------------------
   async function setupMainRepo(tmpDir) {
     const mainRoot = join(tmpDir, 'main');
@@ -292,9 +292,9 @@ describe('ensureSelectiveAutopilotLayout — tracked-dir 残留清理', () => {
     await runGit('init');
     await runGit('checkout', '-b', 'main');
 
-    // 创建 .autopilot/requirements/spec.md 并提交 — 形成 tracked dir
-    mkdirSync(join(mainRoot, '.autopilot', 'requirements'), { recursive: true });
-    writeFileSync(join(mainRoot, '.autopilot', 'requirements', 'spec.md'), '# spec\n');
+    // 创建 .autopilot/runtime/requirements/spec.md 并提交 — 形成 tracked dir
+    mkdirSync(join(mainRoot, '.autopilot', 'runtime', 'requirements'), { recursive: true });
+    writeFileSync(join(mainRoot, '.autopilot', 'runtime', 'requirements', 'spec.md'), '# spec\n');
 
     await runGit('add', '.');
     await runGit('commit', '-m', 'init with requirements dir');
@@ -329,13 +329,13 @@ describe('ensureSelectiveAutopilotLayout — tracked-dir 残留清理', () => {
       const { mainRoot, gitEnv } = await setupMainRepo(tmpDir);
       const worktreePath = await addWorktree(mainRoot, 'wt-branch-a', gitEnv);
 
-      // 模拟"早期残留"：worktree 的 .autopilot/requirements 是指向 main 的 symlink
+      // 模拟"早期残留"：worktree 的 .autopilot/runtime/requirements 是指向 main 的 symlink
       const wtAutopilot = join(worktreePath, '.autopilot');
-      const wtReq = join(wtAutopilot, 'requirements');
-      const mainReq = join(mainRoot, '.autopilot', 'requirements');
+      const wtReq = join(wtAutopilot, 'runtime', 'requirements');
+      const mainReq = join(mainRoot, '.autopilot', 'runtime', 'requirements');
 
-      // 确保 .autopilot 目录存在（worktree 里可能已有或没有）
-      mkdirSync(wtAutopilot, { recursive: true });
+      // 确保 .autopilot/runtime 目录存在（worktree 里可能已有或没有）
+      mkdirSync(join(wtAutopilot, 'runtime'), { recursive: true });
 
       // 如果 worktree 里 git checkout 已建出真实目录，先删掉再做 symlink
       if (existsSync(wtReq)) {
@@ -353,7 +353,7 @@ describe('ensureSelectiveAutopilotLayout — tracked-dir 残留清理', () => {
 
       // 前置断言：确认此刻确实是 symlink
       const beforeStat = lstatSync(wtReq);
-      assert.ok(beforeStat.isSymbolicLink(), 'fixture: requirements 应为 symlink');
+      assert.ok(beforeStat.isSymbolicLink(), 'fixture: runtime/requirements 应为 symlink');
 
       // 调用被测函数
       ensureSelectiveAutopilotLayout(mainRoot, worktreePath);
@@ -383,7 +383,7 @@ describe('ensureSelectiveAutopilotLayout — tracked-dir 残留清理', () => {
 
   // -------------------------------------------------------------------------
   // Case B: dst 是 symlink + main tracked-dir + worktree HEAD 不含该路径
-  //   构造：worktree 切到一个根本没有 .autopilot/requirements/ 的旧分支
+  //   构造：worktree 切到一个根本没有 .autopilot/runtime/requirements/ 的旧分支
   //   期望：unlink 执行，git checkout 失败被 catch（不抛错），
   //         最终 dst 不存在（broken state 被清理），函数整体不抛异常
   // -------------------------------------------------------------------------
@@ -409,7 +409,7 @@ describe('ensureSelectiveAutopilotLayout — tracked-dir 残留清理', () => {
       const runGit = (...args) =>
         execFileAsync('git', args, { cwd: mainRoot, env: gitEnv });
 
-      // 步骤 1：创建"旧提交"（没有 .autopilot/requirements/）
+      // 步骤 1：创建"旧提交"（没有 .autopilot/runtime/requirements/）
       await runGit('init');
       await runGit('checkout', '-b', 'main');
       writeFileSync(join(mainRoot, 'README.md'), '# old\n');
@@ -422,9 +422,9 @@ describe('ensureSelectiveAutopilotLayout — tracked-dir 残留清理', () => {
         { cwd: mainRoot, env: gitEnv }
       );
 
-      // 步骤 2：在 main 上添加 requirements 目录提交
-      mkdirSync(join(mainRoot, '.autopilot', 'requirements'), { recursive: true });
-      writeFileSync(join(mainRoot, '.autopilot', 'requirements', 'spec.md'), '# spec\n');
+      // 步骤 2：在 main 上添加 runtime/requirements 目录提交
+      mkdirSync(join(mainRoot, '.autopilot', 'runtime', 'requirements'), { recursive: true });
+      writeFileSync(join(mainRoot, '.autopilot', 'runtime', 'requirements', 'spec.md'), '# spec\n');
       await runGit('add', '.');
       await runGit('commit', '-m', 'add requirements dir');
 
@@ -443,10 +443,10 @@ describe('ensureSelectiveAutopilotLayout — tracked-dir 残留清理', () => {
 
       // 步骤 4：在 worktree 里手动放置一个残留 symlink
       const wtAutopilot = join(worktreePath, '.autopilot');
-      const wtReq = join(wtAutopilot, 'requirements');
-      const mainReq = join(mainRoot, '.autopilot', 'requirements');
+      const wtReq = join(wtAutopilot, 'runtime', 'requirements');
+      const mainReq = join(mainRoot, '.autopilot', 'runtime', 'requirements');
 
-      mkdirSync(wtAutopilot, { recursive: true });
+      mkdirSync(join(wtAutopilot, 'runtime'), { recursive: true });
       if (existsSync(wtReq)) {
         const st = lstatSync(wtReq);
         if (st.isDirectory()) {
@@ -497,7 +497,7 @@ describe('ensureSelectiveAutopilotLayout — tracked-dir 残留清理', () => {
       const { mainRoot, gitEnv } = await setupMainRepo(tmpDir);
       const worktreePath = await addWorktree(mainRoot, 'wt-branch-c', gitEnv);
 
-      const wtReq = join(worktreePath, '.autopilot', 'requirements');
+      const wtReq = join(worktreePath, '.autopilot', 'runtime', 'requirements');
 
       // 如果 worktree 里 git checkout 已经创建了目录/symlink，先手动删除，
       // 模拟"dst 不存在"的场景
@@ -555,7 +555,7 @@ describe('ensureSelectiveAutopilotLayout — tracked-dir 残留清理', () => {
       const worktreePath = await addWorktree(mainRoot, 'wt-branch-d', gitEnv);
 
       const wtAutopilot = join(worktreePath, '.autopilot');
-      const wtReq = join(wtAutopilot, 'requirements');
+      const wtReq = join(wtAutopilot, 'runtime', 'requirements');
 
       // 确保 dst 是真实目录（不是 symlink）
       // 若 git checkout 已经创建了，直接用；否则手动建

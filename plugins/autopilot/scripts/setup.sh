@@ -38,12 +38,43 @@ if [[ -f "$PROJECT_ROOT/.claude/autopilot.local.md" ]] && [[ ! -f "$(get_active_
     echo "🧹 清理了 .claude/ 下的旧状态文件。"
 fi
 
-# ── 早期迁移：.claude/worktree-links → .autopilot/worktree-links ──
-if [[ -f "$PROJECT_ROOT/.claude/worktree-links" ]] && [[ ! -f "$PROJECT_ROOT/.autopilot/worktree-links" ]]; then
-    mkdir -p "$PROJECT_ROOT/.autopilot"
-    if mv "$PROJECT_ROOT/.claude/worktree-links" "$PROJECT_ROOT/.autopilot/worktree-links"; then
-        echo "📦 worktree-links 迁移: .claude/worktree-links → .autopilot/worktree-links"
+# ── 早期迁移：.claude/worktree-links → .autopilot/runtime/worktree-links.txt ──
+if [[ -f "$PROJECT_ROOT/.claude/worktree-links" ]] && [[ ! -f "$PROJECT_ROOT/.autopilot/runtime/worktree-links.txt" ]]; then
+    mkdir -p "$PROJECT_ROOT/.autopilot/runtime"
+    if mv "$PROJECT_ROOT/.claude/worktree-links" "$PROJECT_ROOT/.autopilot/runtime/worktree-links.txt"; then
+        echo "📦 worktree-links 迁移: .claude/worktree-links → .autopilot/runtime/worktree-links.txt"
     fi
+fi
+
+# ── 早期迁移：.autopilot/ 旧布局 → knowledge/ + runtime/ 二级分层（v3.35+，C5 契约）──
+# 触发条件：旧 knowledge 文件存在（decisions.md）且新布局未就绪（knowledge/ 不存在）
+# 幂等：第二次运行检测到 .autopilot/knowledge/ 已存在 → 短路跳过
+if [[ -f "$PROJECT_ROOT/.autopilot/decisions.md" ]] && [[ ! -d "$PROJECT_ROOT/.autopilot/knowledge" ]]; then
+    echo "📦 检测到 .autopilot/ 旧布局，迁移到 knowledge/ + runtime/ 分层（一次性）"
+    mkdir -p "$PROJECT_ROOT/.autopilot/knowledge" "$PROJECT_ROOT/.autopilot/runtime"
+    # knowledge 文件（用 git mv 保留历史，若不在 git 中则普通 mv）
+    for f in decisions.md patterns.md index.md; do
+        if [[ -f "$PROJECT_ROOT/.autopilot/$f" ]]; then
+            git -C "$PROJECT_ROOT" mv ".autopilot/$f" ".autopilot/knowledge/$f" 2>/dev/null \
+                || mv "$PROJECT_ROOT/.autopilot/$f" "$PROJECT_ROOT/.autopilot/knowledge/$f"
+        fi
+    done
+    if [[ -d "$PROJECT_ROOT/.autopilot/domains" ]]; then
+        git -C "$PROJECT_ROOT" mv ".autopilot/domains" ".autopilot/knowledge/domains" 2>/dev/null \
+            || mv "$PROJECT_ROOT/.autopilot/domains" "$PROJECT_ROOT/.autopilot/knowledge/domains"
+    fi
+    # runtime 文件（普通 mv + 重命名，git rm --cached 旧版本由 .gitignore 自动处理）
+    [[ -f "$PROJECT_ROOT/.autopilot/active" ]] && mv "$PROJECT_ROOT/.autopilot/active" "$PROJECT_ROOT/.autopilot/runtime/active.ptr"
+    [[ -d "$PROJECT_ROOT/.autopilot/requirements" ]] && mv "$PROJECT_ROOT/.autopilot/requirements" "$PROJECT_ROOT/.autopilot/runtime/requirements"
+    [[ -d "$PROJECT_ROOT/.autopilot/sessions" ]] && mv "$PROJECT_ROOT/.autopilot/sessions" "$PROJECT_ROOT/.autopilot/runtime/sessions"
+    [[ -d "$PROJECT_ROOT/.autopilot/sub-agent" ]] && mv "$PROJECT_ROOT/.autopilot/sub-agent" "$PROJECT_ROOT/.autopilot/runtime/sub-agent"
+    [[ -f "$PROJECT_ROOT/.autopilot/worktree-links" ]] && mv "$PROJECT_ROOT/.autopilot/worktree-links" "$PROJECT_ROOT/.autopilot/runtime/worktree-links.txt"
+    [[ -f "$PROJECT_ROOT/.autopilot/doctor-report.md" ]] && mv "$PROJECT_ROOT/.autopilot/doctor-report.md" "$PROJECT_ROOT/.autopilot/runtime/doctor-report.md"
+    # git rm --cached 旧位置的 runtime 文件（如果还在 git 索引中）
+    git -C "$PROJECT_ROOT" rm -r --cached --ignore-unmatch \
+        .autopilot/active .autopilot/requirements .autopilot/sessions \
+        .autopilot/sub-agent .autopilot/worktree-links .autopilot/doctor-report.md 2>/dev/null || true
+    echo "✅ 迁移完成"
 fi
 
 # ── 参数安全处理 ──────────────────────────────────────────────
@@ -407,26 +438,27 @@ if [[ -d "$TASKS_DIR" ]] && [[ -f "$PROJECT_ROOT/.autopilot/project/dag.yaml" ]]
     fi
 fi
 
-# 创建需求管理文件夹
-mkdir -p "$PROJECT_ROOT/.autopilot"
+# 创建需求管理文件夹（二级分层）
+mkdir -p "$PROJECT_ROOT/.autopilot/knowledge"
+mkdir -p "$PROJECT_ROOT/.autopilot/runtime"
 
 # session_id：与 ralph 一致，直接使用环境变量（可能为空）。
 # 空值时由 stop-hook 首次触发时认领真实 session_id，建立隔离。
 SESSION_ID="${CLAUDE_CODE_SESSION_ID:-}"
 
-# 迁移检测：旧路径 .claude/knowledge/ → 新路径 .autopilot/
-# 注意：检查 .autopilot/index.md 而非 .autopilot/ 目录，因为上面 mkdir -p 已创建该目录
-if [[ -d "$PROJECT_ROOT/.claude/knowledge" ]] && [[ ! -f "$PROJECT_ROOT/.autopilot/index.md" ]]; then
-    echo "📦 检测到旧知识库 .claude/knowledge/，自动迁移到 .autopilot/ ..."
+# 迁移检测：旧路径 .claude/knowledge/ → 新路径 .autopilot/knowledge/
+# 注意：检查 .autopilot/knowledge/index.md 而非 .autopilot/ 目录，因为上面 mkdir -p 已创建该目录
+if [[ -d "$PROJECT_ROOT/.claude/knowledge" ]] && [[ ! -f "$PROJECT_ROOT/.autopilot/knowledge/index.md" ]]; then
+    echo "📦 检测到旧知识库 .claude/knowledge/，自动迁移到 .autopilot/knowledge/ ..."
     bash "$(dirname "$0")/migrate-knowledge.sh"
     echo ""
 fi
 
 # 检查知识库是否存在
 KNOWLEDGE_HINT=""
-if [[ -d "$PROJECT_ROOT/.autopilot" ]]; then
+if [[ -f "$PROJECT_ROOT/.autopilot/knowledge/index.md" ]]; then
     KNOWLEDGE_HINT="
-> 📚 项目知识库已存在: .autopilot/。design 阶段请先加载相关知识上下文。"
+> 📚 项目知识库已存在: .autopilot/knowledge/。design 阶段请先加载相关知识上下文。"
 elif [[ -d "$PROJECT_ROOT/.claude/knowledge" ]]; then
     KNOWLEDGE_HINT="
 > ⚠️ 知识库仍在旧路径 .claude/knowledge/，建议手动运行迁移脚本:

@@ -1,5 +1,7 @@
 # autopilot — AI 自动驾驶工程套件
 
+> **v3.35.0**：`.autopilot/` 目录二级分层 — `knowledge/`（git 入库，跨任务持久知识）+ `runtime/`（gitignored，单次运行产物）。三层防御解决「AI 在 commit 时遗忘 autopilot 文件」痛点：(1) `.gitignore` 单条规则 `.autopilot/runtime/` 拦截所有运行时产物；(2) `autopilot-commit` 新增 5.c 子节显式检查知识库变更；(3) `autopilot-doctor` Dim 12 新增子项 6「文件分类正确性」长期巡检。`setup.sh` 内置幂等迁移逻辑，老用户首次升级自动迁移旧布局；`worktree.mjs` 新增 `cleanupStaleLinks()` helper 清理 v3.34 残留 symlink。版本号 acceptance test 同步动态化（消灭 [2026-05-09] 已知盲区）。
+
 > **v3.33.0**：brainstorm 抽离为独立 skill（autopilot-brainstorm），主 SKILL 通过 `Skill: "autopilot-brainstorm"` 显式委托；删除 references/brainstorm-guide.md，visual-companion-guide.md 随迁至新 skill；新 skill 借鉴 superpowers brainstorming 的 HARD-GATE / Anti-Pattern / Checklist 强语言风格，解决 brainstorm 在 references 后置位置被 AI 跳过的痛点。主 SKILL 实际净减 2 行（644→642，原设计预估 ~64 行偏乐观——brainstorm-guide.md 89 行内容从未内嵌主 SKILL，只是 4 行引用链接被删除）。
 >
 > **v3.24.0**：契约规约协议 — 集中 references/contract-protocol.md（DbC 谓词 + Pact example）+ 新增 contract-checker agent 在蓝队完成后自动校验实现 vs 契约字面一致性 + 历史豁免机制（contract_required frontmatter）。基于 relight 7 个红蓝契约不对齐案例 + 业界 CDC/MetaGPT/CANDOR SOTA 模式落地。
@@ -115,7 +117,7 @@ QA 发现问题时，按系统化调试方法论（观察 → 假设 → 验证 
 
 输出 autopilot 兼容性矩阵（哪些功能可用/降级/不可用）和 Top 3 改进建议。
 
-使用 `--fix` 自动修复低分项（每个修复前确认）。报告保存到 `.autopilot/doctor-report.md`。
+使用 `--fix` 自动修复低分项（每个修复前确认）。报告保存到 `.autopilot/runtime/doctor-report.md`。
 
 ## 可追溯性
 

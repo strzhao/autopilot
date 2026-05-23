@@ -80,15 +80,35 @@ export function parseLinksFile(filepath) {
     .map(line => line.trim());
 }
 
-// ─── Selective .autopilot layout ───
-// 仅这些项以 symlink → 主仓库共享；其余（含 sessions/）皆 worktree-local 真实文件。
-// 顺序：常用 → 不常用，便于 log 阅读。
+// ─── Selective .autopilot layout (二级分层 knowledge/ + runtime/) ───
+// 仅这些项以 symlink → 主仓库共享；其余（含 runtime/sessions/）皆 worktree-local 真实文件。
+// 顺序：knowledge 类（持久共享） → runtime 类（运行时共享指针/产物），便于 log 阅读。
 //
 // ⚠ 不要把会被 main 仓库 tracked 为「目录」的项加进来。
 // 因为 git 不允许 tracked 路径穿过 symlink — 一旦 main 把 .autopilot/foo 跟踪为目录，
 // worktree 把 .autopilot/foo 做成 symlink 后，lint-staged stash / git stash 等命令会
 // 失败（"is beyond a symbolic link"）。runtime 也会做防御性检测，但保持列表本身干净更好。
 export const SHARED_AUTOPILOT_ITEMS = [
+  // knowledge/ 组（持久知识，入库）
+  'knowledge/decisions.md',
+  'knowledge/patterns.md',
+  'knowledge/index.md',
+  'knowledge/domains',
+  // runtime/ 组（运行时产物，不入库；但跨 worktree 共享指针/任务）
+  'runtime/active.ptr',
+  'runtime/requirements',
+  'runtime/worktree-links.txt',
+  'runtime/doctor-report.md',
+  // 老版本兼容（仍在迁移过渡期可能存在的顶层文件）
+  'autopilot.local.md',
+];
+
+// 历史上曾在 SHARED_AUTOPILOT_ITEMS 但因为是 tracked-dir 已被移除、
+// 或在 v3.35 二级分层重构前的旧路径项，
+// 现存老 worktree 升级时需要清理这些路径下的残留 symlink。
+export const LEGACY_SHARED_AUTOPILOT_ITEMS = [
+  'project',
+  // v3.35 前的旧路径（升级前 SHARED_AUTOPILOT_ITEMS 元素）
   'decisions.md',
   'patterns.md',
   'index.md',
@@ -97,12 +117,7 @@ export const SHARED_AUTOPILOT_ITEMS = [
   'doctor-report.md',
   'worktree-links',
   'active',
-  'autopilot.local.md',
 ];
-
-// 历史上曾在 SHARED_AUTOPILOT_ITEMS 但因为是 tracked-dir 已被移除的项目。
-// 现存 worktree 升级时需要把这些 symlink 改回真实目录（让 git checkout 恢复）。
-export const LEGACY_SHARED_AUTOPILOT_ITEMS = ['project'];
 
 // 判断 .autopilot/<item> 在主仓库的跟踪状态：'file' / 'dir' / 'untracked'
 function isTrackedInMain(mainRoot, relPath) {
@@ -124,13 +139,40 @@ function applySkipWorktree(worktreePath, relPath) {
   }
 }
 
+// 清理 worktree 里指向旧路径的残留 symlink（v3.35 二级分层升级用）。
+// 老 worktree 由 v3.34.x 创建时，.autopilot/decisions.md / .autopilot/active 等
+// 是直接 symlink 到主仓库同名顶层路径。v3.35 主仓库迁移后这些路径已搬到
+// .autopilot/knowledge/decisions.md / .autopilot/runtime/active.ptr，老 symlink
+// 变成 broken。本函数检测并 unlink，让后续 ensureSharedLinks 用新路径重建。
+// 仅清理 LEGACY_SHARED_AUTOPILOT_ITEMS 中**仍是 symlink 形态**的项 — 真实文件/目录
+// 不动（避免误删 worktree 分支 checkout 出来的真实内容）。
+export function cleanupStaleLinks(worktreePath) {
+  const apDst = join(worktreePath, '.autopilot');
+  if (!existsSync(apDst)) return;
+  for (const item of LEGACY_SHARED_AUTOPILOT_ITEMS) {
+    const dst = join(apDst, item);
+    let s = null;
+    try { s = lstatSync(dst); } catch { continue; }
+    if (!s.isSymbolicLink()) continue;
+    // broken symlink 或指向 v3.34 旧路径 → 统一 unlink。
+    // 不调 git checkout 恢复，留给 ensureSelectiveAutopilotLayout 的统一处理逻辑。
+    try {
+      unlinkSync(dst);
+      log(`→ 清理 v3.34 旧路径残留 symlink: .autopilot/${item}`);
+    } catch (e) {
+      log(`   ⚠ 无法清理 .autopilot/${item}: ${e.message}`);
+    }
+  }
+}
+
 // 把 worktree 的 .autopilot 配置成"选择性 symlink"布局：
-//   .autopilot/                  ← 真实目录
-//   .autopilot/sessions/<name>/  ← 真实目录（worktree-local，提交到 worktree 分支）
-//   .autopilot/<shared item>     ← symlink → 主仓库 .autopilot/<shared item>
+//   .autopilot/                          ← 真实目录
+//   .autopilot/runtime/sessions/<name>/  ← 真实目录（worktree-local，提交到 worktree 分支）
+//   .autopilot/<shared item>             ← symlink → 主仓库 .autopilot/<shared item>
+//   （shared item 含 knowledge/* 与 runtime/* 子路径，详见 SHARED_AUTOPILOT_ITEMS）
 //
 // 旧版兼容：如果 .autopilot 整体是全量 symlink，先把 main 里属于本 worktree 的
-// sessions 子目录暂存到 worktree 内，重建后再放回 sessions/<name>/。
+// sessions 子目录暂存到 worktree 内，重建后再放回 runtime/sessions/<name>/。
 export function ensureSelectiveAutopilotLayout(mainRoot, worktreePath) {
   // 防御：mainRoot === worktreePath 时所有 src/dst 同路径，会导致
   // canDiscard 自我比较为真 → rmSync 真实文件 → symlinkSync 自指。
@@ -149,13 +191,19 @@ export function ensureSelectiveAutopilotLayout(mainRoot, worktreePath) {
   try { dstStat = lstatSync(apDst); } catch { /* not exists */ }
 
   // 旧版迁移：worktree/.autopilot 是全量 symlink
+  // 兼容两种旧 sessions 位置：新版 main/.autopilot/runtime/sessions/<name>/ 与
+  // 旧版 main/.autopilot/sessions/<name>/。优先取新版，回退到旧版。
   let stashedSessions = null;
   if (dstStat?.isSymbolicLink()) {
     const wtName = basename(worktreePath);
-    const mainWtSession = join(apSrc, 'sessions', wtName);
-    if (existsSync(mainWtSession)) {
+    const mainWtSessionNew = join(apSrc, 'runtime', 'sessions', wtName);
+    const mainWtSessionOld = join(apSrc, 'sessions', wtName);
+    const mainWtSession = existsSync(mainWtSessionNew)
+      ? mainWtSessionNew
+      : (existsSync(mainWtSessionOld) ? mainWtSessionOld : null);
+    if (mainWtSession) {
       stashedSessions = join(worktreePath, `.autopilot-sessions-stash-${process.pid}`);
-      log(`→ 迁移 main/.autopilot/sessions/${wtName}/ → worktree（暂存到 ${basename(stashedSessions)}）`);
+      log(`→ 迁移 ${mainWtSession.replace(mainRoot + '/', 'main/')} → worktree（暂存到 ${basename(stashedSessions)}）`);
       try {
         renameSync(mainWtSession, stashedSessions);
       } catch (e) {
@@ -169,6 +217,10 @@ export function ensureSelectiveAutopilotLayout(mainRoot, worktreePath) {
   }
 
   if (!existsSync(apDst)) mkdirSync(apDst, { recursive: true });
+
+  // v3.35 升级：清理指向 v3.34 旧路径的残留 symlink
+  // 必须在 SHARED_AUTOPILOT_ITEMS 重建前调用，否则旧 symlink 会阻挡新路径写入
+  cleanupStaleLinks(worktreePath);
 
   // 旧版升级：曾是 SHARED 但因 tracked-dir 风险被移除的项，
   // 若 worktree 里仍是 symlink，移除后用 git checkout 恢复真实目录。
@@ -193,6 +245,10 @@ export function ensureSelectiveAutopilotLayout(mainRoot, worktreePath) {
     const src = join(apSrc, item);
     const dst = join(apDst, item);
     if (!existsSync(src)) continue; // main 没这一项就跳过
+
+    // item 可能含子路径（如 'knowledge/decisions.md'），确保 dst 父目录存在
+    const dstParent = dirname(dst);
+    if (!existsSync(dstParent)) mkdirSync(dstParent, { recursive: true });
 
     // 防御：如果 main 把这一项跟踪为「目录」，强行 symlink 会触发
     // git "is beyond a symbolic link" 错误，导致 lint-staged stash 等失败。
@@ -277,12 +333,14 @@ export function ensureSelectiveAutopilotLayout(mainRoot, worktreePath) {
     }
   }
 
-  // sessions/ 必须是 worktree-local 真实目录
-  const sessionsDir = join(apDst, 'sessions');
+  // runtime/sessions/ 必须是 worktree-local 真实目录
+  const runtimeDir = join(apDst, 'runtime');
+  if (!existsSync(runtimeDir)) mkdirSync(runtimeDir, { recursive: true });
+  const sessionsDir = join(runtimeDir, 'sessions');
   let sessStat = null;
   try { sessStat = lstatSync(sessionsDir); } catch { /* not exists */ }
   if (sessStat?.isSymbolicLink()) {
-    log('→ sessions/ 是 symlink，移除（应为 worktree-local 真实目录）');
+    log('→ runtime/sessions/ 是 symlink，移除（应为 worktree-local 真实目录）');
     unlinkSync(sessionsDir);
   }
   if (!existsSync(sessionsDir)) mkdirSync(sessionsDir, { recursive: true });
@@ -292,11 +350,11 @@ export function ensureSelectiveAutopilotLayout(mainRoot, worktreePath) {
     const wtName = basename(worktreePath);
     const finalSession = join(sessionsDir, wtName);
     if (existsSync(finalSession)) {
-      log(`   ⚠ sessions/${wtName}/ 已存在，stash 保留在 ${stashedSessions}（请手动合并）`);
+      log(`   ⚠ runtime/sessions/${wtName}/ 已存在，stash 保留在 ${stashedSessions}（请手动合并）`);
     } else {
       try {
         renameSync(stashedSessions, finalSession);
-        log(`   ✓ 还原 sessions/${wtName}/ 到 worktree`);
+        log(`   ✓ 还原 runtime/sessions/${wtName}/ 到 worktree`);
       } catch (e) {
         log(`   ⚠ 还原 sessions 失败: ${e.message}（stash 保留在 ${stashedSessions}）`);
       }
@@ -342,11 +400,11 @@ function repair(worktreePath) {
   }
   log(`→ 修复 worktree: ${worktreePath}`);
 
-  const linksFile = join(root, '.autopilot', 'worktree-links');
+  const linksFile = join(root, '.autopilot', 'runtime', 'worktree-links.txt');
   const links = parseLinksFile(linksFile);
 
   if (links.length > 0) {
-    log('→ 按 .autopilot/worktree-links 创建符号链接...');
+    log('→ 按 .autopilot/runtime/worktree-links.txt 创建符号链接...');
     for (const file of links) {
       const src = join(root, file);
       const dst = join(worktreePath, file);
@@ -370,7 +428,7 @@ function repair(worktreePath) {
       }
     }
   } else {
-    log('→ 无 .autopilot/worktree-links，自动链接 .env* 文件...');
+    log('→ 无 .autopilot/runtime/worktree-links.txt，自动链接 .env* 文件...');
     try {
       const entries = readdirSync(root).filter(f => f.startsWith('.env'));
       for (const file of entries) {
@@ -495,7 +553,7 @@ function remove() {
 
   const cwd = input.cwd || process.cwd();
   const root = repoRoot(cwd);
-  const linksFile = join(root, '.autopilot', 'worktree-links');
+  const linksFile = join(root, '.autopilot', 'runtime', 'worktree-links.txt');
   const links = parseLinksFile(linksFile);
 
   // Remove symlinks first (avoid git worktree remove error on tracked files)
@@ -547,16 +605,20 @@ function remove() {
     }
   }
 
-  // 旧模式遗留：main/.autopilot/sessions/<name>/ 清理
-  // 新模式下 sessions 已经在 worktree 里，这条不会触发；保留作为旧版兼容。
+  // 旧模式遗留：main/.autopilot/sessions/<name>/ 与 main/.autopilot/runtime/sessions/<name>/ 清理
+  // 新模式下 sessions 已经在 worktree 里，这两条都不会触发；保留作为旧版兼容。
   const worktreeName = basename(worktreePath);
-  const legacyMainSession = join(root, '.autopilot', 'sessions', worktreeName);
-  if (existsSync(legacyMainSession)) {
-    try {
-      rmSync(legacyMainSession, { recursive: true, force: true });
-      log(`   ✓ 清理旧版 main/.autopilot/sessions/${worktreeName}/`);
-    } catch (e) {
-      log(`   ⚠ 无法清理: ${e.message}`);
+  for (const legacyPath of [
+    join(root, '.autopilot', 'runtime', 'sessions', worktreeName),
+    join(root, '.autopilot', 'sessions', worktreeName),
+  ]) {
+    if (existsSync(legacyPath)) {
+      try {
+        rmSync(legacyPath, { recursive: true, force: true });
+        log(`   ✓ 清理旧版 ${legacyPath.replace(root + '/', 'main/')}/`);
+      } catch (e) {
+        log(`   ⚠ 无法清理 ${legacyPath}: ${e.message}`);
+      }
     }
   }
 

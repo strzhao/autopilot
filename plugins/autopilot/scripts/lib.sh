@@ -20,15 +20,15 @@ get_worktree_name() {
 }
 
 # 返回 active 指针文件路径（worktree 感知）
-# 在 worktree 中：.autopilot/sessions/<name>/active
-# 非 worktree：.autopilot/active
+# 在 worktree 中：.autopilot/runtime/sessions/<name>/active.ptr
+# 非 worktree：.autopilot/runtime/active.ptr
 get_active_file() {
     local wt_name
     wt_name=$(get_worktree_name)
     if [[ -n "$wt_name" ]]; then
-        echo "$PROJECT_ROOT/.autopilot/sessions/$wt_name/active"
+        echo "$PROJECT_ROOT/.autopilot/runtime/sessions/$wt_name/active.ptr"
     else
-        echo "$PROJECT_ROOT/.autopilot/active"
+        echo "$PROJECT_ROOT/.autopilot/runtime/active.ptr"
     fi
 }
 
@@ -47,9 +47,9 @@ init_paths() {
         local slug
         slug=$(cat "$active_file")
         if [[ -n "$WORKTREE_NAME" ]]; then
-            TASK_DIR="$PROJECT_ROOT/.autopilot/sessions/$WORKTREE_NAME/requirements/$slug"
+            TASK_DIR="$PROJECT_ROOT/.autopilot/runtime/sessions/$WORKTREE_NAME/requirements/$slug"
         else
-            TASK_DIR="$PROJECT_ROOT/.autopilot/requirements/$slug"
+            TASK_DIR="$PROJECT_ROOT/.autopilot/runtime/requirements/$slug"
         fi
         STATE_FILE="$TASK_DIR/state.md"
     else
@@ -121,9 +121,9 @@ setup_requirement_dir() {
     local active_file
     active_file=$(get_active_file)
     if [[ -n "$WORKTREE_NAME" ]]; then
-        TASK_DIR="$PROJECT_ROOT/.autopilot/sessions/$WORKTREE_NAME/requirements/$slug"
+        TASK_DIR="$PROJECT_ROOT/.autopilot/runtime/sessions/$WORKTREE_NAME/requirements/$slug"
     else
-        TASK_DIR="$PROJECT_ROOT/.autopilot/requirements/$slug"
+        TASK_DIR="$PROJECT_ROOT/.autopilot/runtime/requirements/$slug"
     fi
     mkdir -p "$TASK_DIR"
     mkdir -p "$(dirname "$active_file")"
@@ -230,9 +230,9 @@ $(head -60 "$design_file")"
 
     # 知识库提示
     local knowledge_hint=""
-    if [[ -f "$PROJECT_ROOT/.autopilot/index.md" ]]; then
+    if [[ -f "$PROJECT_ROOT/.autopilot/knowledge/index.md" ]]; then
         knowledge_hint="
-> 📚 项目知识库已存在: .autopilot/。design 阶段请先加载相关知识上下文。"
+> 📚 项目知识库已存在: .autopilot/knowledge/。design 阶段请先加载相关知识上下文。"
     fi
 
     mkdir -p "$(dirname "$STATE_FILE")"

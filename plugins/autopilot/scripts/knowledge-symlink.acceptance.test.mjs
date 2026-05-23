@@ -1,16 +1,18 @@
 /**
- * Selective .autopilot Layout — Acceptance Tests
+ * Selective .autopilot Layout — Acceptance Tests (v3.35+ 二级分层)
  *
  * 设计契约：
- *   1. worktree 的 .autopilot/ 是"选择性 symlink"布局：
- *      - sessions/ 是 worktree-local 真实目录（提交到 worktree 分支）
- *      - 共享项（decisions.md、patterns.md、requirements/、domains/ 等）symlink → 主仓库
+ *   1. worktree 的 .autopilot/ 是"选择性 symlink + 二级分层"布局：
+ *      - runtime/sessions/ 是 worktree-local 真实目录（提交到 worktree 分支）
+ *      - 共享项分两组 symlink → 主仓库：
+ *        knowledge/{decisions.md, patterns.md, index.md, domains}（持久知识，入库）
+ *        runtime/{active.ptr, requirements, worktree-links.txt, doctor-report.md}（运行时产物）
  *      - 主仓库无对应共享项时跳过该 symlink（不创建 broken link）
  *      - project/ 不在 SHARED 列表里：因为 main 通常把它作为 tracked 目录跟踪，
  *        而 git 不允许 tracked 路径穿过 symlink（会让 lint-staged stash 等失败）
  *   2. 旧版迁移：
  *      a. 当 worktree 里 .autopilot 是全量 symlink 时，把 main 里
- *         sessions/<worktree-name>/ 移回 worktree，再重建为选择性布局。
+ *         runtime/sessions/<worktree-name>/ 移回 worktree，再重建为选择性布局。
  *      b. 当 .autopilot/project 是旧版 symlink 时，移除并通过 git checkout 恢复真实目录。
  *   3. 幂等：重复运行不破坏现有正确状态；指错的 symlink 自动修正。
  *   4. remove() 兼容性：能清理新模式下的多个 symlink、旧版全量 symlink，以及 LEGACY 项。
@@ -25,7 +27,7 @@ import {
   mkdtempSync, mkdirSync, writeFileSync, symlinkSync,
   existsSync, lstatSync, readFileSync, rmSync, realpathSync, readdirSync,
 } from 'node:fs';
-import { join, basename } from 'node:path';
+import { join, basename, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const { ensureSelectiveAutopilotLayout, SHARED_AUTOPILOT_ITEMS, LEGACY_SHARED_AUTOPILOT_ITEMS } = await import('./worktree.mjs');
@@ -53,12 +55,29 @@ function scaffold(name) {
   return { mainRepo, worktree };
 }
 
-/** 在 main/.autopilot/ 创建若干文件/目录 */
+/** 在 main/.autopilot/ 创建若干文件/目录（v3.35+ 自动路由到 knowledge/ 或 runtime/）
+ *
+ * 路由规则：
+ *   - `decisions.md` / `patterns.md` / `index.md` / `domains` → .autopilot/knowledge/<name>
+ *   - `active.ptr` / `requirements` / `worktree-links.txt` / `doctor-report.md` → .autopilot/runtime/<name>
+ *   - 其他原路径 .autopilot/<name>（兼容老 fixture）
+ */
 function seedMainKnowledge(mainRepo, items) {
   const apDir = join(mainRepo, '.autopilot');
+  const knowledgeNames = new Set(['decisions.md', 'patterns.md', 'index.md', 'domains']);
+  const runtimeNames = new Set(['active.ptr', 'requirements', 'worktree-links.txt', 'doctor-report.md']);
   mkdirSync(apDir, { recursive: true });
   for (const [name, content] of Object.entries(items)) {
-    const target = join(apDir, name);
+    let relPath;
+    if (knowledgeNames.has(name)) {
+      relPath = join('knowledge', name);
+    } else if (runtimeNames.has(name)) {
+      relPath = join('runtime', name);
+    } else {
+      relPath = name;
+    }
+    const target = join(apDir, relPath);
+    mkdirSync(dirname(target), { recursive: true });
     if (content === '__DIR__') {
       mkdirSync(target, { recursive: true });
     } else {
@@ -71,7 +90,7 @@ function seedMainKnowledge(mainRepo, items) {
 // 1. 基础布局：fresh worktree
 // ===========================================================================
 describe('基础布局：fresh worktree', () => {
-  it('在 main 共享项齐全时，worktree 的 .autopilot 是真实目录，共享项是 symlink，sessions/ 是真实目录', () => {
+  it('在 main 共享项齐全时，worktree 的 .autopilot 是真实目录，共享项是 symlink，runtime/sessions/ 是真实目录', () => {
     const { mainRepo, worktree } = scaffold('basic');
     seedMainKnowledge(mainRepo, {
       'decisions.md': '# Decisions\n',
@@ -88,14 +107,17 @@ describe('基础布局：fresh worktree', () => {
     assert.ok(!lstatSync(apDst).isSymbolicLink(), '.autopilot 应是真实目录而非 symlink');
     assert.ok(lstatSync(apDst).isDirectory(), '.autopilot 应是目录');
 
-    // sessions/ 是真实目录
-    const sessionsDir = join(apDst, 'sessions');
-    assert.ok(existsSync(sessionsDir), 'sessions/ 应被创建');
-    assert.ok(!lstatSync(sessionsDir).isSymbolicLink(), 'sessions/ 应是真实目录');
-    assert.ok(lstatSync(sessionsDir).isDirectory(), 'sessions/ 应是目录');
+    // runtime/sessions/ 是真实目录
+    const sessionsDir = join(apDst, 'runtime', 'sessions');
+    assert.ok(existsSync(sessionsDir), 'runtime/sessions/ 应被创建');
+    assert.ok(!lstatSync(sessionsDir).isSymbolicLink(), 'runtime/sessions/ 应是真实目录');
+    assert.ok(lstatSync(sessionsDir).isDirectory(), 'runtime/sessions/ 应是目录');
 
     // 共享项是 symlink → 主仓库（注意：project 已不在 SHARED 列表）
-    for (const item of ['decisions.md', 'patterns.md', 'index.md', 'domains', 'requirements']) {
+    // 分两组：knowledge/* 与 runtime/*
+    const knowledgeItems = ['knowledge/decisions.md', 'knowledge/patterns.md', 'knowledge/index.md', 'knowledge/domains'];
+    const runtimeItems = ['runtime/requirements'];
+    for (const item of [...knowledgeItems, ...runtimeItems]) {
       const link = join(apDst, item);
       assert.ok(lstatSync(link).isSymbolicLink(), `.autopilot/${item} 应是 symlink`);
       const linkTarget = realpathSync(link);
@@ -112,8 +134,8 @@ describe('基础布局：fresh worktree', () => {
     ensureSelectiveAutopilotLayout(mainRepo, worktree);
 
     const apDst = join(worktree, '.autopilot');
-    assert.ok(lstatSync(join(apDst, 'decisions.md')).isSymbolicLink(), 'decisions.md 应是 symlink');
-    assert.ok(!existsSync(join(apDst, 'patterns.md')), 'main 没有的项不应在 worktree 创建 broken symlink');
+    assert.ok(lstatSync(join(apDst, 'knowledge', 'decisions.md')).isSymbolicLink(), 'knowledge/decisions.md 应是 symlink');
+    assert.ok(!existsSync(join(apDst, 'knowledge', 'patterns.md')), 'main 没有的项不应在 worktree 创建 broken symlink');
     assert.ok(!existsSync(join(apDst, 'project')), 'project/ 不存在时不应创建');
   });
 
@@ -124,7 +146,7 @@ describe('基础布局：fresh worktree', () => {
     ensureSelectiveAutopilotLayout(mainRepo, worktree);
 
     assert.ok(existsSync(join(mainRepo, '.autopilot')), 'main/.autopilot 应被预创建');
-    assert.ok(existsSync(join(worktree, '.autopilot', 'sessions')), 'worktree/.autopilot/sessions 应被创建');
+    assert.ok(existsSync(join(worktree, '.autopilot', 'runtime', 'sessions')), 'worktree/.autopilot/runtime/sessions 应被创建');
     assert.ok(!lstatSync(join(worktree, '.autopilot')).isSymbolicLink(), '.autopilot 不应是 symlink');
   });
 });
@@ -133,7 +155,7 @@ describe('基础布局：fresh worktree', () => {
 // 2. 旧版迁移：全量 symlink → 选择性布局
 // ===========================================================================
 describe('旧版迁移', () => {
-  it('worktree/.autopilot 是全量 symlink + main 里有本 worktree 的 sessions → 自动迁移并重建', () => {
+  it('worktree/.autopilot 是全量 symlink + main 里有本 worktree 的 runtime/sessions → 自动迁移并重建', () => {
     const { mainRepo, worktree } = scaffold('legacy');
     const wtName = basename(worktree); // ensureSelectiveAutopilotLayout 用 basename(worktreePath) 推 sessions 目录名
     seedMainKnowledge(mainRepo, {
@@ -143,10 +165,10 @@ describe('旧版迁移', () => {
     // 模拟旧版：worktree/.autopilot 是全量 symlink → main/.autopilot
     symlinkSync(join(mainRepo, '.autopilot'), join(worktree, '.autopilot'));
 
-    // 模拟旧版下 main 里堆积的 sessions/<wtName>/...（实际通过 symlink 写入也会落到这里）
-    const mainSessionDir = join(mainRepo, '.autopilot', 'sessions', wtName);
+    // 模拟新版下 main 里堆积的 runtime/sessions/<wtName>/...（实际通过 symlink 写入也会落到这里）
+    const mainSessionDir = join(mainRepo, '.autopilot', 'runtime', 'sessions', wtName);
     mkdirSync(mainSessionDir, { recursive: true });
-    writeFileSync(join(mainSessionDir, 'active'), 'pointer\n');
+    writeFileSync(join(mainSessionDir, 'active.ptr'), 'pointer\n');
     mkdirSync(join(mainSessionDir, 'requirements', 'task-001'), { recursive: true });
     writeFileSync(join(mainSessionDir, 'requirements', 'task-001', 'state.md'), '# state\n');
 
@@ -156,13 +178,13 @@ describe('旧版迁移', () => {
     // .autopilot 不再是 symlink
     assert.ok(!lstatSync(apDst).isSymbolicLink(), '.autopilot 应是真实目录');
 
-    // sessions 已迁回 worktree
-    const wtSessionDir = join(apDst, 'sessions', wtName);
-    assert.ok(existsSync(wtSessionDir), `sessions/${wtName}/ 应已迁回 worktree`);
+    // runtime/sessions 已迁回 worktree
+    const wtSessionDir = join(apDst, 'runtime', 'sessions', wtName);
+    assert.ok(existsSync(wtSessionDir), `runtime/sessions/${wtName}/ 应已迁回 worktree`);
     assert.equal(
-      readFileSync(join(wtSessionDir, 'active'), 'utf8'),
+      readFileSync(join(wtSessionDir, 'active.ptr'), 'utf8'),
       'pointer\n',
-      'sessions/<name>/active 内容应保留'
+      'runtime/sessions/<name>/active.ptr 内容应保留'
     );
     assert.equal(
       readFileSync(join(wtSessionDir, 'requirements', 'task-001', 'state.md'), 'utf8'),
@@ -170,11 +192,11 @@ describe('旧版迁移', () => {
       '嵌套文件应迁移完整'
     );
 
-    // main 里同名 sessions 目录应已被移除
-    assert.ok(!existsSync(mainSessionDir), `main 里的 sessions/${wtName}/ 应在迁移后被移除`);
+    // main 里同名 runtime/sessions 目录应已被移除
+    assert.ok(!existsSync(mainSessionDir), `main 里的 runtime/sessions/${wtName}/ 应在迁移后被移除`);
 
     // 共享项重建为 symlink
-    assert.ok(lstatSync(join(apDst, 'decisions.md')).isSymbolicLink(), 'decisions.md 重建为 symlink');
+    assert.ok(lstatSync(join(apDst, 'knowledge', 'decisions.md')).isSymbolicLink(), 'knowledge/decisions.md 重建为 symlink');
   });
 
   it('worktree/.autopilot 是全量 symlink 但 main 里没有本 worktree 的 sessions → 直接重建（不报错）', () => {
@@ -182,14 +204,14 @@ describe('旧版迁移', () => {
     seedMainKnowledge(mainRepo, { 'decisions.md': 'D' });
     symlinkSync(join(mainRepo, '.autopilot'), join(worktree, '.autopilot'));
 
-    // 不创建 main/.autopilot/sessions/<wtName>/
+    // 不创建 main/.autopilot/runtime/sessions/<wtName>/
 
     ensureSelectiveAutopilotLayout(mainRepo, worktree);
 
     const apDst = join(worktree, '.autopilot');
     assert.ok(!lstatSync(apDst).isSymbolicLink(), '.autopilot 应是真实目录');
-    assert.ok(existsSync(join(apDst, 'sessions')), 'sessions/ 应被创建');
-    assert.ok(lstatSync(join(apDst, 'decisions.md')).isSymbolicLink(), 'decisions.md 重建为 symlink');
+    assert.ok(existsSync(join(apDst, 'runtime', 'sessions')), 'runtime/sessions/ 应被创建');
+    assert.ok(lstatSync(join(apDst, 'knowledge', 'decisions.md')).isSymbolicLink(), 'knowledge/decisions.md 重建为 symlink');
   });
 });
 
@@ -198,40 +220,41 @@ describe('旧版迁移', () => {
 //    保护策略：内容一致 → 静默替换；不一致 / 目录 → rename 到 conflict 备份
 // ===========================================================================
 describe('真实文件替换为 symlink（带冲突保护）', () => {
-  it('真实 decisions.md 内容与 main 一致 → 静默替换为 symlink，无备份产物', () => {
+  it('真实 knowledge/decisions.md 内容与 main 一致 → 静默替换为 symlink，无备份产物', () => {
     const { mainRepo, worktree } = scaffold('replace-equal');
     seedMainKnowledge(mainRepo, { 'decisions.md': 'same content\n' });
-    mkdirSync(join(worktree, '.autopilot'), { recursive: true });
-    writeFileSync(join(worktree, '.autopilot', 'decisions.md'), 'same content\n');
+    mkdirSync(join(worktree, '.autopilot', 'knowledge'), { recursive: true });
+    writeFileSync(join(worktree, '.autopilot', 'knowledge', 'decisions.md'), 'same content\n');
 
     ensureSelectiveAutopilotLayout(mainRepo, worktree);
 
-    const link = join(worktree, '.autopilot', 'decisions.md');
-    assert.ok(lstatSync(link).isSymbolicLink(), 'decisions.md 应是 symlink');
+    const link = join(worktree, '.autopilot', 'knowledge', 'decisions.md');
+    assert.ok(lstatSync(link).isSymbolicLink(), 'knowledge/decisions.md 应是 symlink');
     assert.equal(readFileSync(link, 'utf8'), 'same content\n');
 
     const backups = readdirSync(worktree).filter(f => f.startsWith('.autopilot-conflict-'));
     assert.equal(backups.length, 0, '内容一致不应留下 conflict 备份');
   });
 
-  it('真实 decisions.md 内容与 main 不同 → rename 到备份文件，symlink 仍建立', () => {
+  it('真实 knowledge/decisions.md 内容与 main 不同 → rename 到备份文件，symlink 仍建立', () => {
     const { mainRepo, worktree } = scaffold('replace-conflict');
     seedMainKnowledge(mainRepo, { 'decisions.md': 'main version\n' });
-    mkdirSync(join(worktree, '.autopilot'), { recursive: true });
-    writeFileSync(join(worktree, '.autopilot', 'decisions.md'), 'worktree branch version\n');
+    mkdirSync(join(worktree, '.autopilot', 'knowledge'), { recursive: true });
+    writeFileSync(join(worktree, '.autopilot', 'knowledge', 'decisions.md'), 'worktree branch version\n');
 
     ensureSelectiveAutopilotLayout(mainRepo, worktree);
 
-    const link = join(worktree, '.autopilot', 'decisions.md');
-    assert.ok(lstatSync(link).isSymbolicLink(), 'decisions.md 应是 symlink');
+    const link = join(worktree, '.autopilot', 'knowledge', 'decisions.md');
+    assert.ok(lstatSync(link).isSymbolicLink(), 'knowledge/decisions.md 应是 symlink');
     assert.equal(
       readFileSync(link, 'utf8'),
       'main version\n',
       '通过 symlink 读到 main 内容'
     );
 
+    // 备份命名含 path 替换：item.replace(/\//g, '-') → 'knowledge-decisions.md'
     const backups = readdirSync(worktree).filter(f =>
-      f.startsWith('.autopilot-conflict-decisions.md-')
+      f.startsWith('.autopilot-conflict-knowledge-decisions.md-')
     );
     assert.equal(backups.length, 1, '不一致内容必须备份到 .autopilot-conflict-* 文件');
     assert.equal(
@@ -241,21 +264,21 @@ describe('真实文件替换为 symlink（带冲突保护）', () => {
     );
   });
 
-  it('真实目录（如 requirements/）→ 一律 rename 到备份目录，symlink 建立', () => {
+  it('真实目录（如 runtime/requirements/）→ 一律 rename 到备份目录，symlink 建立', () => {
     const { mainRepo, worktree } = scaffold('replace-dir');
     seedMainKnowledge(mainRepo, { 'requirements': '__DIR__' });
-    writeFileSync(join(mainRepo, '.autopilot', 'requirements', 'shared.md'), 'shared\n');
-    mkdirSync(join(worktree, '.autopilot', 'requirements'), { recursive: true });
-    writeFileSync(join(worktree, '.autopilot', 'requirements', 'local-only.md'), 'local\n');
+    writeFileSync(join(mainRepo, '.autopilot', 'runtime', 'requirements', 'shared.md'), 'shared\n');
+    mkdirSync(join(worktree, '.autopilot', 'runtime', 'requirements'), { recursive: true });
+    writeFileSync(join(worktree, '.autopilot', 'runtime', 'requirements', 'local-only.md'), 'local\n');
 
     ensureSelectiveAutopilotLayout(mainRepo, worktree);
 
-    const link = join(worktree, '.autopilot', 'requirements');
-    assert.ok(lstatSync(link).isSymbolicLink(), 'requirements/ 应是 symlink');
+    const link = join(worktree, '.autopilot', 'runtime', 'requirements');
+    assert.ok(lstatSync(link).isSymbolicLink(), 'runtime/requirements/ 应是 symlink');
     assert.ok(existsSync(join(link, 'shared.md')), '通过 symlink 应能看到 main 的 shared.md');
 
     const backups = readdirSync(worktree).filter(f =>
-      f.startsWith('.autopilot-conflict-requirements-')
+      f.startsWith('.autopilot-conflict-runtime-requirements-')
     );
     assert.equal(backups.length, 1, '真实目录必须备份');
     assert.equal(
@@ -268,26 +291,26 @@ describe('真实文件替换为 symlink（带冲突保护）', () => {
   it('多次冲突不互相覆盖（timestamp 隔离）', async () => {
     const { mainRepo, worktree } = scaffold('replace-multi');
     seedMainKnowledge(mainRepo, { 'decisions.md': 'm1\n' });
-    mkdirSync(join(worktree, '.autopilot'), { recursive: true });
-    writeFileSync(join(worktree, '.autopilot', 'decisions.md'), 'wt-v1\n');
+    mkdirSync(join(worktree, '.autopilot', 'knowledge'), { recursive: true });
+    writeFileSync(join(worktree, '.autopilot', 'knowledge', 'decisions.md'), 'wt-v1\n');
 
     ensureSelectiveAutopilotLayout(mainRepo, worktree);
 
     // 第一次备份产生
     let backups = readdirSync(worktree).filter(f =>
-      f.startsWith('.autopilot-conflict-decisions.md-')
+      f.startsWith('.autopilot-conflict-knowledge-decisions.md-')
     );
     assert.equal(backups.length, 1);
 
     // 模拟第二次冲突：删 symlink、重写真实文件、等待 timestamp 变化、再跑
-    rmSync(join(worktree, '.autopilot', 'decisions.md'));
-    writeFileSync(join(worktree, '.autopilot', 'decisions.md'), 'wt-v2\n');
+    rmSync(join(worktree, '.autopilot', 'knowledge', 'decisions.md'));
+    writeFileSync(join(worktree, '.autopilot', 'knowledge', 'decisions.md'), 'wt-v2\n');
     await new Promise(r => setTimeout(r, 5));
 
     ensureSelectiveAutopilotLayout(mainRepo, worktree);
 
     backups = readdirSync(worktree).filter(f =>
-      f.startsWith('.autopilot-conflict-decisions.md-')
+      f.startsWith('.autopilot-conflict-knowledge-decisions.md-')
     );
     assert.equal(backups.length, 2, '第二次冲突应另存为新备份');
     const contents = backups.map(b => readFileSync(join(worktree, b), 'utf8')).sort();
@@ -307,30 +330,30 @@ describe('幂等性', () => {
     });
 
     ensureSelectiveAutopilotLayout(mainRepo, worktree);
-    const firstStat = lstatSync(join(worktree, '.autopilot', 'decisions.md'));
+    const firstStat = lstatSync(join(worktree, '.autopilot', 'knowledge', 'decisions.md'));
 
     // 第二次运行
     ensureSelectiveAutopilotLayout(mainRepo, worktree);
-    const secondStat = lstatSync(join(worktree, '.autopilot', 'decisions.md'));
+    const secondStat = lstatSync(join(worktree, '.autopilot', 'knowledge', 'decisions.md'));
 
     assert.ok(firstStat.isSymbolicLink());
     assert.ok(secondStat.isSymbolicLink());
   });
 
-  it('保留 sessions/ 中已有的 worktree-local 文件', () => {
+  it('保留 runtime/sessions/ 中已有的 worktree-local 文件', () => {
     const { mainRepo, worktree } = scaffold('preserve-sessions');
     seedMainKnowledge(mainRepo, { 'decisions.md': 'd' });
     ensureSelectiveAutopilotLayout(mainRepo, worktree);
 
-    // 在 worktree 的 sessions/ 写一个文件
-    const sessFile = join(worktree, '.autopilot', 'sessions', 'feature-a', 'active');
-    mkdirSync(join(worktree, '.autopilot', 'sessions', 'feature-a'), { recursive: true });
+    // 在 worktree 的 runtime/sessions/ 写一个文件
+    const sessFile = join(worktree, '.autopilot', 'runtime', 'sessions', 'feature-a', 'active.ptr');
+    mkdirSync(join(worktree, '.autopilot', 'runtime', 'sessions', 'feature-a'), { recursive: true });
     writeFileSync(sessFile, 'pointer\n');
 
     // 再次运行 repair
     ensureSelectiveAutopilotLayout(mainRepo, worktree);
 
-    assert.ok(existsSync(sessFile), 'sessions/feature-a/active 应被保留');
+    assert.ok(existsSync(sessFile), 'runtime/sessions/feature-a/active.ptr 应被保留');
     assert.equal(readFileSync(sessFile, 'utf8'), 'pointer\n');
   });
 });
@@ -344,30 +367,30 @@ describe('写入隔离验证', () => {
     seedMainKnowledge(mainRepo, { 'decisions.md': '' });
     ensureSelectiveAutopilotLayout(mainRepo, worktree);
 
-    writeFileSync(join(worktree, '.autopilot', 'decisions.md'), 'new from worktree\n');
+    writeFileSync(join(worktree, '.autopilot', 'knowledge', 'decisions.md'), 'new from worktree\n');
     assert.equal(
-      readFileSync(join(mainRepo, '.autopilot', 'decisions.md'), 'utf8'),
+      readFileSync(join(mainRepo, '.autopilot', 'knowledge', 'decisions.md'), 'utf8'),
       'new from worktree\n',
       '通过 worktree symlink 写入应落到 main'
     );
   });
 
-  it('在 worktree 的 sessions/ 写入 → 不影响 main', () => {
+  it('在 worktree 的 runtime/sessions/ 写入 → 不影响 main', () => {
     const { mainRepo, worktree } = scaffold('write-sessions');
     seedMainKnowledge(mainRepo, {});
     ensureSelectiveAutopilotLayout(mainRepo, worktree);
 
     const wtName = basename(worktree);
-    mkdirSync(join(worktree, '.autopilot', 'sessions', wtName), { recursive: true });
+    mkdirSync(join(worktree, '.autopilot', 'runtime', 'sessions', wtName), { recursive: true });
     writeFileSync(
-      join(worktree, '.autopilot', 'sessions', wtName, 'active'),
+      join(worktree, '.autopilot', 'runtime', 'sessions', wtName, 'active.ptr'),
       'pointer\n'
     );
 
-    // main 里 sessions/<wtName>/ 不应被创建
+    // main 里 runtime/sessions/<wtName>/ 不应被创建
     assert.ok(
-      !existsSync(join(mainRepo, '.autopilot', 'sessions', wtName)),
-      'sessions 写入应隔离在 worktree 内，不应在 main 出现'
+      !existsSync(join(mainRepo, '.autopilot', 'runtime', 'sessions', wtName)),
+      'runtime/sessions 写入应隔离在 worktree 内，不应在 main 出现'
     );
   });
 });
@@ -375,34 +398,43 @@ describe('写入隔离验证', () => {
 // ===========================================================================
 // 6. SHARED_AUTOPILOT_ITEMS 导出契约
 // ===========================================================================
-describe('SHARED_AUTOPILOT_ITEMS 导出契约', () => {
-  it('包含核心知识文件', () => {
-    assert.ok(SHARED_AUTOPILOT_ITEMS.includes('decisions.md'));
-    assert.ok(SHARED_AUTOPILOT_ITEMS.includes('patterns.md'));
-    assert.ok(SHARED_AUTOPILOT_ITEMS.includes('index.md'));
-    assert.ok(SHARED_AUTOPILOT_ITEMS.includes('domains'));
+describe('SHARED_AUTOPILOT_ITEMS 导出契约（v3.35+ 二级分层）', () => {
+  it('包含核心知识文件（knowledge/ 子路径）', () => {
+    assert.ok(SHARED_AUTOPILOT_ITEMS.includes('knowledge/decisions.md'));
+    assert.ok(SHARED_AUTOPILOT_ITEMS.includes('knowledge/patterns.md'));
+    assert.ok(SHARED_AUTOPILOT_ITEMS.includes('knowledge/index.md'));
+    assert.ok(SHARED_AUTOPILOT_ITEMS.includes('knowledge/domains'));
   });
 
-  it('包含项目级共享项 (但不含 project — 会触发 git tracked-path-through-symlink 错误)', () => {
-    assert.ok(SHARED_AUTOPILOT_ITEMS.includes('requirements'));
+  it('包含 runtime 共享项 (但不含 project — 会触发 git tracked-path-through-symlink 错误)', () => {
+    assert.ok(SHARED_AUTOPILOT_ITEMS.includes('runtime/requirements'));
+    assert.ok(SHARED_AUTOPILOT_ITEMS.includes('runtime/active.ptr'));
     assert.ok(
       !SHARED_AUTOPILOT_ITEMS.includes('project'),
       'project 不能在 SHARED 列表 — main 通常把它作为 tracked dir，强行 symlink 会让 git 命令失败'
     );
   });
 
-  it('不包含 sessions（sessions 是 worktree-local）', () => {
+  it('不包含 sessions/runtime/sessions（sessions 是 worktree-local）', () => {
     assert.ok(
       !SHARED_AUTOPILOT_ITEMS.includes('sessions'),
       'sessions 必须不在共享列表里——它是 worktree-local'
     );
+    assert.ok(
+      !SHARED_AUTOPILOT_ITEMS.includes('runtime/sessions'),
+      'runtime/sessions 必须不在共享列表里——它是 worktree-local'
+    );
   });
 
-  it('LEGACY_SHARED_AUTOPILOT_ITEMS 包含 project（用于旧版迁移）', () => {
+  it('LEGACY_SHARED_AUTOPILOT_ITEMS 包含 project + v3.34 旧路径（用于旧版迁移）', () => {
     assert.ok(
       LEGACY_SHARED_AUTOPILOT_ITEMS.includes('project'),
       'project 须在 LEGACY 列表中，让旧 worktree 升级时把 project symlink 转回真实目录'
     );
+    // v3.35 升级：v3.34 旧路径项也在 LEGACY 中以便清理残留 symlink
+    assert.ok(LEGACY_SHARED_AUTOPILOT_ITEMS.includes('decisions.md'));
+    assert.ok(LEGACY_SHARED_AUTOPILOT_ITEMS.includes('requirements'));
+    assert.ok(LEGACY_SHARED_AUTOPILOT_ITEMS.includes('active'));
   });
 });
 
@@ -440,8 +472,8 @@ describe('旧版迁移：LEGACY symlink → 真实目录', () => {
 
     // SHARED 列表中其他项仍正常 symlink
     assert.ok(
-      lstatSync(join(worktree, '.autopilot', 'decisions.md')).isSymbolicLink(),
-      'decisions.md 应正常建立 symlink'
+      lstatSync(join(worktree, '.autopilot', 'knowledge', 'decisions.md')).isSymbolicLink(),
+      'knowledge/decisions.md 应正常建立 symlink'
     );
   });
 });

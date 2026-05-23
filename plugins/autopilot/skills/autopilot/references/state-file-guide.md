@@ -2,7 +2,7 @@
 
 ## 状态文件字段说明
 
-状态文件（`.autopilot/active` 指针指向的 `.autopilot/requirements/<slug>/state.md`，worktree 中位于 `.autopilot/sessions/<name>/requirements/<slug>/state.md`）的 frontmatter 包含以下字段：
+状态文件（`.autopilot/runtime/active.ptr` 指针指向的 `.autopilot/runtime/requirements/<slug>/state.md`，worktree 中位于 `.autopilot/runtime/sessions/<name>/requirements/<slug>/state.md`）的 frontmatter 包含以下字段：
 
 **AI 可写字段**：
 - `phase`: 当前阶段（design → implement → qa → auto-fix → merge → done），AI 更新

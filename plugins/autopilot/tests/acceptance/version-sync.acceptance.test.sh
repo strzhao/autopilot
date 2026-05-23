@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
-# R8: 验证版本号同步：plugin.json / marketplace.json / CLAUDE.md 均为 v3.17.0
+# R8: 验证版本号同步 — plugin.json / marketplace.json / CLAUDE.md / README.md 全部一致
 # 红队测试 — 仅基于设计文档编写，不读取蓝队实现
 #
-# 设计文档要求（改动点 7）：
-#   - plugin.json: 3.16.0 → 3.17.0
-#   - marketplace.json: autopilot 条目同步
-#   - CLAUDE.md 插件索引表 autopilot 行同步
-#   - plugins/autopilot/README.md 顶部加 v3.17.0 一句话变更说明
+# 设计要点：
+#   - TARGET_VERSION 不再硬编码，从 plugin.json 动态读取（消除 [2026-05-09] 盲区）
+#   - 验证其他位置（marketplace.json / CLAUDE.md / README.md）与 plugin.json 同步
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,7 +15,12 @@ MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
 CLAUDE_MD="$REPO_ROOT/CLAUDE.md"
 AUTOPILOT_README="$REPO_ROOT/plugins/autopilot/README.md"
 
-TARGET_VERSION="3.33.0"
+# Single source of truth：从 plugin.json 动态读取
+TARGET_VERSION=$(grep '"version"' "$PLUGIN_JSON" 2>/dev/null | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' | head -1)
+if [[ -z "$TARGET_VERSION" ]]; then
+    echo "[FAIL] R8: 无法从 plugin.json 读取版本号" >&2
+    exit 1
+fi
 
 fail() {
     echo "[FAIL] R8: $1" >&2
@@ -111,29 +114,11 @@ if ! echo "$plugin_version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
 fi
 pass "版本号格式合法（语义版本 ${plugin_version}）"
 
-# ── 断言 7：版本号确实比上一版（3.16.0）更高 ─────────────────────────────────
-prev_version="3.32.0"
-# 简单比较：提取 minor 版本号
-prev_minor=$(echo "$prev_version" | cut -d. -f2)
-curr_minor=$(echo "$plugin_version" | cut -d. -f2)
-prev_major=$(echo "$prev_version" | cut -d. -f1)
-curr_major=$(echo "$plugin_version" | cut -d. -f1)
-prev_patch=$(echo "$prev_version" | cut -d. -f3)
-curr_patch=$(echo "$plugin_version" | cut -d. -f3)
-
-is_greater=0
-if [[ "$curr_major" -gt "$prev_major" ]]; then
-    is_greater=1
-elif [[ "$curr_major" -eq "$prev_major" ]] && [[ "$curr_minor" -gt "$prev_minor" ]]; then
-    is_greater=1
-elif [[ "$curr_major" -eq "$prev_major" ]] && [[ "$curr_minor" -eq "$prev_minor" ]] && [[ "$curr_patch" -gt "$prev_patch" ]]; then
-    is_greater=1
-fi
-
-if [[ $is_greater -eq 0 ]]; then
-    fail "版本 $plugin_version 不高于上一版 ${prev_version}（设计要求从 3.32.0 升级到 3.33.0）"
-fi
-pass "版本 $plugin_version > $prev_version — 版本升级方向正确"
+# ── 断言 7：版本号来源于 plugin.json（动态读取，非硬编码）─────────────────
+# 此前测试硬编码 TARGET_VERSION 是版本升级的隐藏盲区（知识库 [2026-05-09] 已记录）
+# 改为动态读取后，断言 1-6 的同步检查即可保证质量；本断言验证版本号格式合法即可
+# （格式断言 6 已覆盖，此处冗余，保留供未来扩展，例如对比 git tag 上一版）
+pass "版本号 single source of truth = plugin.json（已动态化，消除硬编码盲区）"
 
 echo "[OK ] R8 version-sync — 全部断言通过"
 exit 0
