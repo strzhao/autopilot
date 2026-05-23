@@ -78,6 +78,7 @@ S-INV-4 — 不动章节零改动
 **Scenario**: autopilot v3.22.1 → v3.23.0 升级时，蓝队按 CLAUDE.md 版本管理规则同步了 plugin.json + marketplace.json + CLAUDE.md 三处版本号，但 `plugins/autopilot/tests/acceptance/{version-sync,brainstorm-default,plan-review-html}.acceptance.test.sh` 中的 `TARGET_VERSION="3.22.0"` / `"3.22.1"` 硬编码字符串没被同步规则覆盖，导致 Tier 1 bash acceptance 3 个测试 fail（断言形如 `plugin.json 版本 '3.23.0' != 期望 '3.22.1'`）。
 **Lesson**: CLAUDE.md 列出的版本同步范围只是"运行时版本号"层（plugin.json/marketplace.json/CLAUDE.md），但 acceptance 测试文件本身也会出现版本号字符串作为"上一版本契约"硬断言。autopilot-commit skill 的版本同步 grep 范围必须扩展到 `find . -path '*/acceptance/*' -name '*.test.sh'` 中的 `TARGET_VERSION=` 行，以及类似 `expected: '3.X.Y'` 模式的 mjs 测试。同样适用于 README.md 顶部"上一版本变更说明"段——v3.17.0 时建立的契约要求每升一版加一句话变更说明，蓝队 T5 同样漏过，被 version-sync.acceptance.test.sh 的 R8 断言抓住。
 **Evidence**: 本次 wave 1 selective auto-fix 修了 4 处：3 个 bash 测试 TARGET_VERSION + 1 处 README 顶部变更说明。修完 run-all.sh 7/10 → 10/10。下次 autopilot-commit 优化时把 acceptance test + README 一并加入 grep。
+**Update [2026-05-23]**：根治方案落地——把 `TARGET_VERSION="X.Y.Z"` 改为 `TARGET_VERSION=$(grep '"version"' plugin.json | sed ...)`，从 plugin.json 动态读取作为 single source of truth。此后 acceptance test 自动跟随 plugin.json 升级，**永久消除该盲区**（commit `651ba81`，v3.35.0）。优于"扩大 grep 范围"治标方案，因为治标方案要求每个新增 hardcoded 位置都被记得纳入 grep，仍依赖人工自律；动态化是结构性根治。
 
 ### [2026-05-09] 主对话需等待外部 UI 操作时，前台同步 Bash + 长 timeout 优于 run_in_background
 <!-- tags: autopilot, claude-code, bash-tool, run-in-background, ux, html-review, blocking-call -->

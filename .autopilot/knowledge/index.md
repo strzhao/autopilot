@@ -1,6 +1,7 @@
 # Knowledge Index
 
 ## Decisions
+- [2026-05-23] 工具产物的 git 管理边界用"目录拓扑即语义"而非"SKILL.md 规则提醒" | tags: autopilot, file-management, gitignore, topology-as-semantic, knowledge-runtime-split, layered-defense, commit-amnesia, doctor-dim, single-source-of-truth | → decisions.md
 - [2026-05-23] 改 SKILL.md 前必须用 Skill Best Practice 5 条原则筛改进 | tags: autopilot, skill, best-practice, anti-pseudo-optimization, refactor-discipline, terminology-network, reference-chain, false-improvement | → decisions.md
 - [2026-05-19] plan-review HTML 演进走"扩展点"路径而非改 SKILL.md | tags: autopilot, plan-review, skill-fragility, extension-point, decoupling, html-template, sso-isolation, launch-script | → decisions.md
 - [2026-05-17] brainstorm 抽离为独立 skill：解决"指令优先级"而非"主 SKILL 行数" | tags: autopilot, brainstorm, skill-extraction, indication-priority, references-postpone, hard-gate, superpowers, design-prediction | → decisions.md
