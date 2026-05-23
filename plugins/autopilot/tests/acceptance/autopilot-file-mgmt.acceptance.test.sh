@@ -139,7 +139,7 @@ else
     TEST_ROOT=$(mktemp -d 2>/dev/null || mktemp -d -t 'apc6')
     if [[ -n "$TEST_ROOT" && -d "$TEST_ROOT" ]]; then
         (
-            cd "$TEST_ROOT"
+            cd "$TEST_ROOT" || exit 1
             git init -q 2>/dev/null || true
             # 在子 shell 中 source lib.sh 并调用 get_active_file
             # 用 || true 防止 lib.sh 内部 set -e 失败传播
