@@ -269,3 +269,19 @@ S-INV-4 — 不动章节零改动
 **Scenario**: QA Tier 1.5 要验证纯静态 HTML 模板的运行时行为（DOM 结构、JS 函数副作用、CSS computed style）。模板配套的服务端启动脚本是阻塞的（等用户决策）—— 不能直接复用做自动化验证。
 **Lesson**: 对于"渲染层 = 静态 HTML 占位符替换"型资产，Tier 1.5 不必启动配套 server，复用渲染逻辑本地写出 HTML 后用 Chrome DevTools MCP `new_page` + `evaluate_script` 直接断言运行时 DOM。流程：(1) 准备 mock 输入数据；(2) 抽取启动脚本中的渲染段落（不跑等待逻辑）生成 `/tmp/<task>.html`；(3) `new_page` 打开 file:// URL；(4) `evaluate_script` 跑断言函数（带 setTimeout 等异步渲染完成）；(5) `close_page` 收尾。仅在涉及 WS / API 真实交互时才启动 server。这条比"用 jsdom 跑"更接近真实浏览器（CSS / IntersectionObserver 等行为完整），比"启动阻塞 server" 更轻量。
 **Evidence**: 本次 plan-review TOC 任务 Tier 1.5：mock state.md（5 H2 + 9 H3 + 3 重复 "### 步骤"）→ python3 复用 launch-plan-review.sh line 52-77 渲染逻辑写出 `/tmp/autopilot-toc-test/plan-review.html` (93KB) → Chrome DevTools `new_page file:///tmp/.../plan-review.html` → 单次 `evaluate_script` 断言 7 项（toc_items_count=14、all_ids_unique=true、dangling_hrefs=[]、scene6_data_block_id.block_ids_count=26、scene6_choice_buttons.choices=["approve","revise","abort"]、scene5_sticky.position="sticky"）全部命中。无需启动 server.cjs，无需触发阻塞的 wait-decision.sh。
+
+### [2026-05-24] 精简清单必须 wc -l + grep 复核，凭直觉估算行数是 case 反模式元复刻
+<!-- tags: autopilot, refactor, simplification, wc-verify, grep-verify, anti-rationalization, plan-reviewer, blocker, ai-assumption, meta-reproduction, false-precision -->
+**Scenario**: autopilot 任务"同步精简旧 prompt 规则"时，初版 brainstorm.md / state.md 列出 S1-S6 共 6 项精简候选，对每项给出"当前 N 行 → 目标 M 行"数字预估，并算出"净 -108 行"。plan-reviewer R1 用 grep 复核后抓到 BLOCKER-2：**S2-S5 全部把"文件总行数"误当作"内嵌可删行数"**。如 S2 "red-team-prompt.md Mental Mutation 5 问 66 行内嵌" → grep "Mental Mutation 5 问" 命中 0；S3 "plan-reviewer-prompt.md 维度 8 OST 详细模板 55 行" → 维度 8 line 33 单行无 OST 模板；S4 "qa-reviewer Section C tautological 169 行" → tautological 仅 8 行客观 grep 模式不可删；S5 "anti-rationalization Tier 1.5 跳过 50 行" → 整文件 50 行结构紧凑无心理戏段落。砍掉 S2-S5 后真实净 delta 从 -108 修正为 -50。
+**Lesson**: 精简 reference 文件前必须 `wc -l <file>` + 关键术语 `grep -c <pattern> <file>` 双重确认实际可删空间，**禁止凭文件总行数估算可删内容**。这是本 case（数字花园 count 题型）"AI 不验证假设就传播"反模式的 SKILL 演进域元复刻。设计文档自身陷入"防御 AI 自检盲区的元任务居然复刻同款盲区"——讽刺地反向印证客观工具量化门禁必要性。
+**Lint pattern**:
+- 设计文档/brainstorm.md 出现"S{N}: 文件名（X 行内嵌） → -Y 行"格式 → AI 编排器必须先 `wc -l 文件名` + `grep -cE "目标术语" 文件名` 验证 X 和"内嵌"语义
+- plan-reviewer 维度新增："精简项的'当前行数'是否做 wc 验证而非估算？目标行数对应的精简对象 grep 命中是否 ≥ 估算值？"
+
+### [2026-05-24] 单个 commit 内多区域同步是 BLOCKER 元复刻陷阱（修表层漏整体）
+<!-- tags: autopilot, plan-reviewer, blocker, partial-fix, fragment-sync, design-document, architecture-decision, table-vs-text, false-completion, multi-location-update -->
+**Scenario**: plan-reviewer R1 抓到 BLOCKER-2（S2-S5 伪精简）后，我修改了设计文档「精简清单」表格（划掉 S2-S5、净 delta -108 → -50）但**忘了同步**架构决策段 A2 段的描述（仍写"净 -108 行"+ "S1-S6 共 6 项"）。R2 立刻抓到 BLOCKER-3，与 R1 BLOCKER-2 同款"修了表层漏整体"反模式。
+**Lesson**: 单份设计文档中同一事实（数字 / 项数 / 文件清单）出现在多处时（架构决策段 + 详细表格 + 实现计划 + 验证方案），任何一处修改必须**主动 grep 同事实在文档其他位置出现 → 全部同步**。不允许"修了表格就算完成"。
+**Lint pattern**: 修改设计文档某处"+N 行 / -N 行 / X 项"等数字声明时，AI 编排器立刻 `grep -nE "数字" 设计文档` 找出所有出现位置 → 逐处确认是否需要同步更新。plan-reviewer 维度新增："设计文档中出现的数字 / 计数 / 项数是否所有位置一致？grep 验证。"
+**Evidence**: 本任务 design 阶段 R1 + R2 两轮均抓到此模式，且都是修复型 BLOCKER（不是初版遗漏）。
+

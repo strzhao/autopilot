@@ -199,3 +199,11 @@
 **Trade-offs**: 单文件容易膨胀（本次 1321→1652 行 +334），可读性靠 CSS 分段注释维护；但相比触碰多个 skill 资产带来的脆性风险（SKILL.md 改一行重写整段、launch-script 协议变更需同步红队全部）这种集中度是值得的。
 **Lesson**: 设计 skill 时，把"易变的 UI / 表达层"通过"自治脚本入口"与 skill 主流程隔离，是降低 skill 脆性的有效架构手段。需求落到 UI 层时，skill 改动半径应该是 0；只在 UI 调用协议变化（脚本签名、stdout 格式）时才触及 skill。判断方式：对照 SKILL.md 中调用入口的 Bash 命令，如果新需求不改变命令的输入/输出契约，那么 skill 改动量应当为 0。
 **Evidence**: commit `9b936f6`，`git diff --name-only HEAD~1` 仅含 `plan-review-template.html` + 新增红队测试 + 版本同步文件 + .autopilot 流程产物。SKILL.md / launch-plan-review.sh / helper.js / server.cjs / frame-template.html / prefs.cjs / marked.min.js 均 0 行改动。验收场景 9 红队 31 个 grep 断言全 PASS。
+
+### [2026-05-24] AI 评审堆叠的边际效益递减 → 引入客观工具量化门禁
+<!-- tags: autopilot, qa, tier-5, mutation-testing, coverage, stryker, c8, istanbul, ai-self-review, paradigm-shift, meta-fse-2025, tool-driven-gate, dogfooding -->
+**Scenario**: autopilot 经过 v3.16 Mutation-Survival / v3.17 ⚠️ 复盘升级 / v3.20 anti-rationalization / v3.22 contract-checker / v3.25 plan-reviewer 维度 8 / v3.34 不变量护栏 共 6+ 轮"加 prompt 规则约束 AI 自检"的迭代。知识库已积累 7+ 条 Tier 1.5/红队失败模式教训，但 little-ant 数字花园 case 仍展示典型反模式：autopilot 14h 自检全 PASS（红队 121 测试 + Tier 1.5 8/8 + qa-reviewer + contract-checker），用户 5 分钟手动验收暴露 critical bug（count 题型 cells.length 旧不变量在新机制下崩塌，红队 121 测试全正向断言无反例）。
+**Decision**: 范式根本性转向 — **从"prompt 规则约束 AI 自检" → "客观工具量化数字门禁"**。新增 QA Tier 5（Stryker mutation score + Istanbul/c8 coverage），阈值 mutation kill ≥60% / coverage line ≥80% / branch ≥70%。失败 → ❌ → auto-fix（不可 ⚠️ 复盘绕过）；无工具 → N/A + ⚠️ 不阻塞。**根因**：红队/qa-reviewer/Tier 1.5 是同一类 AI 智能体的不同分身，认知盲区同源 — AI 自检循环存在结构性盲区。Meta FSE 2025 论文核心结论 "targeting mutation 比 targeting coverage 有效（32% vs 5.3%）"+ "LLM 生成测试 50% 无法 kill 任何 mutation" 是直接证据。**关键性质**：客观工具吐数字 → AI 无法用"我觉得够了"合理化绕过。
+**Choice**: 不选"再加 prompt 规则"（已被证伪 6+ 轮）；不选"加新 sub-agent 评 AI"（仍是 AI 评 AI）；不选"强制人工 gate"（与 autopilot 自动驾驶定位冲突）；选客观工具量化 — token 增量 ~0、阈值数字不可合理化、业界主流（Meta/Google/字节）。配套精简：test-mutation-survival.md 201→60 行降级为"工具不可用时降级清单"，避免规则单边膨胀。**夯实证据**：本任务 design 阶段两轮 plan-review 反复抓到我自己犯同款"AI 不验证就传播"反模式（R1 S2-S5 文件总行数误读、R2 A2 段未同步），元印证 Tier 5 设计正确性。
+**Reversibility**: 单 commit (8434cb7) 13 文件全部独立可 revert，acceptance test 44 断言锁死契约。
+
