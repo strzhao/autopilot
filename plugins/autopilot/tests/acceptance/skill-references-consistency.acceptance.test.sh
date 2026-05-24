@@ -67,12 +67,13 @@ if [[ "$old_quality_in_qa" -gt 0 ]]; then
 fi
 pass "qa 阶段段落不再引用旧的 design-reviewer / code-quality-reviewer prompt"
 
-# 断言 4：SKILL.md 总行数 < 600
+# 断言 4：SKILL.md 总行数 < 615
+# v3.36 Tier 5 量化指标引入，预留 ~10 行空间
 total_lines=$(wc -l < "$SKILL_FILE" | tr -d ' ')
-if [[ "$total_lines" -ge 600 ]]; then
-    fail "SKILL.md 行数 $total_lines >= 600，防合理化指南未有效抽离（应从 699 减少到 < 600）"
+if [[ "$total_lines" -ge 615 ]]; then
+    fail "SKILL.md 行数 $total_lines >= 615，防合理化指南未有效抽离（v3.36 阈值 615，预留 Tier 5 ~10 行空间）"
 fi
-pass "SKILL.md 行数 $total_lines < 600"
+pass "SKILL.md 行数 $total_lines < 615"
 
 # 断言 5：anti-rationalization.md 存在且包含三阶段标识
 [[ -f "$ANTI_FILE" ]] || fail "anti-rationalization.md 不存在: $ANTI_FILE"

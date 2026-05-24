@@ -1,5 +1,7 @@
 # autopilot — AI 自动驾驶工程套件
 
+> **v3.36.0**：QA 阶段新增 **Tier 5 量化指标门禁**（Wave 1 内并行）— Stryker mutation score ≥ 60% + Istanbul/c8 coverage line ≥ 80% / branch ≥ 70%。工具可用时**强制**，任一未达 → ❌ → auto-fix（**不可 ⚠️ 复盘绕过**，与 Tier 3.5 不阻塞模式区分）；两子项均无工具 → N/A + ⚠️ 不阻塞 + doctor 推荐安装。设计依据：Meta FSE 2025（mutation-targeted 32% vs coverage-targeted 5.3%；约 50% LLM 测试无法 kill 任何 mutation）。同步精简 `references/test-mutation-survival.md` 从 201 → 60 行为"工具不可用时降级清单"，保留 5 类核心 mutator + Mutation-Survival 自检铁律兜底。CI 阈值 SKILL.md 行数从 < 600 上调到 < 615 预留空间。新增 `references/quantitative-metrics.md`（含 `tier5-report.json` schema 完整定义 + 双向语义对偶 + 降级矩阵 4 状态）；`autopilot-doctor` Dim 1 扩展 L4 量化工具检测 + `detect_quantitative_tools()` 函数。
+
 > **v3.35.0**：`.autopilot/` 目录二级分层 — `knowledge/`（git 入库，跨任务持久知识）+ `runtime/`（gitignored，单次运行产物）。三层防御解决「AI 在 commit 时遗忘 autopilot 文件」痛点：(1) `.gitignore` 单条规则 `.autopilot/runtime/` 拦截所有运行时产物；(2) `autopilot-commit` 新增 5.c 子节显式检查知识库变更；(3) `autopilot-doctor` Dim 12 新增子项 6「文件分类正确性」长期巡检。`setup.sh` 内置幂等迁移逻辑，老用户首次升级自动迁移旧布局；`worktree.mjs` 新增 `cleanupStaleLinks()` helper 清理 v3.34 残留 symlink。版本号 acceptance test 同步动态化（消灭 [2026-05-09] 已知盲区）。
 
 > **v3.33.0**：brainstorm 抽离为独立 skill（autopilot-brainstorm），主 SKILL 通过 `Skill: "autopilot-brainstorm"` 显式委托；删除 references/brainstorm-guide.md，visual-companion-guide.md 随迁至新 skill；新 skill 借鉴 superpowers brainstorming 的 HARD-GATE / Anti-Pattern / Checklist 强语言风格，解决 brainstorm 在 references 后置位置被 AI 跳过的痛点。主 SKILL 实际净减 2 行（644→642，原设计预估 ~64 行偏乐观——brainstorm-guide.md 89 行内容从未内嵌主 SKILL，只是 4 行引用链接被删除）。

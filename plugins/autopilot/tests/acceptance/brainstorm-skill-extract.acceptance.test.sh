@@ -38,7 +38,7 @@ MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
 CLAUDE_MD="$REPO_ROOT/CLAUDE.md"
 AUTOPILOT_README="$REPO_ROOT/plugins/autopilot/README.md"
 
-TARGET_VERSION="3.33.0"
+TARGET_VERSION="3.36.0"
 
 # ── 辅助函数 ─────────────────────────────────────────────────────────────────
 pass() { echo "[PASS] R11: $1"; }

@@ -71,8 +71,24 @@ echo "--- L3: E2E 测试 ---"; \
 cat package.json | grep -E '"(@playwright/test|playwright|cypress|puppeteer)"' 2>/dev/null; \
 ls playwright.config* cypress.config* 2>/dev/null; \
 find e2e tests/e2e -name "*.spec.*" -o -name "*.e2e.*" 2>/dev/null | head -10; \
-cat package.json | grep -E '"test:e2e"' 2>/dev/null
+cat package.json | grep -E '"test:e2e"' 2>/dev/null; \
+echo "--- L4: 量化指标工具（Tier 5 门禁支撑） ---"; \
+cat package.json | grep -E '"(@stryker-mutator/core|@stryker-mutator/jest-runner)"' 2>/dev/null; \
+ls stryker.conf.js stryker.conf.json stryker.conf.cjs stryker.conf.mjs 2>/dev/null; \
+cat package.json | grep -E '"(c8|nyc|istanbul)"' 2>/dev/null; \
+ls .c8rc* .nycrc* 2>/dev/null
 ```
+
+**`detect_quantitative_tools()` 函数定义**（业界对齐 `detect_*` 命名）：
+
+- **输入**：项目根目录（package.json + 配置文件）
+- **检测项**：4 类工具（stryker / c8 / nyc / jest_coverage）
+  - `stryker`: package.json 含 `@stryker-mutator/core` 依赖 **或** 存在 `stryker.conf.{js,json,cjs,mjs}`
+  - `c8`: package.json 含 `c8` 依赖 **或** 存在 `.c8rc*`
+  - `nyc`: package.json 含 `nyc` 依赖 **或** 存在 `.nycrc*`
+  - `jest_coverage`: package.json 含 `jest` 依赖 **且**（test script 含 `--coverage` 或 jest.config 含 `collectCoverage`）
+- **输出**：JSON `{stryker: bool, c8: bool, nyc: bool, jest_coverage: bool}`
+- **下游消费**：Dim 1 评分 + doctor-report.md "工具安装建议"段（缺失时给字面命令 `npm install --save-dev @stryker-mutator/core @stryker-mutator/jest-runner c8`）
 
 **L2 路由检测策略**：优先用 `find app/api` 检测 Next.js App Router 路由数，如果为 0 则用 `grep router/app.get` 检测 Express/Fastify 路由数。两者都为 0 时判定"项目无 API 路由，L2 不适用"，不因此降分。
 
