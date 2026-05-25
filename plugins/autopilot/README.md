@@ -1,5 +1,7 @@
 # autopilot — AI 自动驾驶工程套件
 
+> **v3.36.1**：修复 project 模式 auto-chain 失效回归（cdad541 引入约 1 个月）。根因：SKILL.md merge 章节在 "恢复完整内联" 时漏掉 Auto-Chain 评估步骤，导致 AI 永不设置 `next_task`，stop-hook 静默释放、子任务完成后无法自动链接下一个任务。修复：SKILL.md merge §2 补回 Auto-Chain 评估段（4 行）+ §5 清理交叉引用；`skill-references-consistency.acceptance.test.sh` 新增双重 CI 守护（merge 章节必须含 `next_task` **且**含 `#### N. Auto-Chain` 标题段）。dry-run 双向验证：删段 → 测试 FAIL exit 1，恢复 → PASS exit 0。
+
 > **v3.36.0**：QA 阶段新增 **Tier 5 量化指标门禁**（Wave 1 内并行）— Stryker mutation score ≥ 60% + Istanbul/c8 coverage line ≥ 80% / branch ≥ 70%。工具可用时**强制**，任一未达 → ❌ → auto-fix（**不可 ⚠️ 复盘绕过**，与 Tier 3.5 不阻塞模式区分）；两子项均无工具 → N/A + ⚠️ 不阻塞 + doctor 推荐安装。设计依据：Meta FSE 2025（mutation-targeted 32% vs coverage-targeted 5.3%；约 50% LLM 测试无法 kill 任何 mutation）。同步精简 `references/test-mutation-survival.md` 从 201 → 60 行为"工具不可用时降级清单"，保留 5 类核心 mutator + Mutation-Survival 自检铁律兜底。CI 阈值 SKILL.md 行数从 < 600 上调到 < 615 预留空间。新增 `references/quantitative-metrics.md`（含 `tier5-report.json` schema 完整定义 + 双向语义对偶 + 降级矩阵 4 状态）；`autopilot-doctor` Dim 1 扩展 L4 量化工具检测 + `detect_quantitative_tools()` 函数。
 
 > **v3.35.0**：`.autopilot/` 目录二级分层 — `knowledge/`（git 入库，跨任务持久知识）+ `runtime/`（gitignored，单次运行产物）。三层防御解决「AI 在 commit 时遗忘 autopilot 文件」痛点：(1) `.gitignore` 单条规则 `.autopilot/runtime/` 拦截所有运行时产物；(2) `autopilot-commit` 新增 5.c 子节显式检查知识库变更；(3) `autopilot-doctor` Dim 12 新增子项 6「文件分类正确性」长期巡检。`setup.sh` 内置幂等迁移逻辑，老用户首次升级自动迁移旧布局；`worktree.mjs` 新增 `cleanupStaleLinks()` helper 清理 v3.34 残留 symlink。版本号 acceptance test 同步动态化（消灭 [2026-05-09] 已知盲区）。

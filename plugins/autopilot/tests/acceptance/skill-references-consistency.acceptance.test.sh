@@ -97,5 +97,29 @@ if [[ $has_autofix -eq 0 ]]; then
 fi
 pass "anti-rationalization.md 包含三阶段（implement / qa / auto-fix）"
 
+# 断言 6：SKILL.md merge 阶段段落必须包含 next_task（防 Auto-Chain 步骤回归）
+# 回归历史：cdad541 内联还原时漏掉 Auto-Chain 步骤，导致 AI 永不设置 next_task，
+# 子任务完成后 stop-hook 静默释放，project 模式 auto next 失效约 1 个月。
+MERGE_SECTION=$(awk '
+    /^## Phase: *merge/ { in_merge=1; print; next }
+    in_merge && /^## / && !/^## Phase: *merge/ { in_merge=0 }
+    in_merge { print }
+' "$SKILL_FILE")
+
+if [[ -z "$MERGE_SECTION" ]]; then
+    fail "无法从 SKILL.md 定位 merge 阶段段落（找不到 '## Phase: merge'）"
+fi
+
+next_task_in_merge=$(echo "$MERGE_SECTION" | grep -c "next_task" || true)
+if [[ "$next_task_in_merge" -lt 1 ]]; then
+    fail "SKILL.md merge 阶段段落必须提及 next_task（Auto-Chain 步骤），否则 project 模式自动链接失效"
+fi
+# 同时要求显式的 Auto-Chain 步骤标题（否则可能只是清理段附带提到 next_task，仍漏 Auto-Chain 指令）
+auto_chain_heading=$(echo "$MERGE_SECTION" | grep -cE "^#### [0-9.]+ Auto-Chain" || true)
+if [[ "$auto_chain_heading" -lt 1 ]]; then
+    fail "SKILL.md merge 阶段段落必须有 '#### N. Auto-Chain ...' 标题段，单提 next_task 不够（防 cdad541 类回归）"
+fi
+pass "SKILL.md merge 阶段段落包含 next_task ($next_task_in_merge 次) + Auto-Chain 段标题 ($auto_chain_heading 个)"
+
 echo "[OK ] R3 skill-references-consistency — 全部断言通过"
 exit 0
