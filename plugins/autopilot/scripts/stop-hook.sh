@@ -488,6 +488,22 @@ if [[ "$PHASE" == "done" ]]; then
     fi
 fi
 
+# ── 5.5 Auto-approve 子任务在 QA review-accept gate 自动推进 merge ──
+# 解决：project 模式 auto-chain 子任务 QA 通过后卡在 gate=review-accept 等用户审批，
+# 违背 auto-chain 自动推进初衷。三条件 AND：phase=qa（排除 auto-fix max_retries / implement
+# 蓝队失败兜底场景，那两类 phase 不是 qa）+ gate=review-accept + auto_approve=true（仅
+# stop-hook 的 create_brief_state_file / create_project_qa_state_file 会写 true，
+# 单任务模式默认 false，是 auto-chain 流的充分指标）。
+AUTO_APPROVE=$(get_field "auto_approve" || true)
+if [[ "$GATE" == "review-accept" ]] && [[ "$PHASE" == "qa" ]] && \
+   [[ "$AUTO_APPROVE" == "true" ]]; then
+    set_field "gate" '""'
+    set_field "phase" '"merge"'
+    GATE=""
+    PHASE="merge"
+    echo "🔗 auto-approve: review-accept → merge (auto-chain subtask)" >&2
+fi
+
 # ── 6. 审批门检查 ──
 
 if [[ -n "$GATE" ]]; then

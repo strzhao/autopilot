@@ -30,7 +30,9 @@ PLUGIN_JSON="$REPO_ROOT/plugins/autopilot/.claude-plugin/plugin.json"
 MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
 CLAUDE_MD="$REPO_ROOT/CLAUDE.md"
 
-TARGET_VERSION="3.36.0"
+# 动态读取 plugin.json 作为版本同步基准（避免硬编码盲区，参见 [2026-05-09] knowledge）
+TARGET_VERSION=$(grep -oE '"version"[[:space:]]*:[[:space:]]*"[^"]+"' "$PLUGIN_JSON" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+[[ -n "$TARGET_VERSION" ]] || { echo "[FAIL] R9: 无法从 plugin.json 读取版本号" >&2; exit 1; }
 
 # ── 辅助函数 ─────────────────────────────────────────────────────────────────
 pass() { echo "[PASS] R9: $1"; }

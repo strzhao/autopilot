@@ -289,32 +289,38 @@ assert_grep_ge "T5d.3" "复盘升级" "$SKILL_FILE" 1 \
     "OC-6: SKILL.md 含 '复盘升级' 兜底（Tier 1.5 步骤 3）"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# T5e: 版本同步 v3.36.0（CLAUDE.md / plugin.json / marketplace.json / README.md）
+# T5e: 版本同步（CLAUDE.md / plugin.json / marketplace.json / README.md）
+# v3.36.2 改为动态读 plugin.json 作为基准，断言其他 3 处与之一致
+# （避免硬编码盲区，参见 [2026-05-09] knowledge）
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
-echo "--- T5e: 版本同步 v3.36.0 ---"
+PLUGIN_VERSION=$(grep -oE '"version"[[:space:]]*:[[:space:]]*"[^"]+"' "$PLUGIN_JSON" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+echo "--- T5e: 版本同步 v${PLUGIN_VERSION:-UNKNOWN} ---"
 
-# T5e.1 plugin.json
-assert_grep_ge "T5e.1" '"version": "3.36.0"' "$PLUGIN_JSON" 1 \
-    "OC-T5e: plugin.json 含 \"version\": \"3.36.0\""
-
-# T5e.2 marketplace.json 中 autopilot 条目版本 3.36.0
-#   策略：autopilot 命中 + 3.36.0 同文件命中（强约束：3.36.0 字面存在）
-assert_grepE_ge "T5e.2" '"version"[[:space:]]*:[[:space:]]*"3\.36\.0"' "$MARKETPLACE_JSON" 1 \
-    "OC-T5e: marketplace.json 含 version 3.36.0 字面"
-assert_grep_ge "T5e.2b" "autopilot" "$MARKETPLACE_JSON" 1 \
-    "OC-T5e: marketplace.json 含 autopilot 条目"
-
-# T5e.3 CLAUDE.md 插件索引行含 v3.36.0
-assert_grep_ge "T5e.3" "v3.36.0" "$CLAUDE_MD" 1 \
-    "OC-T5e: CLAUDE.md 插件索引含 v3.36.0"
-
-# T5e.4 autopilot README.md 含 v3.36.0
-if [[ -f "$AUTOPILOT_README" ]]; then
-    assert_grep_ge "T5e.4" "v3.36.0\|3.36.0" "$AUTOPILOT_README" 1 \
-        "OC-T5e: autopilot README.md 含 v3.36.0 / 3.36.0"
+if [[ -z "$PLUGIN_VERSION" ]]; then
+    _log_fail "T5e.0" "无法从 plugin.json 读取版本号"
 else
-    _log_fail "T5e.4" "autopilot README.md 不存在: $AUTOPILOT_README"
+    # T5e.1 plugin.json 自身（恒成立，作为基准锚点）
+    assert_grep_ge "T5e.1" "\"version\": \"$PLUGIN_VERSION\"" "$PLUGIN_JSON" 1 \
+        "OC-T5e: plugin.json 含 \"version\": \"$PLUGIN_VERSION\""
+
+    # T5e.2 marketplace.json 与 plugin.json 版本一致
+    assert_grepE_ge "T5e.2" "\"version\"[[:space:]]*:[[:space:]]*\"${PLUGIN_VERSION//./\\.}\"" "$MARKETPLACE_JSON" 1 \
+        "OC-T5e: marketplace.json 版本与 plugin.json 一致 ($PLUGIN_VERSION)"
+    assert_grep_ge "T5e.2b" "autopilot" "$MARKETPLACE_JSON" 1 \
+        "OC-T5e: marketplace.json 含 autopilot 条目"
+
+    # T5e.3 CLAUDE.md 插件索引行含 v$PLUGIN_VERSION
+    assert_grep_ge "T5e.3" "v$PLUGIN_VERSION" "$CLAUDE_MD" 1 \
+        "OC-T5e: CLAUDE.md 插件索引含 v$PLUGIN_VERSION"
+
+    # T5e.4 autopilot README.md 含 v$PLUGIN_VERSION
+    if [[ -f "$AUTOPILOT_README" ]]; then
+        assert_grep_ge "T5e.4" "v$PLUGIN_VERSION\|$PLUGIN_VERSION" "$AUTOPILOT_README" 1 \
+            "OC-T5e: autopilot README.md 含 v$PLUGIN_VERSION"
+    else
+        _log_fail "T5e.4" "autopilot README.md 不存在: $AUTOPILOT_README"
+    fi
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
