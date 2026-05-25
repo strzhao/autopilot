@@ -1,5 +1,33 @@
 # Patterns & Lessons
 
+### [2026-05-25] SKILL.md 关键 step 必须有「双重 grep」长效 CI 守护，单 grep 会被弱条件骗过
+<!-- tags: autopilot, skill-md, ci-guard, regression-prevention, acceptance-test, double-grep, inline-refactor, llm-instruction, behavior-contract -->
+**Scenario**: cdad541（2026-04-28）commit message 自称 "fix(autopilot): 恢复 SKILL.md 完整内联"，但实际把 Phase: merge 章节的 §2 Auto-Chain 评估步骤整段删了，仅保留 commit/handoff/知识/总结/清理。AI 因此再也读不到「Edit `next_task` 字段」的指令，project 模式 auto-chain 失效约 1 个月。stop-hook 基础设施正常，但 AI 永不写 `next_task`，子任务完成后 stop-hook 静默释放。回归持续 27 天才被发现，因为现有 acceptance test 只有 `wc -l < 615` 行数守护和「Phase: qa 段不引用旧 prompt」类断言，没有任何测试守护 merge 段的关键 step 文本。
+**Lesson**: 对每个被 LLM 当指令读的关键 step（SKILL.md 的「写 `next_task`」、「调用 commit-agent」、「跑红队 Agent」等），acceptance test 必须**双重 grep**而不是单 grep：
+- **关键字段名** grep：merge 段必须含 `next_task` 字面（catch 删字段）
+- **显式 step 标题** grep：merge 段必须含 `^#### N\. Auto-Chain` 类标题段（catch 删 step 段但保留交叉引用的情形）
+
+只设字段名 grep 会被弱条件骗过 — 我第一版加的守护只 grep `next_task`，但删 §2 后 §5 清理段仍有「如已设置 `next_task`...」交叉引用，单 grep 命中 1 次仍 PASS。必须强化为「字段 grep + 步骤标题 grep」AND 关系，才能真 catch 删段回归。
+
+**实施模板**（直接套用到 `skill-references-consistency.acceptance.test.sh`）：
+```bash
+SECTION=$(awk '/^## Phase: <name>/{f=1;print;next} f&&/^## /&&!/<name>/{f=0} f' "$SKILL_FILE")
+field_hits=$(echo "$SECTION" | grep -c "<critical_field>" || true)
+heading_hits=$(echo "$SECTION" | grep -cE "^#### [0-9.]+ <Step Title>" || true)
+[[ "$field_hits" -lt 1 ]] && fail "段内 <field> 字面消失（catch 删字段）"
+[[ "$heading_hits" -lt 1 ]] && fail "段内 '#### N. <Step>' 标题消失（catch 删段保留交叉引用）"
+```
+反向验证铁律：写完守护必须**删掉受护内容跑一遍**确认 FAIL exit 非 0，再恢复确认 PASS。我第一版没做反向测试就交付，结果用户层面才发现守护无效。
+
+**与 [[skill-refactor-invariant-guard]]（[2026-05-23] patterns）的分工**：
+- 2026-05-23 「不变量护栏」是 **in-task Tier 1.5**，防当前 refactor 任务引入伪优化（一次性，跟改动绑定）
+- 2026-05-25 「双重 grep CI 守护」是 **cross-task acceptance test**，防未来任何 refactor 漏掉关键 step（长效，跟具体改动解耦）
+- 两者互补：前者控本轮，后者控未来轮。SKILL.md 任何「LLM 指令型」step 都应加后者，前者按任务复杂度选用。
+
+**验证 LLM 行为回归的成本边界**：CI 静态 grep ≈ 零成本，能 catch 「指令文字消失」类回归（本次类型）。但 catch 不到「AI 读了文字但不执行」类。后者需 LLM-in-the-loop e2e（~$0.09/run sonnet + 2-3 工作日搭建 + flakiness），单 fix 边际价值低，建议「静态守护 + 实地观察」组合即可，除非同类回归频次超 ROI 阈值（如月 ≥ 3 次）。
+
+**Evidence**: v3.36.1 修复时新增 `skill-references-consistency.acceptance.test.sh` 断言 6，反向 dry-run：删 SKILL.md §2 → `[FAIL] exit 1`，恢复 → `[PASS] exit 0`。CI 全绿 (run 26408635622，Unit Tests + ShellCheck success)。
+
 ### [2026-05-23] SKILL.md 重构任务的 Tier 1.5 必须含"不变量护栏" grep 场景
 <!-- tags: autopilot, qa, tier-1.5, skill-refactor, invariant-guard, grep-pattern, terminology-network, reference-chain, false-improvement, anti-pseudo-optimization -->
 **Scenario**: autopilot 任务对 SKILL.md 做"小幅改动 + 主动放弃大量伪优化"型重构（如 v3.34.1 仅 +3 行修改但显式放弃了 7 项被 best practice 筛除的伪优化）。如果 Tier 1.5 只验证"改动是否落地"（正向场景），无法防止下一轮其他 AI 编排器误以为某条被放弃的改动是"还没做完"而重新引入劣化（如下次直接拆 Wave 1a/1b/1c）。
