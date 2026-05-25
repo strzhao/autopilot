@@ -1,5 +1,24 @@
 # Patterns & Lessons
 
+### [2026-05-26] 状态机新增「flag」字段时，所有读取该字段的转换点必须同步处理 — 否则形成「半生效」bug
+<!-- tags: autopilot, stop-hook, state-machine, flag-asymmetry, auto-approve, review-accept, transition-coverage, double-link, regression-pattern -->
+**Scenario**: v3.36.2 修的是 project auto-chain 失效**双链第 2 环**。stop-hook 在 phase=design 时正确处理了 `auto_approve=true` 跳过 AskUserQuestion 审批（line 553-555），但 phase=qa 通过后设的 `gate=review-accept` 在第 6 步「审批门检查」(line 491-497) **完全不看 auto_approve**，导致 auto-chain 子任务在 QA 后全部卡死等用户审批。bug 现场：claude-code-buddy 项目 001-launcher-skeleton 子任务 phase=qa + gate=review-accept + auto_approve=true，iteration 3 轮 stop-hook 全部 notify + exit 0，永不进 merge。整个 v3.36.1（修第 3 环 next_task）之前的 project 模式 auto-chain 双链皆坏，但**因为第 2 环卡死优先**，第 3 环的 bug 从未被触发到，所以 v3.36.1 也只是「修了一个不会触发的环节」，端到端仍坏。
+**Lesson**: 状态机引入新「flag」字段（如 `auto_approve` 控制是否跳过人工审批）时，必须**枚举该字段所有应该影响的转换点**，逐个改造，而不是只改第一个想到的入口。可操作清单：
+- **改前**：grep 现有代码所有读 flag 的位置（`grep -n "flag_name" *.sh`）；列出该 flag 应当影响的**所有状态转换边**（如 auto_approve 应影响：design→implement 审批、qa→merge 审批、auto-fix→qa 重试、implement→qa 失败等所有有"用户介入"语义的边）
+- **改时**：每个转换边都要写一遍「if flag → 跳过；else → 现状」分支；同一个 flag 不应在 phase A 跳过审批、phase B 不跳过审批，除非显式记录例外（如本次的 phase 限定 qa 排除 auto-fix max_retries 兜底场景）
+- **改后必测「跨 phase 双向反向」**：正向（flag=true 应该跳过）+ 反向 A（flag=false 现状不变）+ 反向 B（flag=true 但 phase 是兜底场景应该不跳过）。R12 就是这个模式的实例（3 条断言覆盖正向 + 双向反向）
+- **元层防御**：「双链 / 多链 bug」很常见 — 一个流程任意一环坏都会停下，所以一个环修复后端到端仍坏是常态。修第 1 个 bug 时**问自己「这条链上还有没有可能同样的失效模式」**，而不是只看 stacktrace 的第一个错。本次 v3.36.1 修了第 3 环，但当时未问「QA→merge 之间的审批门是否也漏了 auto_approve」—— 应该问。
+
+**与 [[asymmetric-fallback]]（[2026-05-06] patterns）的关系**：
+- 2026-05-06 是「create/repair 新增的兜底路径与原 happy path 功能不对称」（功能集对称性）
+- 2026-05-26 是「同一 flag 在不同 phase 转换点的处理对称性」（数据流对称性）
+- 共享元规律：**新增分支 / 新增字段 / 新增路径都要追问「现有的其他对称点是否需要同步改造」**，否则会形成"半生效"型 bug，比纯回归更难发现（因为局部测试都过、只有端到端才坏）
+
+**Evidence**:
+- v3.36.2 修复后 R12 5/5 PASS（含 2 个反向）、CI run 26412840931 success。
+- 端到端：v3.36.1 (next_task 修复) + v3.36.2 (review-accept gate 修复) 双链同修，project 模式 auto-chain 才真正端到端 work。
+- 「修第 1 环不问第 N 环」是本次教训的核心 — v3.36.1 commit message 自称「修了 cdad541 引入的 project 模式 auto-chain 失效回归」，但实际只修了 1/2 个环节，发布即用即坏。下次修复 X 链路时强制问「这条链上还有没有同样模式的失效点」。
+
 ### [2026-05-25] SKILL.md 关键 step 必须有「双重 grep」长效 CI 守护，单 grep 会被弱条件骗过
 <!-- tags: autopilot, skill-md, ci-guard, regression-prevention, acceptance-test, double-grep, inline-refactor, llm-instruction, behavior-contract -->
 **Scenario**: cdad541（2026-04-28）commit message 自称 "fix(autopilot): 恢复 SKILL.md 完整内联"，但实际把 Phase: merge 章节的 §2 Auto-Chain 评估步骤整段删了，仅保留 commit/handoff/知识/总结/清理。AI 因此再也读不到「Edit `next_task` 字段」的指令，project 模式 auto-chain 失效约 1 个月。stop-hook 基础设施正常，但 AI 永不写 `next_task`，子任务完成后 stop-hook 静默释放。回归持续 27 天才被发现，因为现有 acceptance test 只有 `wc -l < 615` 行数守护和「Phase: qa 段不引用旧 prompt」类断言，没有任何测试守护 merge 段的关键 step 文本。
