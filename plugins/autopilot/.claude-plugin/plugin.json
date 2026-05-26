@@ -1,7 +1,7 @@
 {
     "name": "autopilot",
-    "version": "3.36.2",
-    "description": "AI 自动驾驶工程套件。包含全流程闭环（红蓝对抗 + 五层 QA + 知识工程）、AI 自适应判断 fast/standard（v3.32）、默认含 brainstorm 的交互式设计（Q&A + AskUserQuestion 审批，--fast 强制快速：跳过审批 + contract-checker + qa-reviewer，红蓝/QA 核心保留）、需求管理、智能提交（React 优化 + 代码测验 + 任务同步）、工程健康度诊断和 Worktree 自动初始化（v3.18 选择性 symlink，sessions 隔离到 worktree 分支）、契约规约协议 + contract-checker agent。(v3.36.2: 修复 project auto-chain 失效双链第 2 环 — stop-hook 在 auto_approve=true 子任务 QA 通过后自动跳过 review-accept gate 推进 merge；附 4 个 acceptance test TARGET_VERSION 动态化根治硬编码版本盲区)",
+    "version": "3.36.3",
+    "description": "AI 自动驾驶工程套件。包含全流程闭环（红蓝对抗 + 五层 QA + 知识工程）、AI 自适应判断 fast/standard（v3.32）、默认含 brainstorm 的交互式设计（Q&A + AskUserQuestion 审批，--fast 强制快速：跳过审批 + contract-checker + qa-reviewer，红蓝/QA 核心保留）、需求管理、智能提交（React 优化 + 代码测验 + 任务同步）、工程健康度诊断和 Worktree 自动初始化（v3.18 选择性 symlink，sessions 隔离到 worktree 分支）、契约规约协议 + contract-checker agent。(v3.36.3: 修复 project auto-chain 失效双链第 2 环 — stop-hook 三处 Case 切换 state 后必须重读 GATE/AUTO_APPROVE，否则旧 state 残留 gate=review-accept 会让新 state 卡死；至此双链 4 环全修)",
     "author": {
         "name": "String Zhao",
         "email": "zhaoguixiong@corp.netease.com"

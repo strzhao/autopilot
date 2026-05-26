@@ -421,6 +421,11 @@ if [[ "$PHASE" == "done" ]]; then
                 bash "$SCRIPT_DIR/notify.sh" auto-chain 2>/dev/null || true
                 echo "🔗 project-design → ${FIRST_READY}" >&2
                 PHASE=$(get_field "phase" || true)
+                # v3.36.3 必须重读 GATE/AUTO_APPROVE：旧 state 残留 gate（如 AI 未清的
+                # review-accept）会让下方第 6 步审批门误命中而 exit 0，新 state 的
+                # block JSON 永不输出。这是 auto-chain 失效双链第 2 环。
+                GATE=$(get_field "gate" || true)
+                AUTO_APPROVE=$(get_field "auto_approve" || true)
                 ITERATION=$(get_field "iteration" || true)
                 MAX_ITERATIONS=$(get_field "max_iterations" || true)
                 SKIP_INCREMENT=1
@@ -449,6 +454,9 @@ if [[ "$PHASE" == "done" ]]; then
             echo "🔗 auto-chain: ${NEXT_TASK}" >&2
             # 重新读取新状态文件的字段
             PHASE=$(get_field "phase" || true)
+            # v3.36.3 必须重读 GATE/AUTO_APPROVE（双链第 2 环修复）
+            GATE=$(get_field "gate" || true)
+            AUTO_APPROVE=$(get_field "auto_approve" || true)
             ITERATION=$(get_field "iteration" || true)
             MAX_ITERATIONS=$(get_field "max_iterations" || true)
             SKIP_INCREMENT=1
@@ -470,6 +478,9 @@ if [[ "$PHASE" == "done" ]]; then
             bash "$SCRIPT_DIR/notify.sh" project-qa 2>/dev/null || true
             echo "🏁 所有任务已完成，启动全项目 QA" >&2
             PHASE=$(get_field "phase" || true)
+            # v3.36.3 必须重读 GATE/AUTO_APPROVE（双链第 2 环修复）
+            GATE=$(get_field "gate" || true)
+            AUTO_APPROVE=$(get_field "auto_approve" || true)
             ITERATION=$(get_field "iteration" || true)
             MAX_ITERATIONS=$(get_field "max_iterations" || true)
             SKIP_INCREMENT=1

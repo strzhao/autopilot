@@ -11,7 +11,7 @@ String 维护的 Claude Code 插件集合。
 
 | 插件 | 版本 | 类型 | 一句话 |
 |------|------|------|--------|
-| [autopilot](plugins/autopilot/) | v3.36.2 | Skill + Hook | AI 自动驾驶工程套件：全流程闭环（QA ⚠️ 复盘）、AI 自适应 fast/standard、智能提交、工程诊断、worktree 自动初始化（选择性 symlink）+ brainstorm 独立 skill + plan-review HTML 左侧 TOC 导航 + `.autopilot/` 二级分层 knowledge/+runtime/（三层防御）+ **QA Tier 5 量化指标门禁** + **project auto-chain 失效双链全修**（v3.36.1 修第 3 环 next_task；v3.36.2 修第 2 环 stop-hook 在 auto_approve=true + qa + review-accept 时自动跳过 gate 推进 merge；附 4 个 acceptance test TARGET_VERSION 动态化根治硬编码盲区） |
+| [autopilot](plugins/autopilot/) | v3.36.3 | Skill + Hook | AI 自动驾驶工程套件：全流程闭环（QA ⚠️ 复盘）、AI 自适应 fast/standard、智能提交、工程诊断、worktree 自动初始化（选择性 symlink）+ brainstorm 独立 skill + plan-review HTML 左侧 TOC 导航 + `.autopilot/` 二级分层 knowledge/+runtime/（三层防御）+ **QA Tier 5 量化指标门禁** + **project auto-chain 失效双链 v3.36.1-3 累计全 4 环修复**（v3.36.1 修第 4 环 SKILL.md Auto-Chain step；v3.36.2 修第 3 环 stop-hook review-accept gate 短路；v3.36.3 修第 2 环 stop-hook 三处 Case 切换 state 后必须重读 GATE/AUTO_APPROVE，否则旧 state 残留 gate 卡新 state 死） |
 | [writer-skill](plugins/writer-skill/) | v1.11.0 | Skill | 写作技能包：博客向 / 技术文档向 / 专业技术博客向 / 文章评价 |
 | [summarizer](plugins/summarizer/) | v1.0.0 | Skill | 多模态内容摘要（文章/视频/音频 → flomo） |
 | [task-notifier](plugins/task-notifier/) | v1.0.0 | Hook | 任务完成系统提示音 |

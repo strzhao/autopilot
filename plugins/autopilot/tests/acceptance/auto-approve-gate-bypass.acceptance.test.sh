@@ -176,5 +176,97 @@ if echo "$T5E_SECTION" | grep -qE 'assert_grep[E]?_ge[[:space:]]+"T5e[^"]*"[[:sp
 fi
 pass "tier5-quantitative T5e 段断言已动态化（PLUGIN_VERSION 变量替代硬编码字面）"
 
-echo "[OK ] R12 auto-approve-gate-bypass — 5 条断言全部通过"
+# ─────────────────────────────────────────────────────────────────────────────
+# 断言 6：v3.36.3 修复 auto-chain 失效双链第 2 环 —
+# 旧 state 残留 gate=review-accept + phase=done + next_task=003 切换到新 003
+# state 后，stop-hook 必须重读 GATE/AUTO_APPROVE，**不被旧 gate 卡死**，
+# 必须输出 block JSON 让 AI 接 003 design phase。
+# 现场复现：claude-code-buddy 项目 002→003 卡死，stop-hook Case 1 切换 state 但
+# 旧 GATE 变量未重读，第 6 步审批门误命中 review-accept、静默 exit。
+# ─────────────────────────────────────────────────────────────────────────────
+build_chain_fixture() {
+    # 构造 auto-chain 场景：父 state phase=done + gate=review-accept + next_task=003
+    # 并准备 003 task brief 文件、dag.yaml
+    local dir
+    dir="$(mktemp -d -t autopilot-r12-chain-XXXXXX)"
+    mkdir -p "$dir/.autopilot/runtime/requirements/test-002"
+    mkdir -p "$dir/.autopilot/project/tasks"
+    echo "test-002" > "$dir/.autopilot/runtime/active.ptr"
+
+    # 父 state（模拟 002 完成，但 AI 忘记清 gate）
+    cat > "$dir/.autopilot/runtime/requirements/test-002/state.md" <<EOF
+---
+active: true
+phase: "done"
+gate: "review-accept"
+iteration: 5
+max_iterations: 30
+max_retries: 3
+retry_count: 0
+mode: "single"
+plan_mode: ""
+fast_mode: true
+brief_file: "$dir/.autopilot/project/tasks/002-x.md"
+next_task: "003-x"
+auto_approve: true
+knowledge_extracted: "true"
+task_dir: "$dir/.autopilot/runtime/requirements/test-002"
+session_id: r12chainsess
+started_at: "2026-05-26T00:00:00Z"
+contract_required: false
+html_review: false
+---
+
+## 目标
+父 state 模拟 002 完成
+EOF
+    # 003 任务 brief 文件
+    cat > "$dir/.autopilot/project/tasks/003-x.md" <<EOF
+---
+id: 003-x
+depends_on: ["002-x"]
+---
+# Task 003
+EOF
+    # DAG
+    cat > "$dir/.autopilot/project/dag.yaml" <<EOF
+tasks:
+  - id: "002-x"
+    name: "Two"
+    status: done
+    depends_on: []
+  - id: "003-x"
+    name: "Three"
+    status: pending
+    depends_on: ["002-x"]
+EOF
+    echo "$dir"
+}
+
+dir_chain="$(build_chain_fixture)"
+hook_in_chain='{"session_id":"r12chainsess","transcript_path":"/tmp/none"}'
+out_chain=$(cd "$dir_chain" && echo "$hook_in_chain" | bash "$STOP_HOOK" 2>/dev/null)
+
+if ! echo "$out_chain" | grep -q '"decision":[[:space:]]*"block"'; then
+    fail "Case 1 切换 + 旧 gate 残留场景未输出 block JSON（双链第 2 环回归）。stdout: $out_chain"
+fi
+
+# 切换后 active.ptr 应指向 003
+new_active=$(cat "$dir_chain/.autopilot/runtime/active.ptr" 2>/dev/null)
+if [[ "$new_active" != *003* ]]; then
+    fail "Case 1 切换后 active.ptr 未指向 003，实际: $new_active"
+fi
+
+# 新 003 state 的 gate 应保持 ""（不应被父 state 的 review-accept 污染）
+new_state_file=$(find "$dir_chain/.autopilot/runtime/requirements" -name "state.md" -newer "$dir_chain/.autopilot/runtime/requirements/test-002/state.md" 2>/dev/null | head -1)
+if [[ -n "$new_state_file" ]]; then
+    new_gate=$(grep -E "^gate:" "$new_state_file" | head -1 | sed -E 's/^gate:[[:space:]]*"?([^"]*)"?$/\1/')
+    if [[ -n "$new_gate" ]]; then
+        fail "新 003 state 的 gate 不应非空，实际: '$new_gate'"
+    fi
+fi
+pass "Case 1 切换 + 旧 gate 残留：stop-hook 重读 GATE/AUTO_APPROVE，新 003 state 输出 block JSON（双链第 2 环已修）"
+rm -rf "$dir_chain"
+
+echo "[OK ] R12 auto-approve-gate-bypass — 6 条断言全部通过"
 exit 0
