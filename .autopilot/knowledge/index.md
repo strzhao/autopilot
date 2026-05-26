@@ -28,6 +28,7 @@
 - [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → decisions.md
 
 ## Patterns
+- [2026-05-26] 「状态机切换 state file 后必须重读所有缓存到内存的字段」+「修第 1 个 bug 时不问第 N 个」三连击复刻 | tags: autopilot, stop-hook, state-switch, stale-variable, cached-field, gate-reread, multi-link-failure, regression-recurrence, meta-lesson | → patterns.md
 - [2026-05-26] 状态机新增「flag」字段时所有读取该字段的转换点必须同步处理 — 否则形成「半生效」bug | tags: autopilot, stop-hook, state-machine, flag-asymmetry, auto-approve, review-accept, transition-coverage, double-link, regression-pattern | → patterns.md
 - [2026-05-25] SKILL.md 关键 step 必须有「双重 grep」长效 CI 守护，单 grep 会被弱条件骗过 | tags: autopilot, skill-md, ci-guard, regression-prevention, acceptance-test, double-grep, inline-refactor, llm-instruction, behavior-contract | → patterns.md
 - [2026-05-23] SKILL.md 重构任务的 Tier 1.5 必须含"不变量护栏" grep 场景 | tags: autopilot, qa, tier-1.5, skill-refactor, invariant-guard, grep-pattern, terminology-network, reference-chain, false-improvement, anti-pseudo-optimization | → patterns.md

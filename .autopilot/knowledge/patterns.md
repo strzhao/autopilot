@@ -1,5 +1,34 @@
 # Patterns & Lessons
 
+### [2026-05-26] 「状态机切换 state file 后必须重读所有缓存到内存的字段」+「修第 1 个 bug 时不问第 N 个」三连击复刻
+<!-- tags: autopilot, stop-hook, state-switch, stale-variable, cached-field, gate-reread, multi-link-failure, regression-recurrence, meta-lesson -->
+**Scenario**: project auto-chain 失效在 v3.36.0 突然双坏，前后用了 **3 个版本（v3.36.1/v3.36.2/v3.36.3）** 才修完，每次发版都"自称修复完成"但实际还有下一环卡死。**v3.36.1** 修 SKILL.md merge §2 漏写 Auto-Chain step（AI 不写 next_task）；发版后用户在 claude-code-buddy 跑 project 模式仍卡死 → **v3.36.2** 修 stop-hook 不在 auto_approve=true 时跳过 review-accept gate；发版后用户跑到 002→003 仍卡死 → **v3.36.3** 终于发现 stop-hook 三处 Case 切换 state 后只重读 PHASE/ITERATION/MAX_ITERATIONS、**没重读 GATE/AUTO_APPROVE**（缓存到内存的旧 state 变量过期）。三次都是看着报错"修了最显眼的那环"，没系统排查整条链。
+
+**Lesson**（分两层）：
+
+**第 1 层 — 技术教训**：状态切换型脚本（stop-hook 这类「读 state → 处理 → 切到新 state → 继续处理」）在切换后必须**重读所有该状态相关的变量**，不只是当时业务最关心的几个。可操作清单：
+- 列出 stop-hook 启动时从 state 读到内存的**全部变量**（PHASE / GATE / ITERATION / MAX_ITERATIONS / AUTO_APPROVE / NEXT_TASK / BRIEF_FILE / RETRY_COUNT ...）
+- 每个 Case 切换后**全部重读**，不要挑「业务用得到的」— 因为下游分支可能用到当时没意识到的变量（本次就是「第 6 步审批门读 GATE，但切换处只想到了 phase」）
+- 或者**抽函数**：`reload_state_vars()` 封装所有 `get_field` 调用，切换后调一次。比单点 grep 防御更强
+
+**第 2 层 — 元教训：「单一根因偏见」反模式**
+- 每次只修「看着像 root cause 的那一环」，不全链路排查
+- v3.36.1 commit message 自称「修复 project 模式 auto-chain 失效回归」— 是字面意义的回归修复，但只修了 1/4 环就发布；v3.36.2 commit message 自称「修复双链第 2 环」（编号错了，实际是第 3 环），发版又卡；v3.36.3 终于把整条链画出来才看清还有第 2 环
+- **修复模式建议（迁出本次三连击痛苦）**：
+  1. 看到「X auto-chain 失效」类报告，**先画出从 X→Y 的完整状态机转换图**，标出每个 state 字段在每个转换点被读写的次数
+  2. 用「我修了 A，那 B/C/D 是不是同样模式」**主动反问**，而不是"修完看似 OK 就发版"
+  3. **每发一个 fix 都要追问"如果我这次修复有效，下一次同类 bug 还会从哪个角度出现"** — 这是「半生效 bug」(2026-05-26 patterns) 的元防御
+
+**与 [[flag-asymmetry-half-effective-bug]]（[2026-05-26] patterns）的关系**：
+- 那条是「同一 flag 在不同 phase 转换点的处理对称性」（数据流对称性）
+- 本条是「状态切换后内存变量重读完整性」（时序对称性）
+- 共享元规律：**任何"切换/新增/分支"动作都要追问"现有的其他对称点是否需要同步"**，否则形成"半生效"型 bug。本条进一步加上**「修第 1 个 bug 时强制画整链路」**的过程规约
+
+**Evidence**:
+- v3.36.3 修复后 R12 6/6 PASS（含双链第 2 环复现 fixture）；CI run 26450162873 success
+- 三连击成本：3 个 patch 提交 + 3 次 CI + 3 次知识沉淀 ≈ 半天工作量，本可在 v3.36.1 一次性修完
+- 用户痛苦证据：claude-code-buddy 002→003 卡死 18 分钟（stop.txt "Baked for 26m 30s" 跑完只为最后 stop-hook silent exit），是「修完一环看着 OK 但实际还卡」的真实代价
+
 ### [2026-05-26] 状态机新增「flag」字段时，所有读取该字段的转换点必须同步处理 — 否则形成「半生效」bug
 <!-- tags: autopilot, stop-hook, state-machine, flag-asymmetry, auto-approve, review-accept, transition-coverage, double-link, regression-pattern -->
 **Scenario**: v3.36.2 修的是 project auto-chain 失效**双链第 2 环**。stop-hook 在 phase=design 时正确处理了 `auto_approve=true` 跳过 AskUserQuestion 审批（line 553-555），但 phase=qa 通过后设的 `gate=review-accept` 在第 6 步「审批门检查」(line 491-497) **完全不看 auto_approve**，导致 auto-chain 子任务在 QA 后全部卡死等用户审批。bug 现场：claude-code-buddy 项目 001-launcher-skeleton 子任务 phase=qa + gate=review-accept + auto_approve=true，iteration 3 轮 stop-hook 全部 notify + exit 0，永不进 merge。整个 v3.36.1（修第 3 环 next_task）之前的 project 模式 auto-chain 双链皆坏，但**因为第 2 环卡死优先**，第 3 环的 bug 从未被触发到，所以 v3.36.1 也只是「修了一个不会触发的环节」，端到端仍坏。
