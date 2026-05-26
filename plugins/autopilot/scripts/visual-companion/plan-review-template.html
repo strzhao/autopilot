@@ -190,27 +190,17 @@
     }
     .btn-approve:active { transform: translateY(0) scale(0.97); }
 
-    /* Revise — amber outline */
-    .btn-revise {
+    /* Reject — vermillion outline */
+    .btn-reject {
       background: transparent;
-      color: var(--amber);
-      border-color: var(--amber);
+      color: var(--vermillion);
+      border-color: var(--vermillion);
     }
-    .btn-revise:hover {
-      background: var(--amber-mist);
+    .btn-reject:hover {
+      background: rgba(217, 79, 61, 0.07);
       transform: translateY(-1px);
     }
-    .btn-revise:active { transform: translateY(0) scale(0.97); }
-
-    /* toolbar shake animation for empty-feedback guard */
-    @keyframes toolbar-shake {
-      0%, 100% { transform: translateX(0); }
-      20%       { transform: translateX(-4px); }
-      40%       { transform: translateX(4px); }
-      60%       { transform: translateX(-3px); }
-      80%       { transform: translateX(3px); }
-    }
-    .btn-revise.shake { animation: toolbar-shake 0.35s ease; }
+    .btn-reject:active { transform: translateY(0) scale(0.97); }
 
     /* ===== Toolbar menu (⋯) ===== */
     .toolbar-menu {
@@ -864,6 +854,110 @@
       #comments-drawer-toggle { display: none; }
     }
 
+    /* ===== Overlay body — review list + countdown ===== */
+    .overlay-body {
+      text-align: left;
+      margin: 0.6rem 0 0.3rem;
+    }
+
+    .overlay-comments {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 0.8rem;
+      padding: 0.5rem;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--mist-deep) transparent;
+    }
+    .overlay-comments::-webkit-scrollbar { width: 4px; }
+    .overlay-comments::-webkit-scrollbar-thumb { background: var(--mist-deep); border-radius: 2px; }
+
+    .overlay-comments-title {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--charcoal);
+      margin-bottom: 0.4rem;
+      padding-bottom: 0.3rem;
+      border-bottom: 1px solid var(--rule-soft);
+    }
+
+    .overlay-comment-item {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.3rem 0;
+      border-bottom: 1px solid var(--rule-soft);
+      font-size: 0.78rem;
+    }
+    .overlay-comment-item:last-child { border-bottom: 0; }
+
+    .overlay-comment-num {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--sage-mist);
+      color: var(--sage-deep);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.65rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+
+    .overlay-comment-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .overlay-comment-quote {
+      font-family: 'Crimson Pro', 'Noto Serif SC', serif;
+      font-style: italic;
+      font-size: 0.82rem;
+      color: var(--charcoal);
+      border-left: 2px solid var(--sage);
+      padding-left: 0.5rem;
+      margin-bottom: 0.15rem;
+      line-height: 1.4;
+    }
+
+    .overlay-comment-text {
+      font-size: 0.78rem;
+      color: var(--ink-2);
+      line-height: 1.4;
+    }
+
+    .overlay-countdown {
+      text-align: center;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.82rem;
+      color: var(--charcoal);
+      margin: 0.3rem 0;
+    }
+
+    .overlay-countdown-num {
+      display: inline-block;
+      min-width: 1.4em;
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--sage);
+    }
+
+    .overlay-auto-close-hint {
+      text-align: center;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.68rem;
+      color: var(--smoke);
+      margin-top: 0.2rem;
+      letter-spacing: 0.04em;
+    }
+
     /* ===== TOC pane (left navigation) =====
      * 默认 (>=1200px)：sticky 固定显示，可独立滚动
      * <1200px：抽屉化，#toc-toggle 按钮显示，#toc-pane 转为 fixed off-canvas
@@ -1037,7 +1131,7 @@
     <h1 class="toolbar-title">Autopilot · Plan Review</h1>
     <div class="toolbar-actions">
       <button class="btn-approve" data-choice="approve">同意</button>
-      <button class="btn-revise"  data-choice="revise">反馈</button>
+      <button class="btn-reject"  data-choice="revise">不通过</button>
     </div>
     <div class="toolbar-menu">
       <button id="more-menu-trigger" aria-label="更多" aria-expanded="false">⋯</button>
@@ -1313,32 +1407,87 @@
       var overlayCloseBtn = document.getElementById('overlay-close-btn');
 
       var CHOICE_LABELS = {
-        'approve': { icon: '❧', title: '方案已通过',   subtitle: '窗口即将关闭…' },
-        'revise':  { icon: '✎', title: '修改意见已提交', subtitle: '窗口即将关闭…' },
-        'abort':   { icon: '✕', title: '任务已放弃',   subtitle: '窗口即将关闭…' }
+        'approve': { icon: '❧', title: '方案已通过',   subtitle: '已通知 AI 继续执行，窗口即将自动关闭' },
+        'revise':  { icon: '✕', title: '方案不通过',   subtitle: '已通知 AI 根据评审意见修改，窗口即将自动关闭' },
+        'abort':   { icon: '✕', title: '任务已放弃',   subtitle: '窗口即将自动关闭' }
       };
+
+      /* countdown element ref */
+      var countdownEl = null;
 
       function showOverlay(choice, autoClose) {
         var labels = CHOICE_LABELS[choice] || { icon: '❧', title: '已提交', subtitle: '' };
         overlayIcon.textContent    = labels.icon;
         overlayTitle.textContent   = labels.title;
 
-        if (autoClose) {
-          overlaySubtitle.textContent = '窗口即将关闭…';
-          overlayCloseBtn.classList.remove('visible');
-          overlay.classList.add('visible');
-          setTimeout(function () {
-            window.close();
-            setTimeout(function () {
-              overlaySubtitle.textContent = '请手动关闭此标签页';
-              overlayCloseBtn.classList.add('visible');
-            }, 3000);
-          }, 800);
-        } else {
-          overlaySubtitle.textContent = '已提交，可关闭页面';
-          overlayCloseBtn.classList.add('visible');
-          overlay.classList.add('visible');
+        /* collect saved comments for review list */
+        var savedCards = commentsPane.querySelectorAll('.comment-card[data-state="saved"]');
+        var commentListHtml = '';
+        if (savedCards.length > 0) {
+          commentListHtml = '<div class="overlay-comments"><div class="overlay-comments-title">评审意见（' + savedCards.length + ' 条）</div>';
+          Array.prototype.forEach.call(savedCards, function (card, i) {
+            var quoteEl = card.querySelector('.comment-quote');
+            var textEl  = card.querySelector('.comment-text');
+            var quoteText = quoteEl ? quoteEl.textContent.replace(/^"|"$/g, '') : '';
+            var commentText = textEl ? (textEl.value || textEl.textContent || '') : '';
+            commentListHtml += '<div class="overlay-comment-item">';
+            commentListHtml += '<div class="overlay-comment-num">#' + (i + 1) + '</div>';
+            commentListHtml += '<div class="overlay-comment-body">';
+            if (quoteText) commentListHtml += '<div class="overlay-comment-quote">' + escapeHtml(quoteText.slice(0, 120)) + '</div>';
+            if (commentText) commentListHtml += '<div class="overlay-comment-text">' + escapeHtml(commentText.slice(0, 200)) + '</div>';
+            commentListHtml += '</div></div>';
+          });
+          commentListHtml += '</div>';
         }
+
+        /* countdown */
+        var countdown = 3;
+        var countdownHtml = '<div class="overlay-countdown"><span class="overlay-countdown-num" id="overlay-countdown-num">' + countdown + '</span> 秒后自动关闭</div>';
+
+        /* build overlay body */
+        var bodyHtml = '<div class="overlay-body">';
+        bodyHtml += commentListHtml;
+        bodyHtml += countdownHtml;
+        bodyHtml += '<div class="overlay-auto-close-hint">点击后当前页面会自动关闭</div>';
+        bodyHtml += '</div>';
+
+        /* replace overlay-card content */
+        var card = overlay.querySelector('.overlay-card');
+        var existingBody = card.querySelector('.overlay-body');
+        if (existingBody) existingBody.remove();
+
+        /* insert body after subtitle */
+        var subtitleEl = card.querySelector('#overlay-subtitle');
+        var bodyDiv = document.createElement('div');
+        bodyDiv.className = 'overlay-body';
+        bodyDiv.innerHTML = bodyHtml;
+        subtitleEl.insertAdjacentElement('afterend', bodyDiv);
+
+        overlaySubtitle.textContent = labels.subtitle;
+        overlayCloseBtn.classList.add('visible');
+        overlay.classList.add('visible');
+
+        /* start countdown */
+        countdownEl = document.getElementById('overlay-countdown-num');
+        var timer = setInterval(function () {
+          countdown--;
+          if (countdownEl) countdownEl.textContent = countdown;
+          if (countdown <= 0) {
+            clearInterval(timer);
+            window.close();
+            /* fallback: manual close hint */
+            setTimeout(function () {
+              if (countdownEl) countdownEl.textContent = '0';
+              overlaySubtitle.textContent = '请手动关闭此标签页';
+            }, 2000);
+          }
+        }, 1000);
+      }
+
+      function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
       }
 
       /* ─────────────────────────────────────────────────────────────────────
@@ -1584,26 +1733,6 @@
         /* Abort: require confirmation */
         if (choice === 'abort') {
           if (!window.confirm('放弃任务？该 autopilot 流程将终止。')) return;
-        }
-
-        /* Revise: require at least one comment OR non-empty feedback */
-        if (choice === 'revise') {
-          var savedCards = commentsPane.querySelectorAll('.comment-card[data-state="saved"]');
-          /* no feedback textarea in new UI, so check comments only */
-          if (savedCards.length === 0) {
-            var reviseBtn = document.querySelector('.btn-revise');
-            if (reviseBtn) {
-              reviseBtn.classList.remove('shake');
-              /* force reflow to restart animation */
-              void reviseBtn.offsetWidth;
-              reviseBtn.classList.add('shake');
-              reviseBtn.addEventListener('animationend', function () {
-                reviseBtn.classList.remove('shake');
-              }, { once: true });
-            }
-            showToast('请先添加至少一条评论再提交反馈');
-            return;
-          }
         }
 
         /* Collect saved comments (C6) */
