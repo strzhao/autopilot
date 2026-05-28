@@ -168,5 +168,5 @@ MIT
 ## 联系方式
 
 - **维护者**：String Zhao
-- **邮箱**：zhaoguixiong@corp.netease.com
+- **邮箱**：stringzhao@foxmail.com
 - **仓库**：https://github.com/strzhao/autopilot

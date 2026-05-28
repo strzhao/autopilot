@@ -57,7 +57,7 @@ plugins/task-notifier/
     "description": "任务完成提示音插件。在 Claude Code 任务执行完成后播放提示音提醒用户。",
     "author": {
         "name": "stringzhao",
-        "email": "zhaoguixiong@corp.netease.com"
+        "email": "stringzhao@foxmail.com"
     },
     "license": "MIT",
     "keywords": ["notification", "sound", "alert", "task", "reminder", "hooks"],
@@ -197,7 +197,7 @@ Task "测试任务"  # 测试提示音功能
 ## 许可证和版权
 
 - **许可证**: MIT
-- **作者**: stringzhao (zhaoguixiong@corp.netease.com)
+- **作者**: stringzhao (stringzhao@foxmail.com)
 - **项目地址**: https://github.com/strzhao/autopilot
 
 ## 总结

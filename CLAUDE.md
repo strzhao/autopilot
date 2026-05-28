@@ -2,8 +2,8 @@
 
 String 维护的 Claude Code 插件集合。
 
-- **维护者**: String Zhao（zhaoguixiong@corp.netease.com）
-- **仓库**: https://g.hz.netease.com/cloudmusic-agi/plugins/vip-claude-code-plugin.git
+- **维护者**: String Zhao（stringzhao@foxmail.com）
+- **仓库**: https://github.com/strzhao/autopilot.git
 
 ## 插件索引
 

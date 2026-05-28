@@ -255,7 +255,7 @@ plugin-name/
 ## 支持
 
 - **项目维护者**：String Zhao
-- **邮箱**：zhaoguixiong@corp.netease.com
+- **邮箱**：stringzhao@foxmail.com
 - **仓库地址**：https://github.com/strzhao/autopilot
 
 ## 许可证

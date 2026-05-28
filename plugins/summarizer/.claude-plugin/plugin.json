@@ -4,7 +4,7 @@
     "description": "多模态内容摘要工具。自动识别文章、视频、音频链接，提取内容并生成结构化摘要",
     "author": {
         "name": "stringzhao",
-        "email": "zhaoguixiong@corp.netease.com"
+        "email": "stringzhao@foxmail.com"
     },
     "license": "MIT",
     "keywords": ["article", "video", "audio", "summary", "analysis", "content", "flomo"]
