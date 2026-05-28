@@ -28,19 +28,15 @@
 ```
 高信心 + 有就绪任务:
   Edit frontmatter: next_task: "<first-ready-task-id>"
-  追加变更日志: auto-chain 评估通过，下一个任务: <task-id>
 
 低信心:
   保持 next_task: ""
-  追加变更日志: auto-chain 评估未通过，原因: <具体原因>
 
 无就绪任务（但有 pending 任务被阻塞）:
   保持 next_task: ""
-  追加变更日志: 无就绪任务，等待依赖任务完成
 
 所有任务已完成:
   保持 next_task: ""
-  追加变更日志: DAG 所有任务已完成
   (stop-hook 会自动检测 ALL_DONE 并触发全项目 QA)
 ```
 
@@ -51,4 +47,4 @@
 ## 降级
 
 - DAG 文件不存在 → 跳过评估
-- DAG 解析失败 → 跳过评估，在变更日志记录警告
+- DAG 解析失败 → 跳过评估，在对话中说明原因

@@ -198,7 +198,7 @@ After autopilot-commit completes, review the full autopilot run to extract knowl
    e. 更新 `index.md`（不存在则创建）
    f. 全局文件 >100 行时建议用户迁移领域条目到 `domains/`
    g. 确定知识库 git 提交上下文（见下方 Worktree-Aware Extraction）
-3. 无值得记录的内容 → 变更日志追加"知识提取：本次无新增"后跳过
+3. 无值得记录的内容 → 直接跳过（无需任何记录）
 
 **Time limit**: 2 分钟内完成。宁可少写高质量条目，不要穷举。
 

@@ -106,8 +106,8 @@ N/A — CSS only
 
 ### 蓝队遇到模糊契约
 - 不要悄悄改实现，提交 contract-change-request：
-  - 在变更日志追加 `[契约变更请求] <原契约>` → `<建议契约> 因 <原因>`
   - 设 `phase: "design"`、`gate: "review-accept"`
+  - 在对话中说明 `[契约变更请求] <原契约>` → `<建议契约> 因 <原因>`
   - 编排器收到后回到 design 阶段，更新 `## 契约规约` 章节，重新走红蓝对抗
 
 ### contract-checker 遇到模糊契约

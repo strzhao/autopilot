@@ -22,7 +22,7 @@
 2. 1 个 Explore agent 快速分析任务相关代码
 3. 直接将设计文档写入状态文件 `## 设计文档` 和 `## 实现计划` 区域
 4. **Plan 审查（必须执行）**：启动 plan-reviewer Agent（model: "sonnet"，参见 `plan-reviewer-prompt.md`）
-5. **PASS** → 追加变更日志，更新 `phase: "implement"`
+5. **PASS** → 更新 `phase: "implement"`
 6. **FAIL** → 设 `auto_approve: false`，回退到 Standard 正常审批流程（重新走主 SKILL.md 步骤 1）
 
 qa 阶段差异：

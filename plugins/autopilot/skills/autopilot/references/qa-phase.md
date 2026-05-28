@@ -148,13 +148,13 @@ Wave 1 完成后统计 Tier 0+1 ❌ 数量：≥3 → 跳过 Wave 1.5/2 直接 a
 
 #### 降级策略
 
-- **单个 Agent 失败** → 在变更日志记录警告，使用另一个 Agent 的结果继续（不阻塞流程）
+- **单个 Agent 失败** → 在对话中说明警告，使用另一个 Agent 的结果继续（不阻塞流程）
 - **两个 Agent 都失败** → 编排器自行执行简化版审查（仅检查最关键项：设计覆盖率 + OWASP Top 10）
 - **红队未生成测试** → 设计审查 Agent 额外承担验收检查清单的逐项人工验证
 
 ### 产出报告
 
-将 QA 报告写入状态文件的 `## QA 报告` 区域。**写入前先将所有历史轮次报告压缩为一行摘要**（格式：`### 轮次 N (时间) — ✅/❌ 简要结果`），只保留最新一轮完整报告。报告格式和示例参见 `references/qa-report-template.md`。
+在对话中产出 QA 报告（用户直接看），仅 frontmatter 写 gate/phase。历史轮次报告无需保留完整内容，对话中可按 `### 轮次 N (时间) — ✅/❌ 简要结果` 格式摘要。报告格式和示例参见 `references/qa-report-template.md`。
 
 ### 结果判定
 
@@ -171,7 +171,6 @@ Wave 1 完成后统计 Tier 0+1 ❌ 数量：≥3 → 跳过 Wave 1.5/2 直接 a
 
 如果 frontmatter `auto_approve` 为 `true` 且全部 ✅：
 - 跳过 `gate: "review-accept"`，直接更新 `phase: "merge"`
-- 追加变更日志：QA 全部通过（auto-approve）
 
 如果有 ❌：
 - 设置 `auto_approve: false`（回退到人工审批）
