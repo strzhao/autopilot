@@ -150,12 +150,11 @@
 **Minor（参考）— 置信度 80+**：
 ...
 
-#### Assessment
-**整体评分**: X 分（满分 100）
-**主要风险点**: [1-2 句]
-**Ready to merge**: Yes / No / With fixes
-**Reasoning**: [1-2 句]
+#### Assessment（二值，无分数）
+**Critical 数**: N（>0 即不可合）
+**主要风险点**: [1-2 句，每条引 file:line]
 **推荐改进**: [1-2 项]
+> 不产出"整体评分"或"Ready to merge"——放不放行由**谓词闸门**（∀谓词 PASS + 0 Critical）在 SKILL 结果判定算出。审查者只供 Critical 事实，不下放行结论（自下放行结论 = 抽卡）。
 
 ### Section C — 红队测试质量
 
@@ -166,4 +165,4 @@
 |---|------|--------|------|--------|
 | 1 | path/to/test.ts | 宽容跳过模式 | L42-L48 | BLOCKER |
 
-如有任一 BLOCKER → `Ready to merge: No`，写入 `Reasoning: 红队测试存在宽容跳过/缺失断言`。
+如有任一 BLOCKER → 计入 Critical（谓词闸门据此判不可合），写入 `Critical: 红队测试存在宽容跳过/缺失断言`。

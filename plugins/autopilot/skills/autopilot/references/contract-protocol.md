@@ -18,6 +18,8 @@
 
 两者合一抵抗 LLM 推理跑偏。
 
+> 作用域：本文件管**接口契约**（内部 invariant，如 `loop ≤ 10`、`== 0600`，由单测/contract-checker 校验）。**验收谓词的观测绑定**（QA 阶段驱动真实产物的 `observe/assert/channel`）属 SC/OST 验收层，见 `references/scenario-generator-prompt.md`，不在此扩展。
+
 ## 3. 任务类型必填字段表
 
 | 任务类型 | 必填字段 |

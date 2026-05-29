@@ -42,6 +42,12 @@
 
 ---
 
+## 也用于 design 阶段审谓词
+
+预注册验收谓词（scenario-generator 的 `assert:`）同样套本手册：`height >= 44`（数字，可 kill Boundary mutation）合格；`element visible`（页面初始即满足）是 Stable Element Assertion 反模式，design 阶段当场打回。每条谓词的 assert 必须能 kill 至少 No-op mutation。
+
+---
+
 ## 适用边界（不触发）
 
 1. 纯渲染测试（无交互，渲染即行为）

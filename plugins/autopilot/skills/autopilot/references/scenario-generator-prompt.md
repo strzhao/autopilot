@@ -34,7 +34,15 @@
 4. **执行步骤**：用户/调用方的操作序列
 5. **预期结果**：可观察的成功标志
 6. **验证层级**：UI / API / CLI / Config
-7. **Observable State Transitions (OST)**：场景中每次"用户交互/状态变化"步骤之后，可被外部观察到的状态变化（aria-state / 进度数字 / 类名 / 文本内容 / 计数变化）。这是后续测试编写者写"Mutation-Survival 抗性"断言的依据。纯渲染类场景填 "N/A"。详情参 `references/test-mutation-survival.md`。
+7. **验收谓词（EARS-OST + 观测绑定）**：把场景里每个"可观察状态变化"冻结成预注册谓词，QA 阶段对**真实产物**逐条求值（非散文、非事后打分）。每条谓词给两层：
+   - **EARS 陈述**（冻结意图、消歧）：用关键字 `When <触发>` / `While <前置状态>` / `If <异常>` + `shall <系统响应>`。
+   - **观测绑定**（机器可判）：
+     - `observe:` 观测什么 —— 按技术栈选：GUI→可达性树节点属性 / CLI→exit code、stdout / API→响应字段 / 文件→stat。
+     - `assert:` DbC 谓词（`== / >= / contains / exists`，禁"约/大概"等自然语言）。
+     - `channel:` `det-machine`（数字/exit/文件/AX 属性，零主观）｜ `real-process`（真子进程或真 API 一次冒烟）｜ `visual-residue`（仅 AX 表达不了的纯视觉，写成二值清单项）。
+     - `negate:` 可选，用于"不执行 / 状态不变"类反向谓词。
+   - **GUI 断言优先走可达性树**，禁用 golden-image 像素快照当回归门（基线易漂移、re-record 即失值）。
+   - 信息隔离下你只需给 EARS + channel + assert + 观测目标**类别**；精确 selector/AX 路径由 QA 在真机绑定。纯渲染场景仍可填 "N/A"。谓词同样要能 kill No-op mutation，详情参 `references/test-mutation-survival.md`。
 
 ## 输出格式
 
@@ -46,7 +54,10 @@
 - 执行步骤：{步骤列表}
 - 预期结果：{可观察的结果}
 - 验证层级：{层级}
-- Observable State Transitions: {每次用户交互后可观察到的状态变化列表，纯渲染场景填 "N/A"}
+- 验收谓词（EARS-OST + 观测绑定，纯渲染场景填 "N/A"）：
+  - P1 [det-machine]: When {触发}, {系统} shall {响应} ｜ observe: {观测目标} ｜ assert: {DbC 谓词}
+  - P2 [visual-residue]: While {状态}, {系统} shall {响应} ｜ observe: 截图 ｜ assert: {二值清单项}
+  - P3 [real-process]: If {异常}, then {系统} shall {响应} ｜ observe: {exit/响应} ｜ assert: {DbC 谓词} ｜ negate: {可选}
 
 （按重要性排序，Happy Path 优先）
 ```
