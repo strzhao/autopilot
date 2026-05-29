@@ -6,12 +6,11 @@
 #   .autopilot/requirements/20260519-优化-plan-review-html-里的/state.md
 #   § 设计文档 / § 契约规约 / § 验收场景
 #
-# 覆盖范围（6 大契约组，共 24+ 静态字面断言）：
+# 覆盖范围（5 大契约组，共 22+ 静态字面断言）：
 #   A. DOM 结构契约（场景 1, 8）：<nav id="toc-pane">、<button id="toc-toggle">、<ol id="toc-list">
 #   B. JS 行为契约（场景 1-3, 6, 8）：setAttribute('id'、IntersectionObserver、is-active、is-open、scrollIntoView、ESC、toc-empty
 #   C. CSS 契约（场景 5, 7）：.toc-pane、position:sticky、overflow-y:auto、1199/1200 断点 media query、.toc-h2/.toc-h3
 #   D. 现有功能未退化（场景 6）：dataset.blockId、stopImmediatePropagation、1100/1101 评论抽屉断点、<aside id="comments-pane">
-#   E. skill 文件 0 改动契约（场景 9）：git diff --name-only 仅含 plan-review-template.html
 #   F. 重复 H 文本计数器逻辑（场景 6 OST）：JS 中 counter 自增 + 'h-' + counter 拼接
 #
 # 注意：toc-item 由 JS 运行时生成，红队仅做模板字面断言（无 jsdom 依赖）。
@@ -249,61 +248,13 @@ fi
 pass "D5: <aside id=\"comments-pane\"> 仍存在"
 
 # ════════════════════════════════════════════════════════════════════════════
-# 契约 E：skill 文件 0 改动契约（场景 9）
-# 设计文档场景 9：git diff --name-only HEAD 仅含 plan-review-template.html
-#   不允许改动: SKILL.md / launch-plan-review.sh / helper.js / server.cjs
-#               / frame-template.html / prefs.cjs / marked.min.js
+# 契约 E（skill 文件 0 改动 / 场景 9）已移除
 # ════════════════════════════════════════════════════════════════════════════
-echo ""
-echo "---- E: skill 文件 0 改动契约 ----"
-
-# E1: git diff --name-only HEAD 中不含禁改文件
-# 注意：执行此测试时，蓝队尚未 commit；此断言验证「工作树相对 HEAD」未污染禁改清单
-# 即使新增了 plan-review-toc.acceptance.test.sh（红队测试文件），此文件不在禁改清单中
-
-FORBIDDEN_FILES=(
-    "plugins/autopilot/skills/autopilot/SKILL.md"
-    "plugins/autopilot/scripts/visual-companion/launch-plan-review.sh"
-    "plugins/autopilot/scripts/visual-companion/helper.js"
-    "plugins/autopilot/scripts/visual-companion/server.cjs"
-    "plugins/autopilot/scripts/visual-companion/frame-template.html"
-    "plugins/autopilot/scripts/visual-companion/prefs.cjs"
-    "plugins/autopilot/scripts/visual-companion/marked.min.js"
-)
-
-# git diff --name-only HEAD 列出工作树相对最近提交的所有变化文件
-DIFF_FILES="$(git -C "$REPO_ROOT" diff --name-only HEAD 2>/dev/null || true)"
-
-# 也包含 untracked 但 staged 的（git diff --cached），合并起来
-STAGED_FILES="$(git -C "$REPO_ROOT" diff --name-only --cached HEAD 2>/dev/null || true)"
-
-ALL_DIFF_FILES="$(printf '%s\n%s\n' "$DIFF_FILES" "$STAGED_FILES" | sort -u | grep -v '^$' || true)"
-
-violations=()
-for forbidden in "${FORBIDDEN_FILES[@]}"; do
-    if printf '%s\n' "$ALL_DIFF_FILES" | grep -qFx "$forbidden"; then
-        violations+=("$forbidden")
-    fi
-done
-
-if [[ ${#violations[@]} -gt 0 ]]; then
-    fail "E1: 检测到禁改文件被修改（场景 9：skill 0 改动契约违反）：$(printf '%s ' "${violations[@]}")"
-fi
-pass "E1: 禁改清单（SKILL.md / launch-plan-review.sh / helper.js / server.cjs / frame-template.html / prefs.cjs / marked.min.js）均未被改动"
-
-# E2: 进一步确认改动只发生在允许文件中
-# 允许列表：plan-review-template.html（蓝队改动主体）+ 红队测试文件本身
-# 反向断言：去掉允许文件后，剩余应为空
-ALLOWED_PATTERN='^(plugins/autopilot/scripts/visual-companion/plan-review-template\.html|plugins/autopilot/tests/acceptance/plan-review-toc\.acceptance\.test\.sh|\.autopilot/.*)$'
-
-UNEXPECTED="$(printf '%s\n' "$ALL_DIFF_FILES" | grep -v -E "$ALLOWED_PATTERN" || true)"
-
-if [[ -n "$UNEXPECTED" ]]; then
-    # 设计场景 9 OST：git diff --name-only HEAD 仅含 plan-review-template.html
-    # 此处放宽允许：红队测试文件 + .autopilot/ 状态目录（autopilot 自身的工作目录）
-    fail "E2: 检测到非允许文件被改动（场景 9）：$UNEXPECTED"
-fi
-pass "E2: 改动文件白名单校验通过（仅 plan-review-template.html + 红队测试文件 + .autopilot 状态）"
+# 原 E1/E2 用 `git diff --name-only HEAD` 断言"本任务只应改 plan-review-template.html、
+# SKILL.md 等 7 个文件禁改"。那是**该任务实现期的瞬时 git-working-tree 断言**，只在那次
+# 任务 QA 时有效；作为常驻回归测试它会对未来任何无关改动（如其它特性编辑 SKILL.md）误报。
+# 常驻回归只断言**产物结构**（契约 A/B/C/D/F 直接 grep plan-review-template.html），不巡查
+# git 工作树状态。移除于 QA 谓词化重构。
 
 # ════════════════════════════════════════════════════════════════════════════
 # 契约 F：重复 H 文本计数器逻辑（场景 6 OST）
@@ -330,7 +281,7 @@ pass "F2: JS 中含 'h-' + counter 拼接（id 计数器命名规则）"
 
 # ════════════════════════════════════════════════════════════════════════════
 echo ""
-echo "[OK ] R11 plan-review-toc — 全部 24 个静态字面断言通过"
-echo "      覆盖：A(7) + B(9) + C(6) + D(5) + E(2) + F(2) = 31 个 grep 断言"
+echo "[OK ] R11 plan-review-toc — 全部静态字面断言通过"
+echo "      覆盖：A(7) + B(9) + C(6) + D(5) + F(2) = 29 个 grep 断言（契约 E 已移除）"
 echo "      注：toc-item 由 JS 运行时生成，端到端浏览器测试见 state.md § 真实测试场景"
 exit 0
