@@ -91,6 +91,15 @@ depends_on: ["XXX", "YYY"]
 - `auto_approve` 使下一个任务在高信心时跳过人工审批门（design 审批 + QA 审批）
 - 所有任务完成后自动触发全项目 QA（`mode: "project-qa"`）
 
+## 全项目 QA（mode: "project-qa"）
+
+stop-hook 检测到全部任务 `status: done` 后，创建 `mode: "project-qa"` 状态文件并从 `phase: "qa"` 开始。与单任务 QA 的差异：
+
+- **加载**：`.autopilot/project/design.md` + `dag.yaml` + 状态文件 `## 任务完成摘要`（全 handoff 汇总）
+- **变更范围**：项目创建以来的全部 `git diff`（而非单任务 diff）
+- **Tier 调整**：Tier 0 跳过（无项目级红队测试）；Tier 1 全量构建/测试/lint，重在验跨任务集成；Tier 1.5 从 design.md「跨任务设计约束 / Handoff 策略」提取集成场景（共享接口 / 数据流 / 命名一致性）；Tier 2 对照 design.md 审整体架构符合性 + 全变更范围质量
+- **结果判定**：全部 ✅ → `phase: "done"`；有 ❌ → `gate: "review-accept"`（**不进 auto-fix**，项目级失败需人工判断修复范围与优先级）
+
 ## 用户命令
 
 | 命令 | 行为 |
