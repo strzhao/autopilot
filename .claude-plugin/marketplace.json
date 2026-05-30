@@ -28,8 +28,8 @@
         {
             "name": "autopilot",
             "source": "./plugins/autopilot",
-            "description": "AI 自动驾驶工程套件。全流程闭环（红蓝对抗 + 五层 QA + 谓词闸门）+ 默认含 brainstorm 的交互式设计（v3.32 AI 自适应判断 fast/standard，--fast 强制快速：跳过审批 + contract-checker + qa-reviewer）+ 需求管理 + 智能提交 + Worktree 自动初始化（v3.18 选择性 symlink，sessions 隔离到 worktree 分支）(v3.39.0: 谓词传动轴接线 — `## 验收场景` 成全链路谓词 SSOT，贯通红队双消费 / Tier 1.5 三元组 / 闸门 / 报告，治 B 遗留悬空引用)",
-            "version": "3.39.0",
+            "description": "AI 自动驾驶工程套件。全流程闭环（红蓝对抗 + 五层 QA + 谓词闸门）+ 默认含 brainstorm 的交互式设计（v3.32 AI 自适应判断 fast/standard，--fast 强制快速：跳过审批 + contract-checker + qa-reviewer）+ 需求管理 + 智能提交 + Worktree 自动初始化（v3.18 选择性 symlink，sessions 隔离到 worktree 分支）(v3.39.0: 谓词传动轴接线 — `## 验收场景` 成全链路谓词 SSOT，贯通红队双消费 / Tier 1.5 三元组 / 闸门 / 报告，治 B 遗留悬空引用)(v3.40.0: 合入 Tier 1 AI-First 反过拟合减法 — plan-reviewer 去伪精度分数线、qa-reviewer 正则转语义、Explore 计数自适应、防合理化去重)",
+            "version": "3.40.0",
             "author": {
                 "name": "stringzhao",
                 "email": "stringzhao@foxmail.com"

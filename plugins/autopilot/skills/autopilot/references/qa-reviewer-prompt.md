@@ -92,10 +92,11 @@
 **检查清单**（对每个测试文件依次执行）：
 
 1. **宽容跳过模式（BLOCKER，置信度 95+）**
+   > 以语义判断为准；下列 grep pattern 仅作线索，不命中也可凭语义判定，命中也需确认确属宽容跳过。
    - grep 命中 `if\s*\(.*status.*=*=*\s*[0-9]` 包裹断言、else 分支只 `console.warn` / `console.log`
    - grep 命中 `try\s*{[\s\S]*assert[\s\S]*}\s*catch` 吞掉断言
    - grep 命中 `// .*(蓝队|未实现|先跳过|skip|TODO)` 同行下方就是 soft skip
-   - 文件中 `test.skip` / `it.skip` / `xit` / `xtest` 占比 ≥30% 且无对应 TODO 注释
+   - skip 类标记（test.skip / it.skip / xit / xtest）占比相对该文件断言总数偏高、且无说明性 TODO 注释
 
 2. **缺失断言（BLOCKER，置信度 90+）**
    - 测试函数内仅 `console.log` / `console.warn` 而无 `assert.*` / `expect(...)`. / `should.*` 调用
