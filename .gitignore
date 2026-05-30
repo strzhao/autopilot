@@ -6,5 +6,9 @@ __pycache__/
 
 # autopilot: knowledge/ 入库共享，runtime/ 不入库
 .autopilot/runtime/
+
+# Claude Code worktree（本地临时工作树，不入库）
+.claude/worktrees/
+
 # autopilot plan-review 临时渲染 session（per-run 临时目录，含 server.pid/events/plan-review.html，不应入库）
 .autopilot/**/visual/
