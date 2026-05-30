@@ -207,3 +207,10 @@
 **Choice**: 不选"再加 prompt 规则"（已被证伪 6+ 轮）；不选"加新 sub-agent 评 AI"（仍是 AI 评 AI）；不选"强制人工 gate"（与 autopilot 自动驾驶定位冲突）；选客观工具量化 — token 增量 ~0、阈值数字不可合理化、业界主流（Meta/Google/字节）。配套精简：test-mutation-survival.md 201→60 行降级为"工具不可用时降级清单"，避免规则单边膨胀。**夯实证据**：本任务 design 阶段两轮 plan-review 反复抓到我自己犯同款"AI 不验证就传播"反模式（R1 S2-S5 文件总行数误读、R2 A2 段未同步），元印证 Tier 5 设计正确性。
 **Reversibility**: 单 commit (8434cb7) 13 文件全部独立可 revert，acceptance test 44 断言锁死契约。
 
+
+### [2026-05-30] AI-First 反过拟合的判据：删伪精度/正则/重复，留终止边界/信息隔离/契约/客观门禁
+<!-- tags: autopilot, skill, ai-first, overfitting, voodoo-constant, magic-number, degrees-of-freedom, guardrail-vs-overfitting, pseudo-precision, semantic-judgment, anti-pseudo-optimization -->
+**Scenario**: 收到"基于 AI First 优化 skill、排查过拟合规则"的元任务。审计发现"过拟合候选"与"合理护栏"混杂，存在"AI First = 到处删护栏、相信 AI"的误判风险。
+**Lesson**: skill 的"过拟合"（该删，限制 AI 发挥）与"合理护栏"（该留，结构兜底）有可操作判据。**该删**：① 伪精度数字（Agent 无法客观区分的分数线/百分比阈值，voodoo constant）；② 在 AI Agent 的 prompt 里要求它跑正则/计数做本可语义判断的事（自相矛盾）；③ 跨文件重复的同一规则（违反 SSOT）；④ 对"开阔地"任务的裸计数上限（应给方向不给数）。**该留**：① 终止边界（循环轮次/重试/迭代上限，防无限循环）；② 信息隔离（红队不读实现）；③ 契约字面比对；④ 客观工具量化门禁（数字来自工具而非 AI 主观）。**判别问题**：删掉它，AI 是"更自由地把事做对"，还是"失去一个它无法自我提供的结构保证"？前者是过拟合，后者是护栏。
+**Choice**: 删法走"纯减法 + 保留行为锚点的二分语义"（如置信度分数线 → BLOCKER/重要二分，行为映射不变、只去伪精度），护栏一律不碰。与 [2026-05-07]（AI 自觉不可靠须 hook 兜底）、[2026-05-24]（AI 自检盲区须客观门禁）互补：那两条立"该用结构兜底的边界"，本条立"该还给 AI 的自由边界"。配合 [2026-05-09] 最小集+纯减+可独立回滚 执行。
+**Evidence**: 5 处纯减法（plan-reviewer 伪精度分数线 + 子任务硬上限、qa-reviewer skip 占比正则阈值、Explore agent 裸计数、anti-rationalization 跨文件重复表），9 条不变量 grep + contract-checker + qa-reviewer 三重确认行为守恒；故意保留 SKILL「最多 N 轮审查」终止边界、红队信息隔离铁律、契约字面比对、mutation/coverage 客观门禁。

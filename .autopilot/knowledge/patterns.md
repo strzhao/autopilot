@@ -361,3 +361,9 @@ S-INV-4 — 不动章节零改动
 **Lint pattern**: 修改设计文档某处"+N 行 / -N 行 / X 项"等数字声明时，AI 编排器立刻 `grep -nE "数字" 设计文档` 找出所有出现位置 → 逐处确认是否需要同步更新。plan-reviewer 维度新增："设计文档中出现的数字 / 计数 / 项数是否所有位置一致？grep 验证。"
 **Evidence**: 本任务 design 阶段 R1 + R2 两轮均抓到此模式，且都是修复型 BLOCKER（不是初版遗漏）。
 
+
+### [2026-05-30] bash set -u 下变量紧跟多字节中文标点被误解析为变量名 → unbound variable 崩溃
+<!-- tags: bash, set-u, multibyte, cjk, unbound-variable, shell, variable-expansion, brace-disambiguation, acceptance-test, latent-bug -->
+**Scenario**: 含大量中文字符串的 bash 脚本（本仓库 hook / 验收脚本常见）在 `set -u` 下，`$var` 直接紧跟全角中文标点（如 `$ref_rel，` `$pat」`）。
+**Lesson**: bash 变量展开遇到紧跟的多字节字符时，可能把多字节首字节并入变量名 → `set -u` 下报 `名字�: unbound variable` 崩溃。凡 `$var` 后紧跟非 ASCII 字符，必须用 `${var}` 显式界定变量名边界。该 bug 只在对应 fail 分支真正执行时才暴露，平时潜伏，易逃过"跑一遍全绿"的验证。
+**Evidence**: 验收脚本断链检测 `references/$ref_rel，但…` 在 macOS bash `set -u` 下崩溃，改 `${ref_rel}` 修复；同脚本其他 `$var「中文」` 处预防性同改。
