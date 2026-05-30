@@ -80,6 +80,79 @@ set_field() {
     mv "$temp" "$STATE_FILE"
 }
 
+# ── 枚举归一化工具 ────────────────────────────────────────────────
+#
+# normalize_enum_value <raw> → stdout
+#   机械归一：lowercase + trim + 去外层引号 + 下划线→连字符。
+#   纯函数，无副作用。空串输入输出空串（幂等）。
+normalize_enum_value() {
+    local raw="${1:-}"
+    # 去掉前后空白
+    local v
+    v=$(printf '%s' "${raw}" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+    # 去掉外层引号（单层，" 或 '）
+    if [[ "${v:0:1}" == '"' ]] && [[ "${v: -1}" == '"' ]]; then
+        v="${v:1:${#v}-2}"
+    elif [[ "${v:0:1}" == "'" ]] && [[ "${v: -1}" == "'" ]]; then
+        v="${v:1:${#v}-2}"
+    fi
+    # lowercase
+    v=$(printf '%s' "${v}" | tr '[:upper:]' '[:lower:]')
+    # 下划线 → 连字符
+    v=$(printf '%s' "${v}" | tr '_' '-')
+    printf '%s' "${v}"
+}
+
+# is_canonical <field> <value> → exit 0=命中闭集 / 1=越界
+#   field 仅接受 5 个枚举字段，其余一律返回 1。
+is_canonical() {
+    local field="${1:-}"
+    local value="${2:-}"
+    case "${field}" in
+        phase)
+            case "${value}" in
+                design|implement|qa|auto-fix|merge|done) return 0 ;;
+                *) return 1 ;;
+            esac
+            ;;
+        gate)
+            case "${value}" in
+                ""|review-accept) return 0 ;;
+                *) return 1 ;;
+            esac
+            ;;
+        mode)
+            case "${value}" in
+                ""|single|project|project-qa) return 0 ;;
+                *) return 1 ;;
+            esac
+            ;;
+        qa_scope)
+            case "${value}" in
+                ""|smoke|selective) return 0 ;;
+                *) return 1 ;;
+            esac
+            ;;
+        knowledge_extracted)
+            case "${value}" in
+                ""|true|skipped) return 0 ;;
+                *) return 1 ;;
+            esac
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# get_enum_field <field> → stdout = normalize_enum_value "$(get_field "$field")"
+#   读取 frontmatter 枚举字段并机械归一后输出。
+get_enum_field() {
+    local raw
+    raw=$(get_field "${1}")
+    normalize_enum_value "${raw}"
+}
+
 append_changelog() {
     local ts; ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     local temp="${STATE_FILE}.tmp.$$"

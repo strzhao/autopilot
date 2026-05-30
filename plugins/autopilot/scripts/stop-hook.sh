@@ -252,7 +252,7 @@ detect_smoke_eligible() {
     local diff_input="${1:-}"
 
     # qa_scope 已有值（如 "selective"）时不重复评估
-    [[ -n "$(get_field qa_scope)" ]] && return 0
+    [[ -n "$(get_enum_field qa_scope)" ]] && return 0
 
     local diff_lines=0 diff_files=0 has_deps=0
 
@@ -319,8 +319,8 @@ fi
 
 # ── 2. 解析 frontmatter ──
 
-PHASE=$(get_field "phase" || true)
-GATE=$(get_field "gate" || true)
+PHASE=$(get_enum_field "phase" || true)
+GATE=$(get_enum_field "gate" || true)
 ITERATION=$(get_field "iteration" || true)
 MAX_ITERATIONS=$(get_field "max_iterations" || true)
 STATE_SESSION=$(get_field "session_id" || true)
@@ -343,6 +343,17 @@ fi
 
 # Guard 2: 非空且不匹配 → 不同会话，放行
 if [[ -n "$STATE_SESSION" ]] && [[ "$STATE_SESSION" != "$HOOK_SESSION" ]]; then
+    exit 0
+fi
+
+# ── 3.5 Phase canonical 守卫 ──
+# 若 PHASE 非空但不在闭合枚举内，注入纠正 block，让 AI 用 Edit 改回合法值后再继续。
+# 守卫放在 session 隔离之后、数值校验与 phase=done 判断之前。
+if [[ -n "${PHASE}" ]] && ! is_canonical phase "${PHASE}"; then
+    GUARD_MSG="phase 字段值 '${PHASE}' 不在合法枚举内。合法值（闭合枚举）：design / implement / qa / auto-fix / merge / done。请用 Edit 工具将 ${STATE_FILE} frontmatter 的 phase 字段改为上述合法值之一，然后继续执行。"
+    jq -n --arg reason "${GUARD_MSG}" \
+        --arg msg "autopilot stop-hook: phase 值越界，需要纠正" \
+        '{"decision":"block","reason":$reason,"systemMessage":$msg}'
     exit 0
 fi
 
@@ -377,10 +388,10 @@ SKIP_INCREMENT=0
 
 if [[ "$PHASE" == "done" ]]; then
     # 知识提取守卫：AI 跳过知识提取直接设 done → 回滚到 merge
-    KNOWLEDGE_EXTRACTED=$(get_field "knowledge_extracted" || true)
+    KNOWLEDGE_EXTRACTED=$(get_enum_field "knowledge_extracted" || true)
     if [[ "$KNOWLEDGE_EXTRACTED" != "true" ]] && [[ "$KNOWLEDGE_EXTRACTED" != "skipped" ]]; then
         # 豁免：无代码变更的阶段不需要知识提取
-        MODE_CHECK=$(get_field "mode" || true)
+        MODE_CHECK=$(get_enum_field "mode" || true)
         BRIEF_CHECK=$(get_field "brief_file" || true)
         if { [[ "$MODE_CHECK" == "project" ]] && [[ -z "$BRIEF_CHECK" ]]; } || [[ "$MODE_CHECK" == "project-qa" ]]; then
             set_field "knowledge_extracted" '"skipped"'
@@ -388,14 +399,14 @@ if [[ "$PHASE" == "done" ]]; then
             set_field "phase" '"merge"'
             NEXT_ITERATION=$((ITERATION + 1))
             set_field "iteration" "$NEXT_ITERATION"
-            PROMPT="你跳过了知识提取步骤。读取 ${STATE_FILE}，按照 autopilot skill Phase: merge 的知识提取与沉淀步骤执行。完成后用 Edit 设置 knowledge_extracted 为 true（有新增）或 skipped（无新增），然后再设 phase: done。"
+            PROMPT="你跳过了知识提取步骤。读取 ${STATE_FILE}，按照 autopilot skill Phase: merge 的知识提取与沉淀步骤执行。完成后用 Edit 设置 knowledge_extracted 为 true（有新增）或 skipped（无新增）——合法值仅 true / skipped，然后再设 phase: done。"
             jq -n --arg prompt "$PROMPT" --arg msg "autopilot iteration ${NEXT_ITERATION} | phase: merge | 知识提取回滚" \
                 '{"decision":"block","reason":$prompt,"systemMessage":$msg}'
             exit 0
         fi
     fi
 
-    MODE=$(get_field "mode" || true)
+    MODE=$(get_enum_field "mode" || true)
 
     # Case 0: project-qa 完成 → 项目完成通知 + 清理 active 指针
     if [[ "$MODE" == "project-qa" ]]; then
@@ -420,11 +431,11 @@ if [[ "$PHASE" == "done" ]]; then
                 create_brief_state_file "$TASK_FILE_ABS" "$HOOK_SESSION" "30" "3" "true"
                 bash "$SCRIPT_DIR/notify.sh" auto-chain 2>/dev/null || true
                 echo "🔗 project-design → ${FIRST_READY}" >&2
-                PHASE=$(get_field "phase" || true)
+                PHASE=$(get_enum_field "phase" || true)
                 # v3.36.3 必须重读 GATE/AUTO_APPROVE：旧 state 残留 gate（如 AI 未清的
                 # review-accept）会让下方第 6 步审批门误命中而 exit 0，新 state 的
                 # block JSON 永不输出。这是 auto-chain 失效双链第 2 环。
-                GATE=$(get_field "gate" || true)
+                GATE=$(get_enum_field "gate" || true)
                 AUTO_APPROVE=$(get_field "auto_approve" || true)
                 ITERATION=$(get_field "iteration" || true)
                 MAX_ITERATIONS=$(get_field "max_iterations" || true)
@@ -453,9 +464,9 @@ if [[ "$PHASE" == "done" ]]; then
             bash "$SCRIPT_DIR/notify.sh" auto-chain 2>/dev/null || true
             echo "🔗 auto-chain: ${NEXT_TASK}" >&2
             # 重新读取新状态文件的字段
-            PHASE=$(get_field "phase" || true)
+            PHASE=$(get_enum_field "phase" || true)
             # v3.36.3 必须重读 GATE/AUTO_APPROVE（双链第 2 环修复）
-            GATE=$(get_field "gate" || true)
+            GATE=$(get_enum_field "gate" || true)
             AUTO_APPROVE=$(get_field "auto_approve" || true)
             ITERATION=$(get_field "iteration" || true)
             MAX_ITERATIONS=$(get_field "max_iterations" || true)
@@ -477,9 +488,9 @@ if [[ "$PHASE" == "done" ]]; then
             create_project_qa_state_file "$HOOK_SESSION"
             bash "$SCRIPT_DIR/notify.sh" project-qa 2>/dev/null || true
             echo "🏁 所有任务已完成，启动全项目 QA" >&2
-            PHASE=$(get_field "phase" || true)
+            PHASE=$(get_enum_field "phase" || true)
             # v3.36.3 必须重读 GATE/AUTO_APPROVE（双链第 2 环修复）
-            GATE=$(get_field "gate" || true)
+            GATE=$(get_enum_field "gate" || true)
             AUTO_APPROVE=$(get_field "auto_approve" || true)
             ITERATION=$(get_field "iteration" || true)
             MAX_ITERATIONS=$(get_field "max_iterations" || true)
@@ -506,8 +517,8 @@ fi
 # stop-hook 的 create_brief_state_file / create_project_qa_state_file 会写 true，
 # 单任务模式默认 false，是 auto-chain 流的充分指标）。
 AUTO_APPROVE=$(get_field "auto_approve" || true)
-if [[ "$GATE" == "review-accept" ]] && [[ "$PHASE" == "qa" ]] && \
-   [[ "$AUTO_APPROVE" == "true" ]]; then
+if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]] && \
+   [[ "${AUTO_APPROVE}" == "true" ]]; then
     set_field "gate" '""'
     set_field "phase" '"merge"'
     GATE=""
@@ -589,8 +600,8 @@ if [[ "$PHASE" == "design" ]]; then
 elif [[ "$PHASE" == "implement" ]]; then
     PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: implement, 迭代: ${NEXT_ITERATION}. ⚠️ 红蓝对抗铁律: (1) 从状态文件读取设计文档, 检查是否有领域 Skill 委托; (2) 无委托时必须使用 Agent 工具在同一轮响应中同时启动蓝队和红队两个并行 sub-agent (model: sonnet), prompt 模板参见 references/blue-team-prompt.md 和 references/red-team-prompt.md; (3) 红队绝对不能读取蓝队新写的实现代码——红队只看设计文档; (4) 两个 Agent 都完成后合流: 收集产出、写入红队测试文件、更新状态文件. 详细工作流参见 references/implement-phase.md. 按照 autopilot skill 的 Phase: implement 指引执行."
 elif [[ "$PHASE" == "qa" ]]; then
-    QA_SCOPE=$(get_field "qa_scope" || true)
-    if [[ "$QA_SCOPE" == "smoke" ]]; then
+    QA_SCOPE=$(get_enum_field "qa_scope" || true)
+    if [[ "${QA_SCOPE}" == "smoke" ]]; then
         PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: qa (smoke), 迭代: ${NEXT_ITERATION}. ⚠️ smoke QA: 只执行 Wave 1 (Tier 0/1 红队验收测试 + 类型/Lint/单元/构建) + Wave 1.5 真实测试场景, 不启动 qa-reviewer Agent — 编排器自行 Read git diff 后内联做 3 项自审 (设计符合性 / OWASP 关键 / 代码质量明显问题). Tier 1.5 铁律不变: 必须执行设计文档每一个真实测试场景, 场景计数匹配 E≥N. 按照 autopilot skill 的指引执行."
     else
         PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: qa, 迭代: ${NEXT_ITERATION}. ⚠️ Tier 1.5 铁律: (1) 必须执行设计文档中的每一个真实测试场景, 不允许跳过任何场景; (2) 结果判定前先做场景计数匹配——统计报告中执行:标记数量 E 与设计文档场景总数 N, E<N 则有场景被跳过, 必须补做. 按照 autopilot skill 的指引执行当前阶段的工作流."
@@ -600,7 +611,7 @@ elif [[ "$PHASE" == "merge" ]]; then
 else
     PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: ${PHASE}, 迭代: ${NEXT_ITERATION}. 按照 autopilot skill 的指引执行当前阶段的工作流."
 fi
-MODE=$(get_field "mode" || true)
+MODE=$(get_enum_field "mode" || true)
 SYSTEM_MSG="autopilot iteration ${NEXT_ITERATION} | phase: ${PHASE}${MODE:+ | mode: $MODE}"
 
 jq -n \

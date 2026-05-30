@@ -155,7 +155,7 @@ HELP_EOF
             echo "❌ 没有活跃的 autopilot。使用 /autopilot <目标> 启动新循环。"
             exit 0
         fi
-        GATE=$(get_field "gate")
+        GATE=$(get_enum_field "gate")
         if [[ -z "$GATE" ]]; then
             echo "❌ 当前不在审批门，无需 approve。"
             echo "   当前阶段: $(get_field 'phase')"
@@ -171,7 +171,7 @@ HELP_EOF
                 echo "✅ 验收已通过，将进入代码合并阶段。"
                 ;;
             *)
-                echo "⚠️  未知的审批门: $GATE"
+                echo "⚠️  未知的审批门: $GATE（合法 gate 值：review-accept）"
                 exit 0
                 ;;
         esac
@@ -185,7 +185,7 @@ HELP_EOF
             echo "❌ 没有活跃的 autopilot。"
             exit 0
         fi
-        GATE=$(get_field "gate")
+        GATE=$(get_enum_field "gate")
         if [[ -z "$GATE" ]]; then
             echo "❌ 当前不在审批门，无法 revise。"
             exit 0

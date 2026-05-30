@@ -5,13 +5,13 @@
 状态文件（`.autopilot/runtime/active.ptr` 指针指向的 `.autopilot/runtime/requirements/<slug>/state.md`，worktree 中位于 `.autopilot/runtime/sessions/<name>/requirements/<slug>/state.md`）的 frontmatter 包含以下字段：
 
 **AI 可写字段**：
-- `phase`: 当前阶段（design → implement → qa → auto-fix → merge → done），AI 更新
-- `gate`: 审批门标记，AI 更新
+- `phase`: 当前阶段（design → implement → qa → auto-fix → merge → done），AI 更新。**合法值（闭合枚举）：design / implement / qa / auto-fix / merge / done**
+- `gate`: 审批门标记，AI 更新。**合法值（闭合枚举）：""（空，无门）/ review-accept**
 - `retry_count`: auto-fix 重试计数，AI 在 auto-fix 阶段递增
-- `mode`: 任务模式（""/"single"/"project"），AI 在 design 阶段 1.5 步骤检测后写入
-- `qa_scope`: 选择性重跑标记，AI 更新；可选值：`"smoke"`（diff 小或 fast_mode 触发，跳过 Wave 2 qa-reviewer）/ `"selective"`（auto-fix 后只重跑失败 Tier）/ `""`（默认全量 QA）
+- `mode`: 任务模式，AI 在 design 阶段 1.5 步骤检测后写入。**合法值（闭合枚举）：""（空）/ single / project / project-qa**
+- `qa_scope`: 选择性重跑标记，AI 更新。**合法值（闭合枚举）：""（空，默认全量 QA）/ smoke（diff 小或 fast_mode 触发，跳过 Wave 2 qa-reviewer）/ selective（auto-fix 后只重跑失败 Tier）**
 - `next_task`: 下一个就绪任务 ID（项目模式 merge 阶段写入，触发 auto-chain）
-- `knowledge_extracted`: 知识提取完成标记，AI 在 merge 阶段设为 `"true"`（有新增）或 `"skipped"`（无新增）。stop-hook 的 phase=done 守卫检查此字段，缺失或空值会回滚到 merge
+- `knowledge_extracted`: 知识提取完成标记，AI 在 merge 阶段设为 `"true"`（有新增）或 `"skipped"`（无新增）。**合法值（闭合枚举）：""（空）/ true / skipped**。stop-hook 的 phase=done 守卫检查此字段，缺失或空值会回滚到 merge
 - `fast_mode`: 三态字段。`""`（默认/未定）/`"true"`（fast）/`"false"`（standard）。setup.sh 的 `--fast` / `--standard` flag 时直接写入；为空时 AI 在启动流程步骤 2 中按自适应规则写回（bug 修复/小改动/单一概念跨文件 search-replace→true，架构权衡/新抽象/探索未知模块→false，不确定→true），写入后整个生命周期不再修改
 
 - `html_review`: 布尔值（默认 false）。设为 `true` 时，design 阶段步骤 4 启用 HTML 浏览器评审路径（自动打开浏览器渲染设计文档 + 反馈输入 + 通过/修改/放弃按钮）。setup.sh 创建任务时若环境变量 `AUTOPILOT_HTML_REVIEW=1` 则自动写入 `true`，否则写 `false`；用户可手动编辑该字段覆盖（编辑生效需在下一次步骤 4 判定时读到）。
@@ -54,6 +54,8 @@
 ## Handoff 策略
 (任务间信息传递的关键内容)
 ```
+
+> **枚举归一说明**：shell 会对上述 5 个枚举字段（phase/gate/mode/qa_scope/knowledge_extracted）的值机械归一大小写、下划线↔连字符；越界值（不在闭合枚举内）会触发 stop-hook 纠正并退回 AI 提示。**不要依赖近义词或大小写变体**，请严格使用上述列出的 canonical 值。
 
 ## 更新原则
 
