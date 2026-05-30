@@ -67,4 +67,8 @@
 
 N/A 整体跳过：frontmatter `contract_required` 缺失或 false 时，本章节可省略。
 
+## 验收场景 区域（谓词 SSOT）
+
+design 步骤 2 编排器把验收场景生成器的输出冻结写入 `## 验收场景`，内容为预注册验收谓词（EARS-OST + 观测绑定，格式见 references/scenario-generator-prompt.md）。**这是全链路谓词的唯一权威源（SSOT）**：plan-reviewer 据此做覆盖分析、红队据 det-machine/real-process 谓词写 Tier-0 硬断言、QA Tier 1.5 据此驱动真实产物求值产三元组、谓词闸门据三元组放行。生成器失败时该区域填 `N/A`，下游各环节按各自降级处理。
+
 <!-- deprecated: ## 红队验收测试 / ## QA 报告 / ## 变更日志 区块已废弃（v3.37+），AI 在对话中产出，不持久化到 state.md -->

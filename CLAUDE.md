@@ -11,7 +11,7 @@ String 维护的 Claude Code 插件集合。
 
 | 插件 | 版本 | 类型 | 一句话 |
 |------|------|------|--------|
-| [autopilot](plugins/autopilot/) | v3.38.0 | Skill + Hook | AI 自动驾驶工程套件：全流程闭环、AI 自适应 fast/standard、智能提交、工程诊断、worktree 自动初始化（选择性 symlink）+ brainstorm 独立 skill + plan-review HTML 左侧 TOC 导航 + `.autopilot/` 二级分层 knowledge/+runtime/（三层防御）+ **QA 打分制改谓词闸门 — 验收谓词 EARS-OST + 观测绑定（GUI 走可达性树）、三元组求值 + 强制 artifact、删整体评分/Ready to merge、封 smoke/reviewer 失败两处自审逃生口；清理 5 个孤儿 QA 文档 + 补 project-qa playbook** |
+| [autopilot](plugins/autopilot/) | v3.39.0 | Skill + Hook | AI 自动驾驶工程套件：全流程闭环、AI 自适应 fast/standard、智能提交、工程诊断、worktree 自动初始化（选择性 symlink）+ brainstorm 独立 skill + plan-review HTML 左侧 TOC 导航 + `.autopilot/` 二级分层 knowledge/+runtime/（三层防御）+ QA 谓词闸门（EARS-OST + 观测绑定 + 三元组 + 强制 artifact）+ **谓词传动轴接线：`## 验收场景` 成全链路谓词 SSOT，贯通红队双消费（据 det/real 谓词写 Tier-0 硬断言）/ Tier 1.5（编排器据谓词驱动真实产物产三元组）/ 闸门 / 报告，治 B 遗留的悬空引用** |
 | [writer-skill](plugins/writer-skill/) | v1.11.0 | Skill | 写作技能包：博客向 / 技术文档向 / 专业技术博客向 / 文章评价 |
 | [summarizer](plugins/summarizer/) | v1.0.0 | Skill | 多模态内容摘要（文章/视频/音频 → flomo） |
 | [task-notifier](plugins/task-notifier/) | v1.0.0 | Hook | 任务完成系统提示音 |

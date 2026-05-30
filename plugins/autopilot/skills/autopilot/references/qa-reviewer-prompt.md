@@ -166,3 +166,8 @@
 | 1 | path/to/test.ts | 宽容跳过模式 | L42-L48 | BLOCKER |
 
 如有任一 BLOCKER → 计入 Critical（谓词闸门据此判不可合），写入 `Critical: 红队测试存在宽容跳过/缺失断言`。
+
+**附：审谓词与三元组质量**（有 `## 验收场景` 时）：
+- **Tautological 谓词当场打回**：`assert:` 是 `element visible` / `不报错` / `存在` 这类对 no-op 实现也成立的弱断言 → BLOCKER（合格示例：`height >= 44`、`exit == 0`，详见 `references/test-mutation-survival.md`）。
+- **artifact 真实性**：逐条核验 Tier 1.5 三元组里每个 PASS 引的 artifact 真实存在且支持该判定；artifact 缺失/不匹配 → 该谓词改判 FAIL，写入 Critical。
+- 这两项也计入 Critical。

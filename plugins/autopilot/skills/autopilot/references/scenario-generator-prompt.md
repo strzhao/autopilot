@@ -60,4 +60,7 @@
   - P3 [real-process]: If {异常}, then {系统} shall {响应} ｜ observe: {exit/响应} ｜ assert: {DbC 谓词} ｜ negate: {可选}
 
 （按重要性排序，Happy Path 优先）
+
+## 产物归属
+你的输出将被编排器冻结写入状态文件 `## 验收场景` 区域，作为全链路谓词唯一权威源（SSOT），供 plan-reviewer / 红队 / QA 引用。请确保每条谓词 id（如 `场景1.P1`）唯一且可独立引用。
 ```
