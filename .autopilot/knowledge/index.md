@@ -74,3 +74,4 @@
 - [2026-05-24] AI 评审堆叠的边际效益递减 → 引入客观工具量化门禁 | tags: autopilot, qa, tier-5, mutation-testing, coverage, stryker, c8, istanbul, ai-self-review, paradigm-shift, meta-fse-2025, tool-driven-gate, dogfooding | → decisions.md
 - [2026-05-24] 精简清单必须 wc -l + grep 复核，凭直觉估算行数是 case 反模式元复刻 | tags: autopilot, refactor, simplification, wc-verify, grep-verify, anti-rationalization, plan-reviewer, blocker, ai-assumption, meta-reproduction, false-precision | → patterns.md
 - [2026-05-24] 单个 commit 内多区域同步是 BLOCKER 元复刻陷阱（修表层漏整体） | tags: autopilot, plan-reviewer, blocker, partial-fix, fragment-sync, design-document, architecture-decision, table-vs-text, false-completion, multi-location-update | → patterns.md
+- [2026-05-30] AI 自由写入的状态机枚举字段：容错读取(机械归一→canonical)+越界自愈(点名闭集纠正prompt)，而非精确匹配后静默误路由 | tags: autopilot, stop-hook, state-machine, enum-field, ai-writer-shell-reader, canonical, normalize, self-heal, silent-misroute, get-enum-field, contract-ssot, anti-overfitting | → decisions.md

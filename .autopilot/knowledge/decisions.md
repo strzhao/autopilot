@@ -214,3 +214,11 @@
 **Lesson**: skill 的"过拟合"（该删，限制 AI 发挥）与"合理护栏"（该留，结构兜底）有可操作判据。**该删**：① 伪精度数字（Agent 无法客观区分的分数线/百分比阈值，voodoo constant）；② 在 AI Agent 的 prompt 里要求它跑正则/计数做本可语义判断的事（自相矛盾）；③ 跨文件重复的同一规则（违反 SSOT）；④ 对"开阔地"任务的裸计数上限（应给方向不给数）。**该留**：① 终止边界（循环轮次/重试/迭代上限，防无限循环）；② 信息隔离（红队不读实现）；③ 契约字面比对；④ 客观工具量化门禁（数字来自工具而非 AI 主观）。**判别问题**：删掉它，AI 是"更自由地把事做对"，还是"失去一个它无法自我提供的结构保证"？前者是过拟合，后者是护栏。
 **Choice**: 删法走"纯减法 + 保留行为锚点的二分语义"（如置信度分数线 → BLOCKER/重要二分，行为映射不变、只去伪精度），护栏一律不碰。与 [2026-05-07]（AI 自觉不可靠须 hook 兜底）、[2026-05-24]（AI 自检盲区须客观门禁）互补：那两条立"该用结构兜底的边界"，本条立"该还给 AI 的自由边界"。配合 [2026-05-09] 最小集+纯减+可独立回滚 执行。
 **Evidence**: 5 处纯减法（plan-reviewer 伪精度分数线 + 子任务硬上限、qa-reviewer skip 占比正则阈值、Explore agent 裸计数、anti-rationalization 跨文件重复表），9 条不变量 grep + contract-checker + qa-reviewer 三重确认行为守恒；故意保留 SKILL「最多 N 轮审查」终止边界、红队信息隔离铁律、契约字面比对、mutation/coverage 客观门禁。
+
+
+### [2026-05-30] AI 自由写入的状态机枚举字段：容错读取 + 越界自愈，而非精确匹配后静默误路由
+<!-- tags: autopilot, stop-hook, state-machine, enum-field, ai-writer-shell-reader, canonical, normalize, self-heal, silent-misroute, get-enum-field, contract-ssot, anti-overfitting -->
+**Scenario**: 用户反馈"字段太少导致 AI 写入值和 shell 判断不一致、多了很多轮改动"。逐行核查发现真根因不是字段少，而是 shell 对 AI 按语义自由写入的状态机枚举字段（phase/gate/qa_scope/mode/knowledge_extracted）做**精确字面量匹配**，AI 写大小写/连字符/拼写近义值（`autofix` vs `auto-fix`、`Review-Accept`、`Skipped`）时 shell **不报错、静默走错分支**，且合法值集合从不告知 AI → AI 跨迭代盲试。最坑的是 knowledge_extracted 越界每轮回滚 merge、gate 越界让 approve 变空操作。
+**Lesson**: 凡是「AI 按语义自由写、shell 按字面精确读」的字段，错配是必然而非偶然，必须双向加固：①**容错读取**——读取入口做机械归一（lowercase/trim/去引号/`_`→`-`）到 canonical 再比较，消解最高频的格式近义；②**越界自愈**——归一不掉的越界值不要静默误路由，注入**点名合法闭集**的纠正 prompt，把"静默多轮盲试"压成"一轮纠正"；③**契约 SSOT**——canonical 闭集是 AI 写入方与 shell 读取方的唯一权威，文档每个写入点都列闭合枚举。这是 [2026-05-26 半生效 flag]（所有读取点同步处理）的延伸：不仅要"所有点都读"，还要"所有点都容错读 + 越界点名纠正"。
+**Choice**: 归一**只做机械变换、不做近义词映射表**（review→review-accept 这类猜测被否决）——近义词表是 [2026-05-30 AI-First 反过拟合判据] 里的伪精度正则猜测，自由度高易劣化；语义分歧交给自愈 prompt 让 AI 自己改对。落地为 lib.sh 三函数 `normalize_enum_value`/`is_canonical`/`get_enum_field`，纯加法不重构现有 if-else 路由（遵循 [2026-05-09] 最小集+纯追加+可独立回滚）。
+**Evidence**: 52 红队验收 + 4 条 Tier 1.5 真实驱动谓词（gate 近义→approve 路由 merge、ke 近义不回滚、phase 越界 block 点名枚举、大写合法不误伤）全 PASS；shellcheck/bash -n 0 问题；3 个回归套件单跑全过。附带暴露正交预存 bug：`set_field` 用 sed 替换、**字段不存在时是 no-op**，单任务模式初始 frontmatter 无 qa_scope 字段 → stop-hook 的 `fast_mode→smoke` 自动降级实际从未生效（待单独修）。
