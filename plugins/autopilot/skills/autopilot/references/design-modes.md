@@ -41,7 +41,7 @@ qa 阶段差异：
 完成后续步骤：
 
 1. 读取 `$TASK_DIR/brainstorm.md`（brainstorm skill 的共识总结产出）
-2. 主 SKILL 接力：按主 SKILL.md「步骤 2. 代码探索与设计文档编写」执行（1-2 个 Explore agent + 并行启动 scenario-generator）
+2. 主 SKILL 接力：按主 SKILL.md「步骤 2. 代码探索与设计文档编写」执行（按需 1 个或多个 Explore agent + 并行启动 scenario-generator）
 3. 设计文档写入状态文件 `## 设计文档` 和 `## 实现计划` 区域
 4. 主 SKILL.md「步骤 3. Plan 审查」：plan-reviewer Agent 审查（最多 2 轮）
 5. 主 SKILL.md「步骤 4. 请求审批」：AskUserQuestion + 3 选项（通过 / 修改 / 放弃）
@@ -55,7 +55,7 @@ qa 阶段差异：
 
 | 阶段 | Fast Mode 行为 |
 |------|---------------|
-| design | 知识加载 → **1 个** Explore agent → 设计文档写入状态文件 → 按 `plan-reviewer-prompt.md` 6 维度**自审**（编排器 inline，不启动 scenario-generator / plan-reviewer Agent，不做 brainstorm Q&A）→ 自审通过 → `html_review: true` 仍走步骤 4c HTML 评审，否则**直接 `phase: "implement"`**（跳过 AskUserQuestion 审批，fast 信任 AI 判断） |
+| design | 知识加载 → **1 个**（按需，复杂时自行增加）Explore agent → 设计文档写入状态文件 → 按 `plan-reviewer-prompt.md` 6 维度**自审**（编排器 inline，不启动 scenario-generator / plan-reviewer Agent，不做 brainstorm Q&A）→ 自审通过 → `html_review: true` 仍走步骤 4c HTML 评审，否则**直接 `phase: "implement"`**（跳过 AskUserQuestion 审批，fast 信任 AI 判断） |
 | implement | blue-team / red-team 双 Agent 保留不变，**跳过 contract-checker Agent**（步骤 2.5 在 fast_mode=true 时直接进入 qa） |
 | qa | `qa_scope=smoke`（详见主 SKILL.md 「Phase: qa 前置：选择性重跑判断」），不启动 qa-reviewer Agent，编排器自行 Read git diff 后 inline 做 3 项自审（设计符合性 / OWASP 关键 / 代码质量明显问题）。Tier 1.5 必做铁律不变 |
 | merge | commit-agent 保留不变 |
