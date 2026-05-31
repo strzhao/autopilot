@@ -543,18 +543,29 @@ if [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
     exit 0
 fi
 
-# ── 7.5 后台 sub-agent 检测（仅 implement 阶段） ──
-# implement 阶段主 agent 启动并行蓝队/红队 sub-agent，5-10 分钟运行期间
-# 主 agent 无事可做就结束响应。若注入下一阶段 prompt 会让主 agent 重复唤醒、
-# 空转输出"还在等"，浪费 token 且污染上下文。
-# 检测到 pending sub-agent 时静默放行：不递增 iteration、不构造 block JSON。
+# ── 7.5 后台 sub-agent 检测（全阶段静默等待） ──
+# 任何阶段启动的长时 sub-agent 都受此机制保护：
+#   - implement 阶段：并行蓝队/红队 sub-agent（5-10 分钟）
+#   - merge 阶段：commit-agent 常以 run_in_background=true 启动（异步路径 B），
+#     运行数分钟；主 agent 结束响应 → stop-hook 触发 → 若此检查被跳过则落到
+#     §8 递增 iteration + §9 重新注入「merge 阶段必须启动 commit-agent」prompt
+#     → 反复唤醒近似死循环（flag-asymmetry 历史 bug，2026-05-26）
+#   - qa/auto-fix 阶段：qa-reviewer 等长时 sub-agent 同理受护
+#
+# 旧注释「design/qa/merge 的 sub-agent 都是短时（< 2 分钟）」的假设对
+# commit-agent 不成立，是旧版 phase=implement 门控留下的 flag-asymmetry bug 根因。
+#
+# 该检查自门控：has_pending_subagents 无 pending 时返回 1，正常注入流程继续，
+# 故全阶段泛化零副作用。位于 gate 检查（§6）与 max_iterations（§7）之后，
+# 到达此处必是 gate 空、phase∈{design,implement,qa,auto-fix,merge}
+# （done 在 §5 已提前 exit）。iteration 在静默等待时不递增（exit 0 在 §8 之前）。
+#
 # Sub-agent 完成后，Claude Code 内置机制让主 agent 自然恢复（tool_result 入流，
 # 下次 stop-hook 触发时 pending=0 走正常注入路径）。
 #
-# 限制 phase=implement：design/qa/merge 的 sub-agent 都是短时（< 2 分钟），
-# 不会触发此问题；保守限制可避免对其他阶段产生未预期影响。
-if [[ "$PHASE" == "implement" ]] && [[ -n "$HOOK_TRANSCRIPT" ]] && \
-    has_pending_subagents "$HOOK_TRANSCRIPT"; then
+# 教训（flag-asymmetry）：检测机制必须在所有相关转换点一致生效，
+# 单点修复（仅 implement）会在其他阶段留下同类漏洞。
+if [[ -n "$HOOK_TRANSCRIPT" ]] && has_pending_subagents "$HOOK_TRANSCRIPT"; then
     echo "[autopilot] 检测到后台 sub-agent 运行中，静默等待 (phase: ${PHASE}, iter: ${ITERATION})" >&2
     exit 0
 fi
