@@ -1,5 +1,11 @@
 # Patterns & Lessons
 
+### [2026-05-31] 断言"stdout 含某 JSON 键"易成 tautological — mutation 落点若也输出该键则断言失效
+<!-- tags: autopilot, test-quality, tautological-assertion, mutation-survival, json-key-grep, stop-hook, acceptance-test, no-op-mutation, false-green -->
+**Scenario**: `design-phase-hold` 红队测试场景1 P5 验证"§7.6 放行时输出 systemMessage 暂停说明"，初版断言 `grep -q '"systemMessage"'`。qa-reviewer Section C 抓出：删掉 §7.6（no-op mutation）后 standard design 落到 §9 输出 block JSON——而 **§9 的 block JSON 本身就含 `systemMessage` 键**（值 `"autopilot iteration N | phase: design"`）。所以 P5 在 mutation 存活时仍 PASS，没 kill mutation（同场景 P2 靠 `decision:block` 能 kill，但 P5 个体给了虚假绿）。
+**Lesson**: 断言"输出含某 JSON 键/字段名"时，必须先问：**这个键在 mutation 落点（被测代码改坏后流量会去的其他分支）的输出里也出现吗？** 若出现，该断言无法区分"正确分支"与"mutation"，是 tautological。修法：断言被测分支**专属**的内容标志，而非通用键名——本案改为 `"systemMessage" 键 ∧ §7.6 专属文案标志「用户尚未确认」`（§9 的 systemMessage 值绝不含此标志）。**最小自检**：删被测代码重跑，该断言必须转红；不转红就是 tautological（[[Mutation-Survival自检反no-op]]）。这类陷阱在"两条分支输出同一种结构/JSON、只是字段值不同"时尤其隐蔽。
+**Evidence**: P5 加强为双条件后重跑 20/20 PASS；mutation 复验（删 §7.6）P5 **正确转红**（连同 P2、场景7 共 6 断言 FAIL，PASS=14/20）。qa-reviewer 第 1 轮判此为 Section C Critical → auto-fix 修测试断言力（非削弱，是加强）。commit 5cbee5f / v3.40.3。
+
 ### [2026-05-31] 自门控的横切检测函数不要再加 phase/条件门控 — 否则退化成 flag-asymmetry
 <!-- tags: autopilot, stop-hook, has-pending-subagents, self-gating, phase-gate, flag-asymmetry, cross-cutting-detection, commit-agent, near-infinite-loop, regression-recurrence -->
 **Scenario**: stop-hook §7.5「后台 sub-agent 静默等待」检查被 `[[ "$PHASE" == "implement" ]]` 死门控（当初保守限制，注释假设「design/qa/merge 的 sub-agent 都 <2分钟」）。但 merge 阶段 commit-agent 用 `Agent` 工具启动、常 `run_in_background=true`（异步路径 B），运行数分钟。期间主 agent 结束响应 → Stop hook 触发 → 因 phase≠implement 整段检查被跳过 → 反复注入「启动 commit-agent」prompt + 递增 iteration → 近似死循环（实测 iteration 6/7/8 连发）。红蓝对抗的 implement 阶段早就修好了同样的等待逻辑，merge 漏修。
