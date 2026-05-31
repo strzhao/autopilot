@@ -566,7 +566,9 @@ fi
 # 教训（flag-asymmetry）：检测机制必须在所有相关转换点一致生效，
 # 单点修复（仅 implement）会在其他阶段留下同类漏洞。
 if [[ -n "$HOOK_TRANSCRIPT" ]] && has_pending_subagents "$HOOK_TRANSCRIPT"; then
-    echo "[autopilot] 检测到后台 sub-agent 运行中，静默等待 (phase: ${PHASE}, iter: ${ITERATION})" >&2
+    echo "[autopilot] 检测到后台 sub-agent 运行中，等待 (phase: ${PHASE}, iter: ${ITERATION})" >&2
+    jq -n --arg msg "⏳ autopilot · 正在等待后台 sub-agent 完成（phase: ${PHASE}）。完成后会自动继续；若超过 ~10 分钟仍无进展（sub-agent 可能已异常退出），用 /autopilot cancel 恢复。" \
+        '{"systemMessage": $msg}'
     exit 0
 fi
 
