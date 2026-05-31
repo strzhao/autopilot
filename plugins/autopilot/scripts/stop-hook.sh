@@ -570,6 +570,31 @@ if [[ -n "$HOOK_TRANSCRIPT" ]] && has_pending_subagents "$HOOK_TRANSCRIPT"; then
     exit 0
 fi
 
+# ── 7.6 standard design 放行 + 暂停说明（用户对齐阶段不自动推进） ──
+# design 是与用户对齐设计方案的阶段，本质需要用户参与，不应被自动循环强制推进。
+# 历史 bug（2026-05-31）：AI 在 design 结束回合等用户后，§9 重新注入"继续 design"
+# prompt（block decision），AI 误读为"已通过"直接冲进 implement 把需求做完，绕过对齐。
+# 根治：standard design（非 fast/auto）无 pending sub-agent 时不注入 block，改输出
+# systemMessage 放行——AI 物理上不被重新唤醒，只能等用户在对话里回应才继续。
+#   - 用 systemMessage 而非 decision:block：block 会重新唤醒 AI（正是 bug 成因）；
+#     systemMessage 允许 stop（控制权交回用户）同时让用户/AI 都明白"这是有意暂停"。
+#   - 放在 §8 递增之前：design 对齐不消耗 implement 的 iteration 预算，避免长设计
+#     讨论被 §7 max_iterations 误杀删 active 文件。
+#   - 放在 §7.5 has_pending 之后：design 的 Explore/plan-reviewer 等 sub-agent 运行时
+#     先静默等待（§7.5），不被误放行。
+#   - 仅 standard 路径：fast_mode / auto_approve 是用户显式选择的"跳过审批、全自动"，
+#     保留其 §9 re-injection 自动推进到 implement。
+#   - flag-asymmetry 防御：未来新增 design 模式 flag 时，此处条件与 §9 design 分支
+#     （auto_approve / fast_mode 判断）必须同步处理。
+# 缺失字段 get_field 返回空串，"" != "true" 恒真 → 缺失即按 false（fail-safe 朝放行）。
+AUTO_APPROVE=$(get_field "auto_approve" || true)
+FAST_MODE=$(get_field "fast_mode" || true)
+if [[ "$PHASE" == "design" ]] && [[ "$AUTO_APPROVE" != "true" ]] && [[ "$FAST_MODE" != "true" ]]; then
+    jq -n --arg msg "⏸️ autopilot · design 阶段暂停：控制权已交回用户，用户尚未确认设计方案。在用户明确表态前不要推进——用户认可后才进入 implement，用户给修改意见则留在 design 修订。" \
+        '{"systemMessage": $msg}'
+    exit 0
+fi
+
 # ── 8. 递增 iteration（自动链接创建的新状态文件跳过递增） ──
 
 if [[ "$SKIP_INCREMENT" -eq 0 ]]; then
