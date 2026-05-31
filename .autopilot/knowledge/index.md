@@ -29,6 +29,7 @@
 - [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → decisions.md
 
 ## Patterns
+- [2026-05-31] 自门控的横切检测函数不要再加 phase/条件门控（无副作用即应全局生效），否则退化成 flag-asymmetry | tags: autopilot, stop-hook, has-pending-subagents, self-gating, phase-gate, flag-asymmetry, cross-cutting-detection, commit-agent, near-infinite-loop, regression-recurrence | → patterns.md
 - [2026-05-30] bash set -u 下变量紧跟多字节中文标点被误解析为变量名 → unbound variable 崩溃，须 ${var} 界定 | tags: bash, set-u, multibyte, cjk, unbound-variable, shell, variable-expansion, brace-disambiguation, acceptance-test, latent-bug | → patterns.md
 - [2026-05-26] 「状态机切换 state file 后必须重读所有缓存到内存的字段」+「修第 1 个 bug 时不问第 N 个」三连击复刻 | tags: autopilot, stop-hook, state-switch, stale-variable, cached-field, gate-reread, multi-link-failure, regression-recurrence, meta-lesson | → patterns.md
 - [2026-05-26] 状态机新增「flag」字段时所有读取该字段的转换点必须同步处理 — 否则形成「半生效」bug | tags: autopilot, stop-hook, state-machine, flag-asymmetry, auto-approve, review-accept, transition-coverage, double-link, regression-pattern | → patterns.md

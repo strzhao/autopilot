@@ -1,5 +1,14 @@
 # Patterns & Lessons
 
+### [2026-05-31] 自门控的横切检测函数不要再加 phase/条件门控 — 否则退化成 flag-asymmetry
+<!-- tags: autopilot, stop-hook, has-pending-subagents, self-gating, phase-gate, flag-asymmetry, cross-cutting-detection, commit-agent, near-infinite-loop, regression-recurrence -->
+**Scenario**: stop-hook §7.5「后台 sub-agent 静默等待」检查被 `[[ "$PHASE" == "implement" ]]` 死门控（当初保守限制，注释假设「design/qa/merge 的 sub-agent 都 <2分钟」）。但 merge 阶段 commit-agent 用 `Agent` 工具启动、常 `run_in_background=true`（异步路径 B），运行数分钟。期间主 agent 结束响应 → Stop hook 触发 → 因 phase≠implement 整段检查被跳过 → 反复注入「启动 commit-agent」prompt + 递增 iteration → 近似死循环（实测 iteration 6/7/8 连发）。红蓝对抗的 implement 阶段早就修好了同样的等待逻辑，merge 漏修。
+**Lesson**: 一个检测函数若**「无目标时零副作用返回」**（`has_pending_subagents` 无 pending → 返回 1 → 调用方走正常流程，行为与不调用完全一致），那它就是**自门控**的——给它再叠加 `phase==X` / 其他条件限定，不是变安全，而是把它退化成 flag-asymmetry「半生效」bug：检测只在一个转换点生效，其他转换点裸奔。
+- **判据**：动手加「仅在 X 情况下才跑这个检测」前，先问「这个检测在非 X 情况下跑会有副作用吗？」。**无副作用 → 删掉条件，让它全局生效**；有副作用 → 才需要条件，且必须枚举所有该生效的点（见 [[flag-asymmetry-half-effective-bug]]）。
+- **本次修复**：`if [[ "$PHASE" == "implement" ]] && [[ -n "$HOOK_TRANSCRIPT" ]] && has_pending_subagents ...` → `if [[ -n "$HOOK_TRANSCRIPT" ]] && has_pending_subagents ...`。一行减法，从结构上消灭「未来任何阶段引入长 agent 都要再改这里」的复发面。
+- **与 [[flag-asymmetry-half-effective-bug]]（[2026-05-26]）的关系**：那条是「新增 flag 字段要枚举所有转换点」；本条是其特例的**反向收敛**——当检测本身自门控时，正确解不是「枚举所有 phase 补齐」，而是「去掉 phase 限定」。两条共享元规律：横切关注点的「在哪些点生效」必须与其语义一致，不能凭「保守起见先限一个 phase」拍脑袋。
+**Evidence**: 新红队集成测试 `stop-hook-pending-gate.acceptance.test.mjs` 4/4 PASS（merge+pending静默 / merge+无pending注入 / qa泛化 / implement回归）；编排器独立驱动真实 stop-hook：merge+pending→stdout 空、merge+无pending→注入 commit-agent block JSON。commit 4863f50 / v3.40.2。
+
 ### [2026-05-26] 「状态机切换 state file 后必须重读所有缓存到内存的字段」+「修第 1 个 bug 时不问第 N 个」三连击复刻
 <!-- tags: autopilot, stop-hook, state-switch, stale-variable, cached-field, gate-reread, multi-link-failure, regression-recurrence, meta-lesson -->
 **Scenario**: project auto-chain 失效在 v3.36.0 突然双坏，前后用了 **3 个版本（v3.36.1/v3.36.2/v3.36.3）** 才修完，每次发版都"自称修复完成"但实际还有下一环卡死。**v3.36.1** 修 SKILL.md merge §2 漏写 Auto-Chain step（AI 不写 next_task）；发版后用户在 claude-code-buddy 跑 project 模式仍卡死 → **v3.36.2** 修 stop-hook 不在 auto_approve=true 时跳过 review-accept gate；发版后用户跑到 002→003 仍卡死 → **v3.36.3** 终于发现 stop-hook 三处 Case 切换 state 后只重读 PHASE/ITERATION/MAX_ITERATIONS、**没重读 GATE/AUTO_APPROVE**（缓存到内存的旧 state 变量过期）。三次都是看着报错"修了最显眼的那环"，没系统排查整条链。
