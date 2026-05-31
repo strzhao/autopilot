@@ -1,5 +1,14 @@
 # Patterns & Lessons
 
+### [2026-05-31] 用"静默放行/等待"修死循环时，必须补"用户可见 + 活性自救"，否则把吵闹死循环换成无声卡死（反面同族）
+<!-- tags: autopilot, stop-hook, silent-wait, liveness, observability, exit-0, iteration-freeze, max-iterations-backstop, system-message, false-positive-stall, inverse-failure-mode, has-pending-subagents -->
+**Scenario**: v3.40.2 为治 merge 近似死循环（§9 反复唤醒 commit-agent），引入 §7.5「检测到 pending sub-agent 就静默等待」——裸 `exit 0` + 仅 `echo >&2`。深度审计（对抗+盲扫双 agent）发现这是上次 bug 的**反面同族**，三条致命属性：① `exit 0` 在 §8 iteration 递增**之前** → 等待期 iteration 冻结 → §7 `max_iterations` backstop **永不触发**（计数器不动，30 也到不了）；② 只 echo stderr（Stop hook 的 stderr 用户看不到）→ 零用户信号；③ 若 `has_pending_subagents` 假阳性（sub-agent 崩溃没写完成标记 / Claude Code transcript schema 漂移，见 [[tail-c-jq流式解析丢首行fail-safe]]）→ autopilot **永久静默卡死**，唯一出路 `/autopilot cancel` 但用户无从得知。
+**Lesson**: 修一个「失控循环」最容易的解是「让它停下」（silent exit / 静默等待）——但**「停下」若不可见且无活性兜底，就是把『吵闹的错』换成『无声的错』，后者更难诊断**。任何「条件满足就 exit 0 不再前进」的放行/等待路径，动手前自检三问：
+- **可见吗？** 用户能看到"我在等什么/为什么停"吗？stderr 不算（hook 的 stderr 不展示）。→ 用 `{"systemMessage":...}`（不带 `decision:block`，不唤醒 AI，不破坏 Claude Code 经 tool_result 的自然恢复）让等待可见。
+- **有活性兜底吗？** 这条路径会不会因某个永真的假阳性条件而**永远**走下去？若 exit 早于计数器递增，原有的 max-iteration backstop 就被绕过了——要么让用户可见后自救（最小解），要么加独立活性守卫。
+- **方向同源**：本案直接复用 §7.6（[[对齐阶段design按phase边界放行]]）已验证的 systemMessage 放行模式延伸到 §7.5——零新增状态字段、单点纯追加。与 [[自门控横切检测不要加phase门控]] 互补：那条治「检测在哪些点生效」，本条治「检测命中后那条 exit 路径的可见性与活性」。
+**Evidence**: 红队 `silent-wait-visibility.acceptance.test.sh` 10/10 PASS（P0 放行码 exit 0 + P1-P5 + 自救提示 + 全阶段泛化），mutation 自检（注入 `decision:block` → P2+场景D 转红 PASS=7）证非 tautological；qa-reviewer 复盘抓出 P2 对 pretty-JSON `"decision": "block"`（冒号后有空格）用无空格精确串恒真 → auto-fix 改带空格容错正则 + mutation 复验。commit 5e41eb5 / v3.40.4。
+
 ### [2026-05-31] 断言"stdout 含某 JSON 键"易成 tautological — mutation 落点若也输出该键则断言失效
 <!-- tags: autopilot, test-quality, tautological-assertion, mutation-survival, json-key-grep, stop-hook, acceptance-test, no-op-mutation, false-green -->
 **Scenario**: `design-phase-hold` 红队测试场景1 P5 验证"§7.6 放行时输出 systemMessage 暂停说明"，初版断言 `grep -q '"systemMessage"'`。qa-reviewer Section C 抓出：删掉 §7.6（no-op mutation）后 standard design 落到 §9 输出 block JSON——而 **§9 的 block JSON 本身就含 `systemMessage` 键**（值 `"autopilot iteration N | phase: design"`）。所以 P5 在 mutation 存活时仍 PASS，没 kill mutation（同场景 P2 靠 `decision:block` 能 kill，但 P5 个体给了虚假绿）。
