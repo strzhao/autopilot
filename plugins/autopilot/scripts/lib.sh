@@ -71,12 +71,27 @@ parse_frontmatter() {
 
 get_field() {
     local fm; fm=$(parse_frontmatter)
-    echo "$fm" | grep "^${1}:" | sed "s/${1}: *//" | sed 's/^"\(.*\)"$/\1/'
+    # -m1：重复键（AI Edit 失误产生的 `gate: ""` 两行等）时确定性取第一行，
+    # 杜绝多行值打断下游枚举比较。
+    echo "$fm" | grep -m1 "^${1}:" | sed "s/${1}: *//" | sed 's/^"\(.*\)"$/\1/'
 }
 
 set_field() {
     local temp="${STATE_FILE}.tmp.$$"
-    sed "s/^${1}: .*/${1}: ${2}/" "$STATE_FILE" > "$temp"
+    # 仅替换 frontmatter 内首个匹配键、删除后续同键行：写入即自愈重复键。
+    # awk 用第一对 --- 界定 frontmatter，越过则原样输出（不动正文里形如 "phase: x" 的散文）。
+    awk -v key="${1}" -v val="${2}" '
+        BEGIN { infm=0; done_fm=0; seen=0 }
+        /^---$/ {
+            if (!infm && !done_fm) { infm=1; print; next }
+            else if (infm) { infm=0; done_fm=1; print; next }
+        }
+        infm && $0 ~ "^" key ": " {
+            if (!seen) { print key ": " val; seen=1 }
+            next
+        }
+        { print }
+    ' "$STATE_FILE" > "$temp"
     mv "$temp" "$STATE_FILE"
 }
 

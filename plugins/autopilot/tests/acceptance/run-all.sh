@@ -20,6 +20,7 @@ ORDERED_TESTS=(
     "version-sync.acceptance.test.sh"
     "brainstorm-default.acceptance.test.sh"
     "plan-review-html.acceptance.test.sh"
+    "knowledge-extracted-normalize.acceptance.test.sh"
 )
 
 total=0

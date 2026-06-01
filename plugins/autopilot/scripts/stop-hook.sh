@@ -276,7 +276,7 @@ detect_smoke_eligible() {
     fi
 
     local fast_mode
-    fast_mode=$(get_field fast_mode || true)
+    fast_mode=$(get_enum_field fast_mode || true)
 
     # 路径 A — fast_mode=true → 无视 diff 大小直接 smoke（用户/AI 显式选 fast，相信判断）
     if [[ "$fast_mode" == "true" ]]; then
@@ -387,22 +387,32 @@ fi
 SKIP_INCREMENT=0
 
 if [[ "$PHASE" == "done" ]]; then
-    # 知识提取守卫：AI 跳过知识提取直接设 done → 回滚到 merge
+    # 知识提取守卫（三态）：合法值放行 / 空值才回滚（真守卫）/ 非空乱值自动归一不回滚
     KNOWLEDGE_EXTRACTED=$(get_enum_field "knowledge_extracted" || true)
     if [[ "$KNOWLEDGE_EXTRACTED" != "true" ]] && [[ "$KNOWLEDGE_EXTRACTED" != "skipped" ]]; then
-        # 豁免：无代码变更的阶段不需要知识提取
-        MODE_CHECK=$(get_enum_field "mode" || true)
-        BRIEF_CHECK=$(get_field "brief_file" || true)
-        if { [[ "$MODE_CHECK" == "project" ]] && [[ -z "$BRIEF_CHECK" ]]; } || [[ "$MODE_CHECK" == "project-qa" ]]; then
-            set_field "knowledge_extracted" '"skipped"'
+        if [[ -n "$KNOWLEDGE_EXTRACTED" ]]; then
+            # 非空乱值（yes/done/摘要文本）：AI 已有意标记完成、只是 token 写错 →
+            # 自动归一为 true、不回滚（tautological-key 容错：断言"活做了"而非"token 对不对"）。
+            # 知识沉淀是 best-effort，误放行低危；回滚重跑烧 iteration 才是高危。
+            # 用 stderr 告知（不发 stdout JSON）：done 收尾的 auto-chain 路径后续会输出 block JSON，
+            # 这里再发一个 stdout JSON 会造成双 JSON 破坏 hook 协议。沿用脚本既有 >&2 通知惯例。
+            set_field "knowledge_extracted" '"true"'
+            echo "autopilot · 已将非法 knowledge_extracted 值「${KNOWLEDGE_EXTRACTED}」规范化为 true（知识提取视为已完成，未回滚）" >&2
         else
-            set_field "phase" '"merge"'
-            NEXT_ITERATION=$((ITERATION + 1))
-            set_field "iteration" "$NEXT_ITERATION"
-            PROMPT="你跳过了知识提取步骤。读取 ${STATE_FILE}，按照 autopilot skill Phase: merge 的知识提取与沉淀步骤执行。完成后用 Edit 设置 knowledge_extracted 为 true（有新增）或 skipped（无新增）——合法值仅 true / skipped，然后再设 phase: done。"
-            jq -n --arg prompt "$PROMPT" --arg msg "autopilot iteration ${NEXT_ITERATION} | phase: merge | 知识提取回滚" \
-                '{"decision":"block","reason":$prompt,"systemMessage":$msg}'
-            exit 0
+            # 空值：这一步根本没执行 → 维持严格的豁免/回滚逻辑（防真跳过）
+            MODE_CHECK=$(get_enum_field "mode" || true)
+            BRIEF_CHECK=$(get_field "brief_file" || true)
+            if { [[ "$MODE_CHECK" == "project" ]] && [[ -z "$BRIEF_CHECK" ]]; } || [[ "$MODE_CHECK" == "project-qa" ]]; then
+                set_field "knowledge_extracted" '"skipped"'
+            else
+                set_field "phase" '"merge"'
+                NEXT_ITERATION=$((ITERATION + 1))
+                set_field "iteration" "$NEXT_ITERATION"
+                PROMPT="知识提取字段为空（这一步尚未执行）。读取 ${STATE_FILE}，按照 autopilot skill Phase: merge 的知识提取与沉淀步骤执行。完成后用 Edit 设置 knowledge_extracted 为 true（有新增）或 skipped（无新增）——合法值仅 true / skipped，然后再设 phase: done。"
+                jq -n --arg prompt "$PROMPT" --arg msg "autopilot iteration ${NEXT_ITERATION} | phase: merge | 知识提取回滚（字段为空）" \
+                    '{"decision":"block","reason":$prompt,"systemMessage":$msg}'
+                exit 0
+            fi
         fi
     fi
 
@@ -436,7 +446,7 @@ if [[ "$PHASE" == "done" ]]; then
                 # review-accept）会让下方第 6 步审批门误命中而 exit 0，新 state 的
                 # block JSON 永不输出。这是 auto-chain 失效双链第 2 环。
                 GATE=$(get_enum_field "gate" || true)
-                AUTO_APPROVE=$(get_field "auto_approve" || true)
+                AUTO_APPROVE=$(get_enum_field "auto_approve" || true)
                 ITERATION=$(get_field "iteration" || true)
                 MAX_ITERATIONS=$(get_field "max_iterations" || true)
                 SKIP_INCREMENT=1
@@ -467,7 +477,7 @@ if [[ "$PHASE" == "done" ]]; then
             PHASE=$(get_enum_field "phase" || true)
             # v3.36.3 必须重读 GATE/AUTO_APPROVE（双链第 2 环修复）
             GATE=$(get_enum_field "gate" || true)
-            AUTO_APPROVE=$(get_field "auto_approve" || true)
+            AUTO_APPROVE=$(get_enum_field "auto_approve" || true)
             ITERATION=$(get_field "iteration" || true)
             MAX_ITERATIONS=$(get_field "max_iterations" || true)
             SKIP_INCREMENT=1
@@ -491,7 +501,7 @@ if [[ "$PHASE" == "done" ]]; then
             PHASE=$(get_enum_field "phase" || true)
             # v3.36.3 必须重读 GATE/AUTO_APPROVE（双链第 2 环修复）
             GATE=$(get_enum_field "gate" || true)
-            AUTO_APPROVE=$(get_field "auto_approve" || true)
+            AUTO_APPROVE=$(get_enum_field "auto_approve" || true)
             ITERATION=$(get_field "iteration" || true)
             MAX_ITERATIONS=$(get_field "max_iterations" || true)
             SKIP_INCREMENT=1
@@ -516,7 +526,7 @@ fi
 # 蓝队失败兜底场景，那两类 phase 不是 qa）+ gate=review-accept + auto_approve=true（仅
 # stop-hook 的 create_brief_state_file / create_project_qa_state_file 会写 true，
 # 单任务模式默认 false，是 auto-chain 流的充分指标）。
-AUTO_APPROVE=$(get_field "auto_approve" || true)
+AUTO_APPROVE=$(get_enum_field "auto_approve" || true)
 if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]] && \
    [[ "${AUTO_APPROVE}" == "true" ]]; then
     set_field "gate" '""'
@@ -589,8 +599,8 @@ fi
 #   - flag-asymmetry 防御：未来新增 design 模式 flag 时，此处条件与 §9 design 分支
 #     （auto_approve / fast_mode 判断）必须同步处理。
 # 缺失字段 get_field 返回空串，"" != "true" 恒真 → 缺失即按 false（fail-safe 朝放行）。
-AUTO_APPROVE=$(get_field "auto_approve" || true)
-FAST_MODE=$(get_field "fast_mode" || true)
+AUTO_APPROVE=$(get_enum_field "auto_approve" || true)
+FAST_MODE=$(get_enum_field "fast_mode" || true)
 if [[ "$PHASE" == "design" ]] && [[ "$AUTO_APPROVE" != "true" ]] && [[ "$FAST_MODE" != "true" ]]; then
     jq -n --arg msg "⏸️ autopilot · design 阶段暂停：控制权已交回用户，用户尚未确认设计方案。在用户明确表态前不要推进——用户认可后才进入 implement，用户给修改意见则留在 design 修订。" \
         '{"systemMessage": $msg}'
@@ -622,10 +632,10 @@ fi
 # 所有变量必须用 ${VAR} 花括号界定。
 
 # design 阶段直接写设计文档到状态文件（auto_approve 时跳过审批）
-AUTO_APPROVE=$(get_field "auto_approve" || true)
+AUTO_APPROVE=$(get_enum_field "auto_approve" || true)
 # shellcheck disable=SC2034  # 兼容期保留：plan_mode 字段已弃用，分支体已删除（v3.21.0），仅保留赋值便于后续 grep 检测旧字段使用
 PLAN_MODE=$(get_field "plan_mode" || true)
-FAST_MODE=$(get_field "fast_mode" || true)
+FAST_MODE=$(get_enum_field "fast_mode" || true)
 if [[ "$PHASE" == "design" ]]; then
     if [[ "$AUTO_APPROVE" == "true" ]]; then
         PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. auto_approve=true: 直接写设计文档到状态文件. ⚠️ 必须使用 Agent 工具启动 plan-reviewer sub-agent (model: sonnet) 审查设计方案, 参见 references/plan-reviewer-prompt.md. 审查通过则推进到 implement; 失败则设 auto_approve: false 回退到正常审批流程. 按照 autopilot skill 的 Phase: design 指引执行."
