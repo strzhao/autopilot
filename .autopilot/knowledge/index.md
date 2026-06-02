@@ -1,6 +1,7 @@
 # Knowledge Index
 
 ## Decisions
+- [2026-06-02] QA 假阳性根治：客观工具门禁不够，要更便宜的确定性硬信号（产物新鲜度 mtime / 测试篡改 git-sha hook backstop / coverage 反向否决 / na 可见化）+ 散文铁律转 hook | tags: autopilot, qa, false-positive, false-green, deterministic-signal, artifact-freshness, mtime, tamper-guard, git-sha-lock, na-visibility, fake-hard-gate, coverage-not-green, prose-iron-law-to-hook, dogfood, generator-verifier | → decisions.md
 - [2026-05-31] 对齐阶段(design)按 phase 边界放行交回用户，优于新增 gate 字段 | tags: autopilot, stop-hook, design, user-alignment, phase-boundary, systemMessage, decision-block, auto-loop-scope, minimal-state, flag-asymmetry-avoidance, anti-bypass | → decisions.md
 - [2026-05-30] AI-First 反过拟合判据：删伪精度数字/正则/重复/裸计数，留终止边界/信息隔离/契约/客观门禁 | tags: autopilot, skill, ai-first, overfitting, voodoo-constant, magic-number, degrees-of-freedom, guardrail-vs-overfitting, pseudo-precision, semantic-judgment, anti-pseudo-optimization | → decisions.md
 - [2026-05-23] 工具产物的 git 管理边界用"目录拓扑即语义"而非"SKILL.md 规则提醒" | tags: autopilot, file-management, gitignore, topology-as-semantic, knowledge-runtime-split, layered-defense, commit-amnesia, doctor-dim, single-source-of-truth | → decisions.md
@@ -30,6 +31,7 @@
 - [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → decisions.md
 
 ## Patterns
+- [2026-06-02] `$(cmd \|\| true); rc=$?` 把退出码吞成 0；trap ERR 下用 `cmd \|\| rc=$?` 保留真 rc（含 awk $2 截断含空格路径 → 参数扩展） | tags: bash, exit-code, command-substitution, or-true, rc-masking, trap-err, double-signal, stop-hook, lib-sh, qa-reviewer-catch | → patterns.md
 - [2026-05-31] 用"静默放行/等待"修死循环时必须补"用户可见 + 活性自救"，否则吵闹死循环换成无声卡死（反面同族） | tags: autopilot, stop-hook, silent-wait, liveness, observability, exit-0, iteration-freeze, max-iterations-backstop, system-message, false-positive-stall, inverse-failure-mode, has-pending-subagents | → patterns.md
 - [2026-05-31] 断言"stdout 含某 JSON 键"易成 tautological——mutation 落点若也输出该键则断言失效，应断言分支专属内容标志 | tags: autopilot, test-quality, tautological-assertion, mutation-survival, json-key-grep, stop-hook, acceptance-test, no-op-mutation, false-green | → patterns.md
 - [2026-05-31] 自门控的横切检测函数不要再加 phase/条件门控（无副作用即应全局生效），否则退化成 flag-asymmetry | tags: autopilot, stop-hook, has-pending-subagents, self-gating, phase-gate, flag-asymmetry, cross-cutting-detection, commit-agent, near-infinite-loop, regression-recurrence | → patterns.md

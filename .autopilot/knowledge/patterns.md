@@ -1,5 +1,11 @@
 # Patterns & Lessons
 
+### [2026-06-02] `$(cmd || true); rc=$?` 把退出码永久吞成 0；要保留 rc 又不触发 trap ERR 用 `cmd || rc=$?`
+<!-- tags: bash, exit-code, command-substitution, or-true, rc-masking, trap-err, double-signal, stop-hook, lib-sh, defensive-edit, qa-reviewer-catch -->
+**Scenario**: stop-hook 在顶层有 `trap 'exit 0' ERR`，为防函数返回非零误触发 trap 早退，蓝队给"读取 tamper 守卫结果"写成 `out=$(check || true); rc=$?`。设计本是"双信号判定（rc==2 或 stdout 含 TAMPER）"，但 qa-reviewer 读实际代码发现 rc 分支永远不触发。
+**Lesson**: `rc=$?` 取的是它**前一条命令**的退出码；而 `x=$(cmd || true)` 这条赋值的退出码是 `true`（=0），所以紧跟的 `rc=$?` **永远是 0**，把真实 rc 彻底吞掉（这里让"双信号"退化成"单信号"，rc==2 死分支）。要既保留真实 rc、又不让非零触发顶层 `trap ERR`，用 `rc=0; out=$(cmd) || rc=$?`——`||` 列表左侧命令非零**不触发 ERR trap**（bash 规则：&&/|| 列表中除最后一条外的命令失败不触发 errexit/ERR），右侧 `rc=$?` 拿到真实码。这是 [2026-05-07] "顶层 trap 'exit 0' ERR 拦截函数内 || return 1" 的同族续：trap ERR 环境下任何"捕获子命令 rc"都要用 `|| rc=$?` 而非 `|| true`。
+**Evidence**: 改 `_tamper_rc=0; _tamper_out=$(acceptance_tests_tampered "$lk") || _tamper_rc=$?` 后，脚本复测篡改场景 `rc=2` 真值捕获、clean `rc=0`、no-lock `rc=1` 三态正确；双信号恢复。同批 qa-reviewer 还逮出 `awk '{print $2}'` 解析"双空格分隔含空格路径"会截断 → 改 `${line#*  }` 参数扩展（按双空格切，保留路径内空格）。
+
 ### [2026-05-31] 用"静默放行/等待"修死循环时，必须补"用户可见 + 活性自救"，否则把吵闹死循环换成无声卡死（反面同族）
 <!-- tags: autopilot, stop-hook, silent-wait, liveness, observability, exit-0, iteration-freeze, max-iterations-backstop, system-message, false-positive-stall, inverse-failure-mode, has-pending-subagents -->
 **Scenario**: v3.40.2 为治 merge 近似死循环（§9 反复唤醒 commit-agent），引入 §7.5「检测到 pending sub-agent 就静默等待」——裸 `exit 0` + 仅 `echo >&2`。深度审计（对抗+盲扫双 agent）发现这是上次 bug 的**反面同族**，三条致命属性：① `exit 0` 在 §8 iteration 递增**之前** → 等待期 iteration 冻结 → §7 `max_iterations` backstop **永不触发**（计数器不动，30 也到不了）；② 只 echo stderr（Stop hook 的 stderr 用户看不到）→ 零用户信号；③ 若 `has_pending_subagents` 假阳性（sub-agent 崩溃没写完成标记 / Claude Code transcript schema 漂移，见 [[tail-c-jq流式解析丢首行fail-safe]]）→ autopilot **永久静默卡死**，唯一出路 `/autopilot cancel` 但用户无从得知。
