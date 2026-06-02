@@ -185,12 +185,17 @@ pass "smoke 分支包含 inline 自审描述"
 # 改动点 1：frontmatter 字段表中含 fast_mode 字段说明
 # ═══════════════════════════════════════════════════════
 
-# 断言 16：frontmatter 字段表中存在 fast_mode 字段描述
-# 通常在 SKILL.md 中有字段说明表，fast_mode 默认 false 应在其中出现
-if ! grep -qE '\bfast_mode\b.*false|false.*\bfast_mode\b' "$SKILL_FILE"; then
-    fail "SKILL.md 字段说明表中未找到 fast_mode 及其默认值 false（改动点 1 要求 frontmatter 字段表更新）"
+# 断言 16：fast_mode 字段有完整说明
+# 渐进式披露（[2026-03-27]）：完整 frontmatter 字段文档迁至 references/state-file-guide.md，
+# SKILL.md 主体只引用 fast_mode 为 AI 可写字段。默认值为三态 ""（非 false，三态模型 v3.x 后改）。
+STATE_GUIDE="$(dirname "$SKILL_FILE")/references/state-file-guide.md"
+if ! grep -q 'fast_mode' "$SKILL_FILE"; then
+    fail "SKILL.md 未引用 fast_mode 字段（AI 可写字段清单应含 fast_mode）"
 fi
-pass "SKILL.md 字段说明表包含 fast_mode 及默认值 false"
+if [[ ! -f "$STATE_GUIDE" ]] || ! grep -qE 'fast_mode.*(三态|true.*false|false.*true)' "$STATE_GUIDE"; then
+    fail "state-file-guide.md 未找到 fast_mode 三态字段说明（字段文档已按渐进式披露迁至此处）"
+fi
+pass "fast_mode 字段说明：SKILL.md 引用 + state-file-guide.md 三态文档（渐进式披露）"
 
 echo "[OK ] R7 skill-fast-mode-doc — 全部断言通过"
 exit 0

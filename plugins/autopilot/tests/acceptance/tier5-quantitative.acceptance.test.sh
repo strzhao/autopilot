@@ -284,9 +284,10 @@ assert_grep_ge "T5d.1" "Mutation-Survival 自检铁律" "$RED_PROMPT" 1 \
 assert_grepE_le "T5d.2" "Mental Mutation 5 问|过 5 问" "$RED_PROMPT" 1 \
     "OC-6: red-team-prompt.md 'Mental Mutation 5 问' / '过 5 问' 字面命中 <= 1（防铁律复活）"
 
-# T5d.3 SKILL.md 仍含 "复盘升级" 兜底字面（Tier 1.5 步骤 3 不变）
-assert_grep_ge "T5d.3" "复盘升级" "$SKILL_FILE" 1 \
-    "OC-6: SKILL.md 含 '复盘升级' 兜底（Tier 1.5 步骤 3）"
+# T5d.3 SKILL.md 含 "谓词闸门"（v3.38.0 b72b6b4 谓词闸门取代旧的 ⚠️复盘/打分；
+#   原守 "复盘升级" 已随该机制合法移除，护栏升级为守护当前 QA 判定机制不被误删）
+assert_grep_ge "T5d.3" "谓词闸门" "$SKILL_FILE" 1 \
+    "OC-6: SKILL.md 含 '谓词闸门'（v3.38 取代 ⚠️复盘/打分，当前 QA 判定机制）"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # T5e: 版本同步（CLAUDE.md / plugin.json / marketplace.json / README.md）
@@ -346,14 +347,17 @@ assert_grep_ge "T5f.3" "615" "$CI_GUARD_TEST" 1 \
     "OC-T5f: CI 守护测试包含 615 阈值（v3.36 Tier 5 上调）"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# T5g: 精简验证（S1）— test-mutation-survival.md ≤ 60 行 + 顶部仍引用降级清单
+# T5g: 精简验证（S1）— test-mutation-survival.md ≤ 70 行 + 顶部仍引用降级清单
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 echo "--- T5g: 精简验证（S1）---"
 
-# T5g.1 test-mutation-survival.md 行数 ≤ 60（设计 ~50，留 10 行余量）
-assert_wc_le "T5g.1" "$MUTATION_DOC" 60 \
-    "OC-S1: test-mutation-survival.md 精简后 wc -l <= 60"
+# T5g.1 test-mutation-survival.md 行数 ≤ 70
+#   原 ≤60 预算（设计 ~50）已被 v3.38 合法增长突破：谓词闸门引入"也用于 design 阶段审谓词"段
+#   （该文件内容全为功能性：5-mutator 表/反模式/正模式/边界/证据脚注，无冗余可裁）。
+#   放宽到 70 保留防膨胀意图 + 反映当前合法范围（删 --- 分隔线凑 60 是伪精度，不取）。
+assert_wc_le "T5g.1" "$MUTATION_DOC" 70 \
+    "OC-S1: test-mutation-survival.md 精简后 wc -l <= 70"
 
 # T5g.2 顶部仍保留"工具不可用时降级清单"字面或类似引用
 #   设计：保留为"工具不可用时降级清单"的核心

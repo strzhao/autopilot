@@ -2,12 +2,11 @@
 # R5: 验证 stop-hook.sh detect_smoke_eligible 函数三路径决策
 # 红队测试 — 仅基于设计文档编写，不读取蓝队实现
 #
-# 设计文档决策表：
-#   fast_mode=true  + ≤100行/≤8文件 + 无依赖  → qa_scope=smoke, fast_mode 保持 true
-#   fast_mode=true  + >100行 或 含依赖         → qa_scope 不变（空）, fast_mode 降级为 false
-#   fast_mode=false + ≤30行/≤3文件  + 无依赖  → qa_scope=smoke, fast_mode 保持 false
-#   fast_mode=false + >30行  或 含依赖         → qa_scope 不变（空）, fast_mode 保持 false
-#   qa_scope 已被设为非空（如 "selective"）    → 不覆盖，直接返回
+# 设计文档决策表（v3.32.0+：fast_mode=true 不再因 diff 大小/文件数/依赖降级，相信用户/AI 判断）：
+#   fast_mode=true  （任意 diff 大小/文件数/含依赖）→ qa_scope=smoke, fast_mode 保持 true
+#   fast_mode=false + ≤30行/≤3文件  + 无依赖       → qa_scope=smoke, fast_mode 保持 false
+#   fast_mode=false + >30行 或 >3文件 或 含依赖     → qa_scope 不变（空）, fast_mode 保持 false
+#   qa_scope 已被设为非空（如 "selective"）         → 不覆盖，直接返回
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -132,7 +131,8 @@ if [[ "$fast_mode_a" != "true" ]]; then
 fi
 pass "路径A: fast_mode=true + 小diff → qa_scope=smoke, fast_mode=true"
 
-# ── 路径 B：fast_mode=true + 大 diff（>100行）→ qa_scope 不变，fast_mode 降级 ──
+# ── 路径 B（v3.32.0）：fast_mode=true + 大 diff（>100行）→ 仍 smoke，fast_mode 保持 true ──
+# v3.32.0 起 fast_mode=true 不再因 diff 大小降级（相信用户/AI 显式选择），此处守护"降级已移除"
 make_state "true" ""
 # 构造 >100 行的 diff
 large_diff=""
@@ -151,13 +151,13 @@ invoke_detect "$STATE_FILE" "$large_diff"
 qa_scope_b=$(read_field "qa_scope" "$STATE_FILE")
 fast_mode_b=$(read_field "fast_mode" "$STATE_FILE")
 
-if [[ "$qa_scope_b" == "smoke" ]]; then
-    fail "路径B(fast+大diff): qa_scope 不应被设为 smoke（diff 超过阈值，应保持空或不变）"
+if [[ "$qa_scope_b" != "smoke" ]]; then
+    fail "路径B(fast+大diff): v3.32.0 fast_mode=true 无视 diff 大小应仍 smoke，实际 '$qa_scope_b'"
 fi
-if [[ "$fast_mode_b" == "true" ]]; then
-    fail "路径B(fast+大diff): fast_mode 应降级为 false，实际仍为 true"
+if [[ "$fast_mode_b" != "true" ]]; then
+    fail "路径B(fast+大diff): fast_mode 应保持 true（不再降级），实际 '$fast_mode_b'"
 fi
-pass "路径B: fast_mode=true + 大diff → fast_mode 降级为 false，qa_scope 不设 smoke"
+pass "路径B: fast_mode=true + 大diff → 仍 qa_scope=smoke, fast_mode 保持 true（v3.32.0 不再降级）"
 
 # ── 路径 C：fast_mode=false + 小 diff（≤30行，≤3文件）+ 无依赖 → smoke ────────
 make_state "false" ""
@@ -208,7 +208,7 @@ if [[ "$qa_scope_d" == "smoke" ]]; then
 fi
 pass "路径D: fast_mode=false + 大diff(>30行) → qa_scope 不变（不设 smoke）"
 
-# ── 路径 E：fast_mode=true + 含依赖文件 → 不触发 smoke，fast_mode 降级 ─────────
+# ── 路径 E（v3.32.0）：fast_mode=true + 含依赖文件 → 仍 smoke，fast_mode 保持 true ─────────
 make_state "true" ""
 dep_diff="diff --git a/package.json b/package.json
 index aaa..bbb 100644
@@ -224,13 +224,13 @@ invoke_detect "$STATE_FILE" "$dep_diff"
 qa_scope_e=$(read_field "qa_scope" "$STATE_FILE")
 fast_mode_e=$(read_field "fast_mode" "$STATE_FILE")
 
-if [[ "$qa_scope_e" == "smoke" ]]; then
-    fail "路径E(fast+含依赖): 含 package.json 变更不应触发 smoke"
+if [[ "$qa_scope_e" != "smoke" ]]; then
+    fail "路径E(fast+含依赖): v3.32.0 fast_mode=true 无视依赖变更应仍 smoke，实际 '$qa_scope_e'"
 fi
-if [[ "$fast_mode_e" == "true" ]]; then
-    fail "路径E(fast+含依赖): fast_mode 应降级为 false（含依赖文件修改）"
+if [[ "$fast_mode_e" != "true" ]]; then
+    fail "路径E(fast+含依赖): fast_mode 应保持 true（不再降级），实际 '$fast_mode_e'"
 fi
-pass "路径E: fast_mode=true + 含 package.json 依赖文件 → fast_mode 降级，不触发 smoke"
+pass "路径E: fast_mode=true + 含 package.json 依赖 → 仍 smoke, fast_mode 保持 true（v3.32.0 不再降级）"
 
 # ── 路径 F：fast_mode=false + 含依赖文件（pnpm-lock/yarn.lock 等）→ 不触发 smoke ──
 for dep_file in "pnpm-lock.yaml" "yarn.lock" "requirements.txt" "Cargo.lock"; do
@@ -261,7 +261,7 @@ if [[ "$qa_scope_g" != "selective" ]]; then
 fi
 pass "路径G: qa_scope 已为 'selective' → detect_smoke_eligible 不覆盖（保持 selective）"
 
-# ── 路径 H：fast_mode=true + 文件数 > 8 → 即使行数 ≤100 也不触发 smoke ────────
+# ── 路径 H（v3.32.0）：fast_mode=true + 多文件（9文件）→ 仍 smoke，fast_mode 保持 true ────────
 make_state "true" ""
 many_files_diff=""
 for i in $(seq 1 9); do
@@ -279,13 +279,13 @@ invoke_detect "$STATE_FILE" "$many_files_diff"
 qa_scope_h=$(read_field "qa_scope" "$STATE_FILE")
 fast_mode_h=$(read_field "fast_mode" "$STATE_FILE")
 
-if [[ "$qa_scope_h" == "smoke" ]]; then
-    fail "路径H(fast+9文件): 文件数超过 8 不应触发 smoke（fast 模式阈值 ≤8 文件）"
+if [[ "$qa_scope_h" != "smoke" ]]; then
+    fail "路径H(fast+9文件): v3.32.0 fast_mode=true 无视文件数应仍 smoke，实际 '$qa_scope_h'"
 fi
-if [[ "$fast_mode_h" == "true" ]]; then
-    fail "路径H(fast+9文件): fast_mode 应降级为 false（文件数超过阈值）"
+if [[ "$fast_mode_h" != "true" ]]; then
+    fail "路径H(fast+9文件): fast_mode 应保持 true（不再降级），实际 '$fast_mode_h'"
 fi
-pass "路径H: fast_mode=true + 9文件(>8) → 不触发 smoke，fast_mode 降级"
+pass "路径H: fast_mode=true + 9文件 → 仍 smoke, fast_mode 保持 true（v3.32.0 不再降级）"
 
 echo "[OK ] R5 detect-smoke-eligible — 全部断言通过"
 exit 0

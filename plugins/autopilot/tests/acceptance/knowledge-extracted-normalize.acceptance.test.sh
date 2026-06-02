@@ -133,6 +133,7 @@ rm -rf "$dir3"
 # T4：frontmatter 重复键 — get_field 取第一行、set_field 写后去重、正文不动
 # ─────────────────────────────────────────────────────────────────────
 ( # 子 shell 隔离 source 副作用
+    # shellcheck source=/dev/null
     source "$LIB" >/dev/null 2>&1
     TMP="$(mktemp)"
     cat > "$TMP" <<'EOF'
@@ -149,6 +150,7 @@ iteration: 3
 # body
 phase: not-a-field
 EOF
+    # shellcheck disable=SC2034  # STATE_FILE 被 sourced lib.sh 的 get_field/set_field 经全局读取
     STATE_FILE="$TMP"
     g_read="$(get_field gate)"
     k_read="$(get_field knowledge_extracted)"
