@@ -69,6 +69,39 @@ updated_at: 2026-05-07T00:00:00Z
 EOF
 }
 
+# Helper：生产口径 frontmatter —— 完全照搬 setup.sh 初始模板，关键是【不含 qa_scope 字段】。
+# 此前所有 mock 都预置了 qa_scope 行，set_field 的 no-op bug（键缺失静默吞写入）被掩盖，
+# 导致 fast_mode→smoke 降级在生产单任务模式从未生效却测不出（知识库 [2026-05-30] 记录）。
+make_state_production() {
+    local fast_mode="$1"
+    cat > "$STATE_FILE" <<EOF
+---
+active: true
+phase: "qa"
+gate: ""
+iteration: 1
+max_iterations: 30
+max_retries: 3
+retry_count: 0
+mode: "single"
+plan_mode: ""
+fast_mode: $fast_mode
+brief_file: ""
+next_task: ""
+auto_approve: false
+knowledge_extracted: ""
+task_dir: "$TMP_DIR"
+session_id: testsess
+started_at: "2026-05-30T00:00:00Z"
+contract_required: true
+html_review: false
+---
+
+## 目标
+生产口径占位
+EOF
+}
+
 # Helper：通过 subshell source stop-hook.sh 并调用函数
 # 传入：state 文件路径、diff 内容
 # 输出：执行后 qa_scope 和 fast_mode 字段值（从 state 文件读取）
@@ -286,6 +319,27 @@ if [[ "$fast_mode_h" != "true" ]]; then
     fail "路径H(fast+9文件): fast_mode 应保持 true（不再降级），实际 '$fast_mode_h'"
 fi
 pass "路径H: fast_mode=true + 9文件 → 仍 smoke, fast_mode 保持 true（v3.32.0 不再降级）"
+
+# ── 路径 I（回归：set_field upsert）：生产 frontmatter【不含 qa_scope 字段】+ fast_mode=true ──
+# 复现知识库 [2026-05-30] 潜伏 bug：旧 set_field 在键缺失时 no-op，detect_smoke_eligible
+# 调 set_field "qa_scope" smoke 静默失败 → qa_scope 始终空 → 降级生产从未生效。
+# 修复后 set_field 改 upsert（键缺失→追加），此路径必须能写出 smoke。
+make_state_production "true"
+# 防御：确认 fixture 确实不含 qa_scope 字段（否则这条测试无意义，退化成路径B）
+if grep -q '^qa_scope:' "$STATE_FILE"; then
+    fail "路径I 前置: 生产 fixture 不应预置 qa_scope 字段（否则掩盖 set_field no-op bug）"
+fi
+invoke_detect "$STATE_FILE" "$small_diff"
+qa_scope_i=$(read_field "qa_scope" "$STATE_FILE")
+if [[ "$qa_scope_i" != "smoke" ]]; then
+    fail "路径I(生产无qa_scope字段): set_field 应 upsert 追加 qa_scope=smoke，实际 '$qa_scope_i'（set_field no-op bug 复现）"
+fi
+# 追加后不应产生重复 qa_scope 行
+qa_scope_i_lines=$(grep -c '^qa_scope:' "$STATE_FILE")
+if [[ "$qa_scope_i_lines" != "1" ]]; then
+    fail "路径I: upsert 后 qa_scope 应恰好 1 行，实际 $qa_scope_i_lines"
+fi
+pass "路径I: 生产 frontmatter（无 qa_scope 字段）→ set_field upsert 追加 qa_scope=smoke（根治 [2026-05-30] no-op bug）"
 
 echo "[OK ] R5 detect-smoke-eligible — 全部断言通过"
 exit 0

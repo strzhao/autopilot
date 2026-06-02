@@ -78,13 +78,19 @@ get_field() {
 
 set_field() {
     local temp="${STATE_FILE}.tmp.$$"
-    # 仅替换 frontmatter 内首个匹配键、删除后续同键行：写入即自愈重复键。
+    # Upsert 语义：键存在 → 替换首个匹配、删除后续同键行（写入即自愈重复键）；
+    # 键缺失 → 在 frontmatter 闭合 --- 前追加一行（修复历史 no-op：初始 frontmatter
+    # 不含 qa_scope 等字段时，旧实现静默吞掉写入，导致 fast_mode→smoke 降级从未生效）。
     # awk 用第一对 --- 界定 frontmatter，越过则原样输出（不动正文里形如 "phase: x" 的散文）。
     awk -v key="${1}" -v val="${2}" '
         BEGIN { infm=0; done_fm=0; seen=0 }
         /^---$/ {
             if (!infm && !done_fm) { infm=1; print; next }
-            else if (infm) { infm=0; done_fm=1; print; next }
+            else if (infm) {
+                # 闭合 frontmatter：键从未出现过 → 在此追加（upsert insert 分支）
+                if (!seen) { print key ": " val; seen=1 }
+                infm=0; done_fm=1; print; next
+            }
         }
         infm && $0 ~ "^" key ": " {
             if (!seen) { print key ": " val; seen=1 }

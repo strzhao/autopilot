@@ -397,3 +397,9 @@ S-INV-4 — 不动章节零改动
 **Scenario**: 含大量中文字符串的 bash 脚本（本仓库 hook / 验收脚本常见）在 `set -u` 下，`$var` 直接紧跟全角中文标点（如 `$ref_rel，` `$pat」`）。
 **Lesson**: bash 变量展开遇到紧跟的多字节字符时，可能把多字节首字节并入变量名 → `set -u` 下报 `名字�: unbound variable` 崩溃。凡 `$var` 后紧跟非 ASCII 字符，必须用 `${var}` 显式界定变量名边界。该 bug 只在对应 fail 分支真正执行时才暴露，平时潜伏，易逃过"跑一遍全绿"的验证。
 **Evidence**: 验收脚本断链检测 `references/$ref_rel，但…` 在 macOS bash `set -u` 下崩溃，改 `${ref_rel}` 修复；同脚本其他 `$var「中文」` 处预防性同改。
+
+### [2026-06-02] frontmatter set_field 必须 upsert（键缺失追加），且测试 mock 不能恒含被测字段
+<!-- tags: autopilot, lib.sh, set_field, upsert, no-op, frontmatter, qa_scope, smoke, test-mock-masking, latent-bug, production-only-bug, fixture-realism -->
+**Scenario**: `lib.sh` 的 `set_field` 用 awk 只替换 frontmatter 中**既有**键，键缺失时 `seen` 永不置位 → 静默吞写入（no-op）。而 `setup.sh` 初始 frontmatter **不含 `qa_scope` 字段**，于是 stop-hook `detect_smoke_eligible` 调 `set_field "qa_scope" smoke` 在生产单任务模式**从未落盘**——fast_mode 任务的 Wave 2 跳过降级实际从未发生。潜伏数月无人察觉。
+**Lesson**: ① 写状态机字段的 setter 必须是 **upsert**（键存在则替换+去重，键缺失则在闭合 `---` 前追加），否则"字段是否预先声明"成了隐式前提，一个原语缺陷放大成"整类未来新字段都静默丢失"的 footgun。修法落在原语层（awk 闭合 `---` 分支补 `if(!seen) print key": "val`），零新增字段/状态。② **此 bug 测不出的真因是测试 mock 恒含被测字段**——`detect-smoke-eligible` 所有 mock state 都预置了 `qa_scope:` 行（走既有键替换路径），完美掩盖缺键路径。**fixture 必须照搬生产初始模板（setup.sh），不能为"方便断言"补全字段**；缺键、空值、重复键这些生产真实形态恰是 bug 温床。回归测试加"生产口径路径"时应带前置防御断言（`grep -q '^qa_scope:' && fail`）禁止 fixture 预置该字段，否则测试会悄悄退化成已覆盖路径的重复。③ 验证手法：红→绿——`git stash` 还原旧实现跑新测试必失败、修复版通过，证明测试真能 kill 该 bug 而非 tautological。
+**Evidence**: v3.42.1，`set_field` 改 upsert（4 用例验证：缺键追加/既有键替换/重复键自愈/追加位置在 frontmatter 内）；`detect-smoke-eligible` 新增生产口径路径 I（红→绿证伪：旧版 `qa_scope=''` 失败、修复版 smoke 通过）；全套件 22/22。关联 [[Mutation-Survival自检反no-op]]（mock 掩盖缺键 = 断言无法 kill mutation 的同族）。

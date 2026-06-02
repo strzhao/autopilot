@@ -33,6 +33,7 @@
 ## Patterns
 - [2026-06-02] `$(cmd \|\| true); rc=$?` 把退出码吞成 0；trap ERR 下用 `cmd \|\| rc=$?` 保留真 rc（含 awk $2 截断含空格路径 → 参数扩展） | tags: bash, exit-code, command-substitution, or-true, rc-masking, trap-err, double-signal, stop-hook, lib-sh, qa-reviewer-catch | → patterns.md
 - [2026-05-31] 用"静默放行/等待"修死循环时必须补"用户可见 + 活性自救"，否则吵闹死循环换成无声卡死（反面同族） | tags: autopilot, stop-hook, silent-wait, liveness, observability, exit-0, iteration-freeze, max-iterations-backstop, system-message, false-positive-stall, inverse-failure-mode, has-pending-subagents | → patterns.md
+- [2026-06-02] frontmatter set_field 必须 upsert（键缺失追加），且测试 mock 不能恒含被测字段否则掩盖缺键路径生产 bug | tags: autopilot, lib.sh, set_field, upsert, no-op, frontmatter, qa_scope, smoke, test-mock-masking, latent-bug, production-only-bug, fixture-realism | → patterns.md
 - [2026-05-31] 断言"stdout 含某 JSON 键"易成 tautological——mutation 落点若也输出该键则断言失效，应断言分支专属内容标志 | tags: autopilot, test-quality, tautological-assertion, mutation-survival, json-key-grep, stop-hook, acceptance-test, no-op-mutation, false-green | → patterns.md
 - [2026-05-31] 自门控的横切检测函数不要再加 phase/条件门控（无副作用即应全局生效），否则退化成 flag-asymmetry | tags: autopilot, stop-hook, has-pending-subagents, self-gating, phase-gate, flag-asymmetry, cross-cutting-detection, commit-agent, near-infinite-loop, regression-recurrence | → patterns.md
 - [2026-05-30] bash set -u 下变量紧跟多字节中文标点被误解析为变量名 → unbound variable 崩溃，须 ${var} 界定 | tags: bash, set-u, multibyte, cjk, unbound-variable, shell, variable-expansion, brace-disambiguation, acceptance-test, latent-bug | → patterns.md
