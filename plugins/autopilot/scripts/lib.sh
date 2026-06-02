@@ -181,6 +181,98 @@ now_iso() {
     date -u +%Y-%m-%dT%H:%M:%SZ
 }
 
+# ── 确定性硬信号原语 ──────────────────────────────────────────────
+
+# freshness_check <product> <src_dir> → stdout: STALE | FRESH | UNKNOWN
+#
+# 判断构建产物相对于源码目录的新鲜度。
+#   FRESH (rc0)  ：产物存在且产物中最新文件比 src_dir 所有源码都新（或一样新）
+#   STALE (rc1)  ：src_dir 中存在任一文件比产物中最新文件更新
+#   UNKNOWN (rc1)：产物路径不存在（无产物 → 不放行）
+#
+# 跨平台：禁用 `stat -f/-c`；用 `find -newer` + `ls -t`。
+# 兼容编译型（二进制/bundle）与解释型（dist/ 目录）。
+freshness_check() {
+    local product="${1:-}"
+    local src="${2:-}"
+    local ref=""
+    # 找产物中最新的文件作参照
+    if [ -f "$product" ]; then
+        ref="$product"
+    elif [ -d "$product" ]; then
+        ref=$(find "$product" -type f -print0 2>/dev/null | xargs -0 ls -1td 2>/dev/null | head -1)
+    fi
+    if [ -z "$ref" ] || [ ! -e "$ref" ]; then
+        echo "UNKNOWN"
+        return 1
+    fi
+    # 任一源码比产物参照新 → STALE
+    if [ -n "$(find "$src" -type f -newer "$ref" -print -quit 2>/dev/null)" ]; then
+        echo "STALE"
+        return 1
+    fi
+    echo "FRESH"
+    return 0
+}
+
+# lock_acceptance_tests <lock_file> <file...>
+#
+# 将指定验收测试文件的 sha256 写入锁文件（格式：每行 "<sha256>  <abs-path>"）。
+# 幂等：重复调用会覆盖同一锁文件。锁文件仅在 runtime 目录（不入库）。
+# 跨平台 sha256：sha256sum（Linux）或 shasum -a 256（macOS）。
+lock_acceptance_tests() {
+    local lock="${1:-}"
+    shift
+    [ -z "$lock" ] && return 0
+    : > "$lock"
+    local f
+    for f in "$@"; do
+        if command -v sha256sum >/dev/null 2>&1; then
+            echo "$(sha256sum "$f" | awk '{print $1}')  $f" >> "$lock"
+        else
+            echo "$(shasum -a 256 "$f" | awk '{print $1}')  $f" >> "$lock"
+        fi
+    done
+}
+
+# acceptance_tests_tampered <lock_file>
+#
+# 校验锁文件中所有文件的 sha256 是否匹配。
+# 退出码语义（双信号：rc + stdout 均可判断）：
+#   0 = clean（所有文件 sha 匹配）
+#   2 = tampered（任一文件 sha 变化或缺失）
+#   1 = no-lock（锁文件不存在，自门控 no-op）
+# tampered 时 stdout 含 "TAMPER(modified):" 或 "TAMPER(missing):" + 路径。
+acceptance_tests_tampered() {
+    local lock="${1:-}"
+    [ -f "$lock" ] || return 1   # 无锁=未进入受保护期，自门控 no-op
+    local bad=0
+    local want path got line
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        # 锁格式 "<sha256>␣␣<path>"：按双空格切分，保留路径内空格（awk $2 会截断含空格路径）
+        want="${line%%  *}"
+        path="${line#*  }"
+        [ -z "${want}" ] && continue
+        if [ ! -f "${path}" ]; then
+            echo "TAMPER(missing): ${path}"
+            bad=1
+            continue
+        fi
+        if command -v sha256sum >/dev/null 2>&1; then
+            got=$(sha256sum "${path}" | awk '{print $1}')
+        else
+            got=$(shasum -a 256 "${path}" | awk '{print $1}')
+        fi
+        if [ "$got" != "$want" ]; then
+            echo "TAMPER(modified): ${path}"
+            bad=1
+        fi
+    done < "$lock"
+    [ "$bad" -eq 1 ] && return 2
+    return 0
+}
+
 # ── Task Slug 生成 ──────────────────────────────────────────────
 
 # 生成需求管理文件夹的 slug。格式: YYYYMMDD-<目标前30字符清洗>

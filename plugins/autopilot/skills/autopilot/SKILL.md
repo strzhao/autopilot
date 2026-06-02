@@ -247,7 +247,8 @@ preview: |
 1. **收集蓝队产出**：实现摘要、文件列表、困难任务标记
 2. **收集红队产出**：将红队生成的测试文件写入项目（如果 Agent 在 worktree 隔离中运行则需要手动写入）
 3. `git add` 红队的测试文件
-4. 更新 frontmatter：`phase: "qa"`
+4. **写入测试锁**：调用 `lock_acceptance_tests "$task_dir/.acceptance-lock" <测试文件列表>`（lib.sh 函数），将验收测试文件的 sha256 写入 `$task_dir/.acceptance-lock`（runtime，不入库）。stop-hook 据此在 implement→qa 转入时检测篡改。
+5. 更新 frontmatter：`phase: "qa"`
 
 #### 3. 降级策略
 
@@ -312,7 +313,7 @@ preview: |
 
 **Tier 1: 基础验证**（四项并行）：类型检查(`tsc --noEmit`) | Lint(`eslint`) | 单元测试(`jest/vitest`) | 构建(`npm run build`)，各超时 60s
 
-**Tier 5: 量化指标门禁**（条件性，工具可用时强制）：Stryker mutation score ≥ 60% + Istanbul/c8 coverage line ≥ 80% / branch ≥ 70%；任一未达 → ❌ → auto-fix（不可 ⚠️ 复盘绕过）；两子项均无工具 → N/A + ⚠️ 不阻塞 + doctor 推荐。详见 references/quantitative-metrics.md。
+**Tier 5: 量化指标门禁**（条件性，工具可用时强制）：Stryker mutation score ≥ 60% + Istanbul/c8 coverage line ≥ 80% / branch ≥ 70%；任一未达 → ❌ → auto-fix（不可 ⚠️ 复盘绕过）；两子项均无工具 → `na`，**必须**渲染"⚠️ 测试有效性维度未验证（无 mutation/coverage 工具）"（na 不等于 PASS，不得静默放行）+ doctor 推荐。详见 references/quantitative-metrics.md §7 na 可见化规则。
 
 **Tier 3: 集成验证**（条件性）：Dev server 启动、API 端点验证、导入完整性
 
@@ -353,6 +354,7 @@ Tier 5 ❌ 数字达不到阈值 → 与 Tier 0/1 ❌ 同权重计数
 - **驱动源 = 状态文件 `## 验收场景` 的预注册谓词清单**（非散文场景）。`## 验证方案 > 真实测试场景` 降为"如何驱动真实产物"的前置说明（怎么起 dev server / 登录 / 造数据）。
 - 执行者 = **编排器**：对每条谓词 → 驱动真实产物 → 按 `observe:` 观测 → 按 `assert:`/`channel:` 求值 → 产出三元组 `(谓词id, artifact 路径, PASS/FAIL)`。`det-machine` 谓词优先（零主观）。
 - **每条 PASS 必须引一个真实存在的 artifact**（命令输出 / 截图 / AX dump / 日志）；无法驱动观测（INCONCLUSIVE）记 FAIL。
+- **新鲜度谓词求值**：谓词 `channel: det-machine` 且 `observe: freshness_check` 时，调用 `freshness_check <product> <src_dir>`（已在 lib.sh 实现），stdout 作 artifact；`UNKNOWN` 按 INCONCLUSIVE→FAIL 铁律处理（不放行）；`STALE` 同 FAIL；仅 `FRESH`（rc0）算 PASS。骑既有谓词闸门，不新增 Tier。
 - **不可跳过**：`## 验收场景` 为 N/A 时，编排器据变更内容现场推导至少 1 条谓词并求值。
 - 超时：单条谓词 60s，总计 180s。与 Tier 0/1 的区别：Tier 0/1 验证「代码是否正确」，Tier 1.5 验证「真实产物是否满足预注册谓词」。
 

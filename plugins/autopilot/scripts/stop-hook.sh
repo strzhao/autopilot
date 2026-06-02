@@ -625,6 +625,27 @@ fi
 # 单独的 qa 触发点（不在 auto-fix 触发，避免重复评估）
 if [[ "$NEW_PHASE" == "qa" ]]; then
     detect_smoke_eligible || true
+
+    # ── 8.5.1 测试篡改守卫（implement→qa 转入时一次性检测） ──
+    # 自门控：仅当 .acceptance-lock 存在且 sha 不匹配时触发。
+    # 无锁文件 → acceptance_tests_tampered 返回 1（no-lock）→ 不触发（零副作用）。
+    # 检出篡改 → decision:block 指责"红队测试被修改，问题在实现不在测试"。
+    # 先例：§3.5 canonical 守卫、§5 知识提取回滚守卫均为 early-exit decision:block+exit 0。
+    if [[ -n "${TASK_DIR}" ]]; then
+        _lock_file="${TASK_DIR}/.acceptance-lock"
+        # 用 `|| _tamper_rc=$?` 而非 `|| true`：保留真实 rc（no-lock=1/tampered=2），
+        # 左侧在 || 列表中非零不触发顶层 trap ERR（不会误早退破坏 §9 路由）。
+        _tamper_rc=0
+        _tamper_out=$(acceptance_tests_tampered "${_lock_file}" 2>/dev/null) || _tamper_rc=$?
+        # 双信号判断：rc==2 或 stdout contains "TAMPER"（防 rc 歧义）
+        if [[ "${_tamper_rc}" -eq 2 ]] || echo "${_tamper_out}" | grep -q "TAMPER"; then
+            _tamper_reason="红队验收测试被修改（${_tamper_out}）。autopilot 铁律：问题在实现不在测试，绝对不允许修改红队测试文件。必须 git checkout -- <测试文件> 还原后重修实现，再推进到 QA 阶段。"
+            jq -n --arg reason "${_tamper_reason}" \
+                --arg msg "autopilot stop-hook: 验收测试篡改守卫触发（implement→qa），还原测试后重修实现" \
+                '{"decision":"block","reason":$reason,"systemMessage":$msg}'
+            exit 0
+        fi
+    fi
 fi
 
 # ── 9. 构造 block JSON ──

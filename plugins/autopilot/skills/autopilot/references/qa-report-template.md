@@ -35,6 +35,21 @@ QA 报告在对话中产出供用户直接看（v3.37+ 不再持久化到 state.
 - Tier 1.5: P2「下载」 — HTTP 500（谓词 FAIL）
 ```
 
+## Tier 5 na 渲染规则
+
+`tier5_status == "na"`（无 mutation/coverage 工具）时，QA 报告**必须**包含以下渲染，不得静默放行：
+
+```markdown
+**Tier 5: 量化指标门禁**
+⚠️ 测试有效性维度未验证（无 mutation/coverage 工具）
+- na 表示无法求值（无工具评估测试套件的 kill-rate 与覆盖有效性），不计入放行依据
+- 建议运行 `/autopilot doctor` 获取安装命令
+```
+
+该标注**不得**含"PASS"/"绿灯"/"通过"字样（na 是"无法求值"，非绿灯）。
+
+---
+
 ## Tier 1.5 报告格式强制
 
 每条谓词的 `artifact` 列**必须**是真实存在的命令输出 / 截图 / AX dump / 日志路径。以下为错误示范：

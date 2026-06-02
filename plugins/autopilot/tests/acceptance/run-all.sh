@@ -9,6 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 #               → R4 (setup-fast-flag) → R5 (detect-smoke-eligible)
 #               → R6 (stop-hook-prompt-routing) → R7 (skill-fast-mode-doc) → R8 (version-sync)
 #               → R9 (brainstorm-default) → R10 (plan-review-html)
+#               → R_FRESH (freshness-check) → R_TAMPER (acceptance-tamper-guard)
 ORDERED_TESTS=(
     "compress-qa-report.acceptance.test.sh"
     "qa-reviewer-prompt.acceptance.test.sh"
@@ -21,6 +22,8 @@ ORDERED_TESTS=(
     "brainstorm-default.acceptance.test.sh"
     "plan-review-html.acceptance.test.sh"
     "knowledge-extracted-normalize.acceptance.test.sh"
+    "freshness-check.acceptance.test.sh"
+    "acceptance-tamper-guard.acceptance.test.sh"
 )
 
 total=0

@@ -43,6 +43,7 @@
      - `negate:` 可选，用于"不执行 / 状态不变"类反向谓词。
    - **GUI 断言优先走可达性树**，禁用 golden-image 像素快照当回归门（基线易漂移、re-record 即失值）。
    - 信息隔离下你只需给 EARS + channel + assert + 观测目标**类别**；精确 selector/AX 路径由 QA 在真机绑定。纯渲染场景仍可填 "N/A"。谓词同样要能 kill No-op mutation，详情参 `references/test-mutation-survival.md`。
+   - **新鲜度谓词**：目标描述含"重建/重启/部署/rebuild/restart/deploy"等语义时，额外产出 1 条 `det-machine` 新鲜度谓词，格式：`When {构建触发}, {产物} shall 比 {源码目录} 中所有源文件更新 ｜ observe: freshness_check 输出 ｜ assert: stdout == "FRESH" && exit == 0`。产物路径由 QA 阶段求值时绑定（信息隔离下只声明期望），`channel: det-machine`。
 
 ## 输出格式
 

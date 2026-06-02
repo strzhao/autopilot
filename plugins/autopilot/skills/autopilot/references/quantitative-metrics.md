@@ -137,6 +137,9 @@ coverage_branch_threshold: 70
 
 两子项均检测不到 → `tier5_status: "na"` + `warning: true` + `blocker: false`。
 
+**na 必须可见不得静默放行**（见 [2026-05-31] 静默放行反模式）：
+QA 报告必须显式渲染"⚠️ 测试有效性维度未验证（无 mutation/coverage 工具）"，该标注不得含"PASS"/"绿灯"/"通过"字样。na 不等于 PASS，是"无法求值"。
+
 **doctor-report.md 必须输出字面安装命令**：
 
 ```bash
@@ -149,6 +152,15 @@ npm install --save-dev @stryker-mutator/core @stryker-mutator/jest-runner c8
 - Mutation-Survival 自检铁律（兜底，不可删）
 
 > **重要**：降级清单是兜底，Tier 5 工具量化门禁是主路径。AI 主观自检比客观工具数字弱一个数量级。
+
+---
+
+## 8. coverage 反向否决语义
+
+**覆盖率达标不作通过/绿灯信号**（Inozemtseva ICSE 2014：高覆盖不预示高检错率）。
+
+coverage 的唯一判定用途：`uncovered_critical[]` 非空时**反向否决**（改动行有未覆盖路径 → ❌ 阻塞）。
+覆盖率达标（line ≥ 80%、branch ≥ 70%）仅表示"未进入反向否决条件"，不可据此输出 PASS 或绿灯标记。
 
 ---
 
