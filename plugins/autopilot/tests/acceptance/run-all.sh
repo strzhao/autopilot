@@ -18,6 +18,7 @@ ORDERED_TESTS=(
     "detect-smoke-eligible.acceptance.test.sh"
     "stop-hook-prompt-routing.acceptance.test.sh"
     "skill-fast-mode-doc.acceptance.test.sh"
+    "fast-mode-decision-timing.acceptance.test.sh"
     "version-sync.acceptance.test.sh"
     "brainstorm-default.acceptance.test.sh"
     "plan-review-html.acceptance.test.sh"

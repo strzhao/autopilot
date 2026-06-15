@@ -12,7 +12,7 @@
 - `qa_scope`: 选择性重跑标记，AI 更新。**合法值（闭合枚举）：""（空，默认全量 QA）/ smoke（diff 小或 fast_mode 触发，跳过 Wave 2 qa-reviewer）/ selective（auto-fix 后只重跑失败 Tier）**
 - `next_task`: 下一个就绪任务 ID（项目模式 merge 阶段写入，触发 auto-chain）
 - `knowledge_extracted`: 知识提取完成标记，AI 在 merge 阶段设为 `"true"`（有新增）或 `"skipped"`（无新增）。**合法值（闭合枚举）：""（空）/ true / skipped**。stop-hook 的 phase=done 守卫检查此字段，缺失或空值会回滚到 merge
-- `fast_mode`: 三态字段。`""`（默认/未定）/`"true"`（fast）/`"false"`（standard）。setup.sh 的 `--fast` / `--standard` flag 时直接写入；为空时 AI 在启动流程步骤 2 中按自适应规则写回（bug 修复/小改动/单一概念跨文件 search-replace→true，架构权衡/新抽象/探索未知模块→false，不确定→true），写入后整个生命周期不再修改
+- `fast_mode`: 三态字段。`""`（默认/未定）/`"true"`（fast）/`"false"`（standard）。setup.sh 的 `--fast` / `--standard` flag 时直接写入；为空时 AI 在 design 步骤 1 探针后按自适应规则写回（bug 修复/小改动/单一概念跨文件 search-replace→true，架构权衡/新抽象/探索未知模块→false，不确定→true），写入后整个生命周期不再修改
 
 - `html_review`: 布尔值（默认 false）。设为 `true` 时，design 阶段步骤 4 启用 HTML 浏览器评审路径（自动打开浏览器渲染设计文档 + 反馈输入 + 通过/修改/放弃按钮）。setup.sh 创建任务时若环境变量 `AUTOPILOT_HTML_REVIEW=1` 则自动写入 `true`，否则写 `false`；用户可手动编辑该字段覆盖（编辑生效需在下一次步骤 4 判定时读到）。
 

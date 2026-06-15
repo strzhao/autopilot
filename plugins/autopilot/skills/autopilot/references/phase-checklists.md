@@ -4,7 +4,7 @@
 
 ## Phase: design
 - [ ] 步骤 0: 知识上下文加载（.autopilot/ 存在时）
-- [ ] 步骤 1: 模式检测与分流（单任务/项目模式）
+- [ ] 步骤 1: 模式检测与分流（探针后定 fast_mode + 单任务/项目模式）
 - [ ] 步骤 2: 代码探索 + 写设计文档到状态文件（并行：Explore agent + 验收场景生成器 agent）
 - [ ] 步骤 3: Plan 审查（启动 plan-reviewer agent）
 - [ ] 步骤 4: AskUserQuestion 请求用户审批
