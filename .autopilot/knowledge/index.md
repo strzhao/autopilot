@@ -1,85 +1,95 @@
 # Knowledge Index
 
-## Decisions
-- [2026-06-16] 判定时机问题根因是上下文不足（非时机）；状态字段写入点搬迁安全性看读者观测边界 | tags: autopilot, fast-mode, decision-timing, context-availability, iteration-boundary, stop-hook, relocation-invariant, skill-surgery, dogfood, probe-driven | → decisions.md
-- [2026-06-02] QA 假阳性根治：客观工具门禁不够，要更便宜的确定性硬信号（产物新鲜度 mtime / 测试篡改 git-sha hook backstop / coverage 反向否决 / na 可见化）+ 散文铁律转 hook | tags: autopilot, qa, false-positive, false-green, deterministic-signal, artifact-freshness, mtime, tamper-guard, git-sha-lock, na-visibility, fake-hard-gate, coverage-not-green, prose-iron-law-to-hook, dogfood, generator-verifier | → decisions.md
-- [2026-05-31] 对齐阶段(design)按 phase 边界放行交回用户，优于新增 gate 字段 | tags: autopilot, stop-hook, design, user-alignment, phase-boundary, systemMessage, decision-block, auto-loop-scope, minimal-state, flag-asymmetry-avoidance, anti-bypass | → decisions.md
-- [2026-05-30] AI-First 反过拟合判据：删伪精度数字/正则/重复/裸计数，留终止边界/信息隔离/契约/客观门禁 | tags: autopilot, skill, ai-first, overfitting, voodoo-constant, magic-number, degrees-of-freedom, guardrail-vs-overfitting, pseudo-precision, semantic-judgment, anti-pseudo-optimization | → decisions.md
-- [2026-05-23] 工具产物的 git 管理边界用"目录拓扑即语义"而非"SKILL.md 规则提醒" | tags: autopilot, file-management, gitignore, topology-as-semantic, knowledge-runtime-split, layered-defense, commit-amnesia, doctor-dim, single-source-of-truth | → decisions.md
-- [2026-05-23] 改 SKILL.md 前必须用 Skill Best Practice 5 条原则筛改进 | tags: autopilot, skill, best-practice, anti-pseudo-optimization, refactor-discipline, terminology-network, reference-chain, false-improvement | → decisions.md
-- [2026-05-19] plan-review HTML 演进走"扩展点"路径而非改 SKILL.md | tags: autopilot, plan-review, skill-fragility, extension-point, decoupling, html-template, sso-isolation, launch-script | → decisions.md
-- [2026-05-17] brainstorm 抽离为独立 skill：解决"指令优先级"而非"主 SKILL 行数" | tags: autopilot, brainstorm, skill-extraction, indication-priority, references-postpone, hard-gate, superpowers, design-prediction | → decisions.md
-- [2026-05-17] skill 引入新概念优先业界对齐命名，禁止自创术语 | tags: autopilot, skill, naming, terminology, industry-alignment, llm-friendly, mutation-testing, tautological-test, semantic-anchor, prompt-engineering | → decisions.md
-- [2026-05-16] 改 QA ⚠️/❌ 判定规则时必须枚举所有合法标记来源 + 强制复盘机制 | tags: autopilot, qa, judgement, warning, false-acquit, plan-reviewer, blocker, defensive-design, anti-rationalization, tier-1.5, tier-3.5 | → decisions.md
-- [2026-05-14] per-user 偏好持久化采用 ~/.autopilot/ 与项目级命名对称 | tags: autopilot, prefs, persistence, user-level, project-level, naming-convention, dotfile | → decisions.md
-- [2026-05-10] auto-fix 中"看似独立的两个 bug"应优先寻找共同上游脆弱点，一处合并修复 | tags: autopilot, qa, auto-fix, root-cause, merge-fix, anti-symptomatic, bash, scripting | → decisions.md
-- [2026-05-10] 契约对齐采用 contract-checker agent + 集中 protocol，而非分散 prompt 铁律 | tags: autopilot, contract, red-team, blue-team, contract-checker, agent, single-source-of-truth, skill-fragility, gojko, sbe, cdc, pact, dbc, contract-protocol | → decisions.md
-- [2026-05-09] 修改脆弱 skill 时遵循"最小集 + 纯追加 + 可独立回滚" | tags: autopilot, skill, fragility, minimal-change, append-only, rollback, tdd-quality, defensive-edit | → decisions.md
-- [2026-05-09] 引入新能力时优先复用现有内部基础设施，再考虑引入新栈 | tags: autopilot, integration, dependency-discipline, infrastructure-reuse, plugin-design, html-review, visual-companion | → decisions.md
-- [2026-05-08] Design 阶段默认含 brainstorm Q&A，--fast 复用为快速通道（决策树 4→3 档） | tags: autopilot, brainstorm, design, fast-mode, default-inversion, simplification, yagni | → decisions.md
-- [2026-05-08] Design 阶段移除 Plan Mode，用 AskUserQuestion 替代 ExitPlanMode 审批 | tags: autopilot, plan-mode, design, AskUserQuestion, approval-gate, simplification | → decisions.md
-- [2026-05-07] 双轨道 fast track：显式 flag + hook 自动检测互为兜底 | tags: autopilot, token-optimization, fast-mode, dual-track, self-correction, hook | → decisions.md
-- [2026-05-07] Sub-agent 数量是 token 优化的真正杠杆，不是 SKILL.md 加载 | tags: autopilot, token-optimization, sub-agent, cold-start, qa-reviewer | → decisions.md
-- [2026-05-07] Stop hook 利用 transcript_path 检测后台 sub-agent 等待状态 | tags: autopilot, stop-hook, sub-agent, transcript, token-optimization, hard-coded, implement | → decisions.md
-- [2026-05-07] AI 自觉的优化机制不可靠，结构性优化必须由 hook 硬编码兜底 | tags: autopilot, hook, automation, ai-discipline, stop-hook, hard-coded | → decisions.md
-- [2026-05-06] Plugin hooks.json 不接收 `claude -w` 的 WorktreeCreate 事件，用 SessionStart 兜底 | tags: claude-code, plugin, hooks, worktree, event-dispatch, sessionstart, fallback | → decisions.md
-- [2026-05-05] Lint / 健康检查能力优先 AI 语义判断而非正则脚本 | tags: autopilot, doctor, lint, ai-judgment, knowledge-engineering, design-principle | → decisions.md
-- [2026-05-04] Per-worktree 会话隔离通过 sessions/<name>/ 子目录实现 | tags: autopilot, worktree, session-isolation, architecture | → decisions.md
-- [2026-03-21] 知识工程采用三层 Progressive Disclosure 而非单层扩展 | tags: knowledge, architecture, progressive-disclosure | → decisions.md
-- [2026-03-26] doctor Dim 1 测试金字塔分层评估优于文件计数 | tags: autopilot, doctor, testing, test-pyramid, scoring | → decisions.md
-- [2026-03-27] SKILL.md Phase 分片优于状态文件索引 | tags: autopilot, skill, progressive-disclosure, token-optimization | → decisions.md
-- [2026-04-03] merge 阶段 Agent 化优于 Skill 调用 | tags: autopilot, token-optimization, merge, agent, cost | → decisions.md
-- [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → decisions.md
+> 三层 Progressive Disclosure：本索引（≤5s 扫描）→ 全局 decisions/patterns（热区）→ domains/（历史归档按主题）。
 
-## Patterns
-- [2026-06-02] `$(cmd \|\| true); rc=$?` 把退出码吞成 0；trap ERR 下用 `cmd \|\| rc=$?` 保留真 rc（含 awk $2 截断含空格路径 → 参数扩展） | tags: bash, exit-code, command-substitution, or-true, rc-masking, trap-err, double-signal, stop-hook, lib-sh, qa-reviewer-catch | → patterns.md
-- [2026-05-31] 用"静默放行/等待"修死循环时必须补"用户可见 + 活性自救"，否则吵闹死循环换成无声卡死（反面同族） | tags: autopilot, stop-hook, silent-wait, liveness, observability, exit-0, iteration-freeze, max-iterations-backstop, system-message, false-positive-stall, inverse-failure-mode, has-pending-subagents | → patterns.md
-- [2026-06-02] frontmatter set_field 必须 upsert（键缺失追加），且测试 mock 不能恒含被测字段否则掩盖缺键路径生产 bug | tags: autopilot, lib.sh, set_field, upsert, no-op, frontmatter, qa_scope, smoke, test-mock-masking, latent-bug, production-only-bug, fixture-realism | → patterns.md
-- [2026-05-31] 断言"stdout 含某 JSON 键"易成 tautological——mutation 落点若也输出该键则断言失效，应断言分支专属内容标志 | tags: autopilot, test-quality, tautological-assertion, mutation-survival, json-key-grep, stop-hook, acceptance-test, no-op-mutation, false-green | → patterns.md
-- [2026-05-31] 自门控的横切检测函数不要再加 phase/条件门控（无副作用即应全局生效），否则退化成 flag-asymmetry | tags: autopilot, stop-hook, has-pending-subagents, self-gating, phase-gate, flag-asymmetry, cross-cutting-detection, commit-agent, near-infinite-loop, regression-recurrence | → patterns.md
-- [2026-05-30] bash set -u 下变量紧跟多字节中文标点被误解析为变量名 → unbound variable 崩溃，须 ${var} 界定 | tags: bash, set-u, multibyte, cjk, unbound-variable, shell, variable-expansion, brace-disambiguation, acceptance-test, latent-bug | → patterns.md
-- [2026-05-26] 「状态机切换 state file 后必须重读所有缓存到内存的字段」+「修第 1 个 bug 时不问第 N 个」三连击复刻 | tags: autopilot, stop-hook, state-switch, stale-variable, cached-field, gate-reread, multi-link-failure, regression-recurrence, meta-lesson | → patterns.md
-- [2026-05-26] 状态机新增「flag」字段时所有读取该字段的转换点必须同步处理 — 否则形成「半生效」bug | tags: autopilot, stop-hook, state-machine, flag-asymmetry, auto-approve, review-accept, transition-coverage, double-link, regression-pattern | → patterns.md
-- [2026-05-25] SKILL.md 关键 step 必须有「双重 grep」长效 CI 守护，单 grep 会被弱条件骗过 | tags: autopilot, skill-md, ci-guard, regression-prevention, acceptance-test, double-grep, inline-refactor, llm-instruction, behavior-contract | → patterns.md
-- [2026-05-23] SKILL.md 重构任务的 Tier 1.5 必须含"不变量护栏" grep 场景 | tags: autopilot, qa, tier-1.5, skill-refactor, invariant-guard, grep-pattern, terminology-network, reference-chain, false-improvement, anti-pseudo-optimization | → patterns.md
-- [2026-05-19] 静态 HTML 模板的 Tier 1.5 用 Chrome DevTools MCP + file:// 直接 evaluate_script | tags: autopilot, qa, tier-1.5, smoke-test, html-template, chrome-devtools-mcp, file-protocol, server-bypass | → patterns.md
-- [2026-05-17] 设计阶段量化承诺（行数 / token 数 / 性能数）必须 grep 验证而非估算 | tags: autopilot, design, prediction, quantitative-commitment, grep-verify, estimate-bias, plan-reviewer, skill-extraction | → patterns.md
-- [2026-05-17] documentation-only 变更的 QA 降级模式：Tier 1/3.5 N/A、Tier 1.5 用产出审阅替代浏览器冒烟 | tags: autopilot, qa, documentation-only, markdown, tier-1.5, smoke-test, content-review, prompt-engineering, fallback | → patterns.md
-- [2026-05-14] 多占位符模板 str.replace 顺序敏感：原始用户内容占位必须最后替换 | tags: template, str-replace, render-order, placeholder, pollution, marked-js, latent-bug | → patterns.md
-- [2026-05-14] 契约规约中字段/占位符出现同义变体会让下游实现犹豫 | tags: autopilot, contract, plan-reviewer, placeholder, naming, single-source-of-truth, blue-team, red-team, ambiguity | → patterns.md
-- [2026-05-11] tail -c + jq 流式解析必须丢首行 + 走 fail-safe 兜底，否则在长会话下死循环 | tags: autopilot, stop-hook, jq, tail, byte-cut, fail-safe, fail-unsafe, has-pending-subagents, parse-error, detection-function | → patterns.md
-- [2026-05-10] git worktree list --porcelain 第一项稳定为主仓库，按位置跳过优于按路径比对 | tags: git, worktree, porcelain, position-stable, run-anywhere, doctor, autopilot, path-resolution | → patterns.md
-- [2026-05-10] skill 改动应一处真相不重复 N 处文件 | tags: autopilot, skill, single-source-of-truth, drift, integration, sbe, gojko, contract, references | → patterns.md
-- [2026-05-10] frontmatter 加豁免字段是 skill 演进的元任务安全模式 | tags: autopilot, skill, evolution, meta-task, frontmatter, opt-in, historical-exemption, contract-required, setup-sh | → patterns.md
-- [2026-05-10] 红/蓝队 prompt 改动应在现有 ⚠️ 铁律 内追加 bullet，禁止新增 ⚠️ 章节 | tags: autopilot, red-team, blue-team, prompt, warning-section, anti-pattern, decision-tree, dilution, contract | → patterns.md
-- [2026-05-09] acceptance test 中 `TARGET_VERSION="X.Y.Z"` 是版本同步规则的隐藏盲区 | tags: autopilot, version-sync, acceptance-test, hardcoded, regression, blind-spot, autopilot-commit | → patterns.md
-- [2026-05-09] 主对话需等待外部 UI 操作时，前台同步 Bash + 长 timeout 优于 run_in_background | tags: autopilot, claude-code, bash-tool, run-in-background, ux, html-review, blocking-call | → patterns.md
-- [2026-05-09] macOS `tail -F | grep -m1 | timeout` 退出码语义不可靠，依赖 stdout 非空判成功 | tags: bash, macos, tail, grep, timeout, exit-code, event-watching, wait-decision, autopilot | → patterns.md
-- [2026-05-08] 字段反转默认值 + 复用现有 flag 优于新增 flag | tags: autopilot, design-decision, yagni, flag-design, default-inversion | → patterns.md
-- [2026-05-07] 函数支持"测试 mock 输入"分支会掩盖生产路径 bug | tags: autopilot, red-team, dual-path, function-signature, qa-blind-spot, production-vs-test | → patterns.md
-- [2026-05-07] Cache 命中率高不等于 token 成本低，要看绝对 token 数据 | tags: token-analysis, prompt-cache, methodology, autopilot | → patterns.md
-- [2026-05-07] Shell 脚本要支持 source 测试必须用 BASH_SOURCE[0] | tags: bash, shell, testing, source, BASH_SOURCE, autopilot, stop-hook | → patterns.md
-- [2026-05-07] 顶层 `trap 'exit 0' ERR` 拦截函数内 `|| return 1` 短路链 | tags: bash, trap-err, return, source-mode, testing, stop-hook, autopilot | → patterns.md
-- [2026-05-06] 新增兜底路径暴露 create / repair 功能不对称 | tags: autopilot, worktree, repair, create, asymmetry, fallback, idempotent, bootstrap | → patterns.md
-- [2026-05-04] Worktree 检测使用 .git 文件/目录区分法 | tags: autopilot, worktree, shell, detection | → patterns.md
-- [2026-03-21] 多处引用同一数据（版本号 / 计数 / 路径）容易长期不同步 | tags: autopilot, doctor, consistency, version, dimension, lint | → patterns.md
-- [2026-03-21] Skill 插件 Progressive Disclosure 重构模式 | tags: skill, progressive-disclosure, plugin, refactoring | → patterns.md
-- [2026-03-22] 通用编排器不应替代领域专业 Skill | tags: autopilot, skill-delegation, implement, domain-workflow | → patterns.md
-- [2026-03-22] 外部审查后的修改必须重新验证 | tags: autopilot, qa, post-review, validation, framer-motion | → patterns.md
-- [2026-03-22] Tier 1.5 验证场景必须匹配核心变更层级 | tags: autopilot, qa, tier-1.5, ui-testing, smoke-test | → patterns.md
-- [2026-03-21] HTML comment tags 比 YAML frontmatter 更适合 AI 知识标签 | tags: knowledge, tags, ai-parsing | → patterns.md
-- [2026-03-24] SKILL.md 步骤标题需包含可搜索的"步骤"前缀 | tags: autopilot, skill, naming-convention, testing | → patterns.md
-- [2026-03-24] 插件合并时红队路径假设容易出错 | tags: autopilot, red-team, testing, file-path, merge | → patterns.md
-- [2026-03-25] 符号链接检测 ≠ worktree 检测，防御需多层 | tags: worktree, knowledge, symlink, fallback, defense-in-depth | → patterns.md
-- [2026-03-26] Tier 1.5 场景部分执行等于未执行 | tags: autopilot, qa, tier-1.5, smoke-test, partial-execution | → patterns.md
-- [2026-03-27] Skill 规范不应硬编码项目特定的文件路径 | tags: autopilot-commit, skill, version, hardcoding, claude-md | → patterns.md
-- [2026-03-30] SKILL.md 文档文本中的标识符会干扰红队正则测试 | tags: autopilot, red-team, testing, indexOf, text-proximity, regex | → patterns.md
-- [2026-04-12] "从缓存同步源码"操作会连带回退不相关的文件改动 | tags: autopilot, cache-sync, regression, stop-hook, source-of-truth | → patterns.md
-- [2026-04-17] SKILL.md 决策树中后置章节会被 AI 跳过 | tags: autopilot, skill, decision-tree, priority, plan-mode, auto-approve | → patterns.md
-- [2026-04-17] Early-exit 守卫阻断后续添加的合法代码路径 | tags: autopilot, stop-hook, guard, early-exit, ordering, knowledge-extracted | → patterns.md
-- [2026-05-14] HTML 模板用 dataset.X 设置 data-* 属性，红队字面 grep 命中失败 → 改 setAttribute | tags: dom-api, dataset, setattribute, acceptance-test, grep-literal, red-team, html-template, autopilot, plan-review | → patterns.md
-- [2026-05-14] 事件委托双 listener 冲突：模板 JS 在 [data-choice] 守卫命中后立即 stopImmediatePropagation | tags: event-delegation, stopimmediatepropagation, click-handler, helper.js, autopilot, plan-review, dual-listener, pollution-defense | → patterns.md
+## Domains 导航（历史归档，按主题）
+- [stop-hook-state-machine](domains/stop-hook-state-machine.md) — stop-hook 兜底 / 状态机 / flag-asymmetry / pending-subagent（7 entry）
+- [skill-authoring](domains/skill-authoring.md) — SKILL.md 改动纪律 / 命名 / best-practice / 版本同步（15 entry）
+- [qa-testing](domains/qa-testing.md) — QA 判定 / red-team / mutation / contract / 量化门禁（15 entry）
+- [worktree-git](domains/worktree-git.md) — worktree 检测 / symlink / git porcelain / 文件管理（7 entry）
+- [knowledge-token-arch](domains/knowledge-token-arch.md) — progressive disclosure / token / sub-agent / 架构 / doctor（11 entry）
+- [bash-shell-pitfalls](domains/bash-shell-pitfalls.md) — bash 陷阱 / exit-code / trap-err / set-u / macOS（3 entry）
+
+## Decisions（30）
+- [2026-06-16] 判定时机问题根因是上下文不足（非时机）；状态字段写入点搬迁安全性看读者观测边界 | tags: autopilot, fast-mode, decision-timing, context-availability, iteration-boundary, stop-hook, relocation-invariant, skill-surgery, dogfood, probe-driven | → decisions.md
+- [2026-06-02] QA 假阳性根治：客观工具门禁不够，要更便宜的确定性硬信号 + 散文铁律转 hook backstop | tags: autopilot, qa, false-positive, false-green, deterministic-signal, artifact-freshness, mtime, make-dependency, tamper-guard, git-sha-lock, na-visibility, fake-hard-gate, coverage-not-green, prose-iron-law-to-hook, dogfood, generator-verifier | → decisions.md
+- [2026-05-31] 对齐阶段(design)按 phase 边界放行交回用户，优于新增 gate 字段 | tags: autopilot, stop-hook, design, user-alignment, phase-boundary, systemMessage, decision-block, auto-loop-scope, minimal-state, flag-asymmetry-avoidance, anti-bypass | → decisions.md
+- [2026-05-30] AI-First 反过拟合的判据：删伪精度/正则/重复，留终止边界/信息隔离/契约/客观门禁 | tags: autopilot, skill, ai-first, overfitting, voodoo-constant, magic-number, degrees-of-freedom, guardrail-vs-overfitting, pseudo-precision, semantic-judgment, anti-pseudo-optimization | → decisions.md
+- [2026-05-30] AI 自由写入的状态机枚举字段：容错读取 + 越界自愈，而非精确匹配后静默误路由 | tags: autopilot, stop-hook, state-machine, enum-field, ai-writer-shell-reader, canonical, normalize, self-heal, silent-misroute, get-enum-field, contract-ssot, anti-overfitting | → decisions.md
 - [2026-05-24] AI 评审堆叠的边际效益递减 → 引入客观工具量化门禁 | tags: autopilot, qa, tier-5, mutation-testing, coverage, stryker, c8, istanbul, ai-self-review, paradigm-shift, meta-fse-2025, tool-driven-gate, dogfooding | → decisions.md
+- [2026-05-23] 工具产物的 git 管理边界用"目录拓扑即语义"而非"SKILL.md 规则提醒" | tags: autopilot, file-management, gitignore, topology-as-semantic, knowledge-runtime-split, layered-defense, commit-amnesia, doctor-dim, single-source-of-truth | → decisions.md
+- [2026-05-23] 改 SKILL.md 前必须用 Skill Authoring Best Practice 5 条原则筛改进 | tags: autopilot, skill, best-practice, anti-pseudo-optimization, refactor-discipline, terminology-network, reference-chain, false-improvement | → decisions.md
+- [2026-05-19] plan-review HTML 演进走"扩展点"路径而非改 SKILL.md | tags: autopilot, plan-review, skill-fragility, extension-point, decoupling, html-template, sso-isolation, launch-script | → decisions.md
+- [2026-05-17] skill 引入新概念优先业界对齐命名，禁止自创术语 | tags: autopilot, skill, naming, terminology, industry-alignment, llm-friendly, mutation-testing, tautological-test, semantic-anchor, prompt-engineering | → decisions.md
+- [2026-05-17] brainstorm 抽离为独立 skill：解决"指令优先级"而非"主 SKILL 行数" | tags: autopilot, brainstorm, skill-extraction, indication-priority, references-postpone, hard-gate, superpowers, design-prediction | → decisions.md
+- [2026-05-16] 改 QA ⚠️/❌ 判定规则时必须枚举所有合法标记来源 + 强制复盘机制 | tags: autopilot, qa, judgement, warning, false-acquit, plan-reviewer, blocker, defensive-design, anti-rationalization, tier-1.5, tier-3.5 | → domains/qa-testing.md
+- [2026-05-14] per-user 偏好持久化采用 `~/.autopilot/` 形成与项目级 `.autopilot/` 的命名对称 | tags: autopilot, prefs, persistence, user-level, project-level, naming-convention, dotfile, single-source-of-truth | → domains/knowledge-token-arch.md
+- [2026-05-10] auto-fix 中"看似独立的两个 bug"应优先寻找共同上游脆弱点，一处合并修复 | tags: autopilot, qa, auto-fix, root-cause, merge-fix, anti-symptomatic, bash, scripting | → domains/qa-testing.md
+- [2026-05-10] 契约对齐采用 contract-checker agent + 集中 protocol，而非分散 prompt 铁律 | tags: autopilot, contract, red-team, blue-team, contract-checker, agent, single-source-of-truth, skill-fragility, gojko, sbe, cdc, pact, dbc, contract-protocol | → domains/qa-testing.md
+- [2026-05-09] 修改脆弱 skill 时遵循"最小集 + 纯追加 + 可独立回滚" | tags: autopilot, skill, fragility, minimal-change, append-only, rollback, tdd-quality, defensive-edit | → domains/skill-authoring.md
+- [2026-05-09] 引入新能力时优先复用现有内部基础设施，再考虑引入新栈 | tags: autopilot, integration, dependency-discipline, infrastructure-reuse, plugin-design, html-review, visual-companion | → domains/skill-authoring.md
+- [2026-05-08] Design 阶段移除 Plan Mode，用 AskUserQuestion 替代 ExitPlanMode 审批 | tags: autopilot, plan-mode, design, AskUserQuestion, approval-gate, simplification | → domains/skill-authoring.md
+- [2026-05-08] Design 阶段默认含 brainstorm Q&A，--fast 复用为快速通道 | tags: autopilot, brainstorm, design, fast-mode, default-inversion, simplification, yagni | → domains/skill-authoring.md
+- [2026-05-07] Sub-agent 数量是 token 优化的真正杠杆，不是 SKILL.md 加载 | tags: autopilot, token-optimization, sub-agent, cold-start, qa-reviewer | → domains/knowledge-token-arch.md
+- [2026-05-07] 双轨道 fast track：显式 flag + hook 自动检测互为兜底 | tags: autopilot, token-optimization, fast-mode, dual-track, self-correction, hook | → domains/knowledge-token-arch.md
+- [2026-05-07] AI 自觉的优化机制不可靠，结构性优化必须由 hook 硬编码兜底 | tags: autopilot, hook, automation, ai-discipline, stop-hook, hard-coded | → domains/stop-hook-state-machine.md
+- [2026-05-07] Stop hook 利用 transcript_path 检测后台 sub-agent 等待状态 | tags: autopilot, stop-hook, sub-agent, transcript, token-optimization, hard-coded, implement | → domains/stop-hook-state-machine.md
+- [2026-05-06] Plugin hooks.json 不接收 `claude -w` 派发的 WorktreeCreate 事件 | tags: claude-code, plugin, hooks, worktree, event-dispatch, sessionstart, fallback | → domains/worktree-git.md
+- [2026-05-05] Lint / 健康检查能力优先 AI 语义判断而非正则脚本 | tags: autopilot, doctor, lint, ai-judgment, knowledge-engineering, design-principle | → domains/knowledge-token-arch.md
+- [2026-05-04] Per-worktree 会话隔离通过 sessions/<name>/ 子目录实现 | tags: autopilot, worktree, session-isolation, architecture | → domains/worktree-git.md
+- [2026-04-10] 运行时文件统一迁移到 .autopilot/ 而非逐个豁免 | tags: autopilot, file-path, permission, claude-code, migration | → domains/worktree-git.md
+- [2026-03-27] SKILL.md Phase 分片优于状态文件索引 | tags: autopilot, skill, progressive-disclosure, token-optimization | → domains/skill-authoring.md
+- [2026-03-26] doctor Dim 1 测试金字塔分层评估优于文件计数 | tags: autopilot, doctor, testing, test-pyramid, scoring | → domains/knowledge-token-arch.md
+- [2026-03-21] 知识工程采用三层 Progressive Disclosure 而非单层扩展 | tags: knowledge, architecture, progressive-disclosure | → domains/knowledge-token-arch.md
+
+## Patterns（50）
+- [2026-06-02] `$(cmd || true); rc=$?` 把退出码永久吞成 0；要保留 rc 又不触发 trap ERR 用 `cmd || rc=$?` | tags: bash, exit-code, command-substitution, or-true, rc-masking, trap-err, double-signal, stop-hook, lib-sh, defensive-edit, qa-reviewer-catch | → patterns.md
+- [2026-06-02] frontmatter set_field 必须 upsert（键缺失追加），且测试 mock 不能恒含被测字段 | tags: autopilot, lib.sh, set_field, upsert, no-op, frontmatter, qa_scope, smoke, test-mock-masking, latent-bug, production-only-bug, fixture-realism | → patterns.md
+- [2026-05-31] 用"静默放行/等待"修死循环时，必须补"用户可见 + 活性自救"，否则把吵闹死循环换成无声卡死（反面同族） | tags: autopilot, stop-hook, silent-wait, liveness, observability, exit-0, iteration-freeze, max-iterations-backstop, system-message, false-positive-stall, inverse-failure-mode, has-pending-subagents | → patterns.md
+- [2026-05-31] 断言"stdout 含某 JSON 键"易成 tautological — mutation 落点若也输出该键则断言失效 | tags: autopilot, test-quality, tautological-assertion, mutation-survival, json-key-grep, stop-hook, acceptance-test, no-op-mutation, false-green | → patterns.md
+- [2026-05-31] 自门控的横切检测函数不要再加 phase/条件门控 — 否则退化成 flag-asymmetry | tags: autopilot, stop-hook, has-pending-subagents, self-gating, phase-gate, flag-asymmetry, cross-cutting-detection, commit-agent, near-infinite-loop, regression-recurrence | → patterns.md
+- [2026-05-30] bash set -u 下变量紧跟多字节中文标点被误解析为变量名 → unbound variable 崩溃 | tags: bash, set-u, multibyte, cjk, unbound-variable, shell, variable-expansion, brace-disambiguation, acceptance-test, latent-bug | → patterns.md
+- [2026-05-26] 「状态机切换 state file 后必须重读所有缓存到内存的字段」+「修第 1 个 bug 时不问第 N 个」三连击复刻 | tags: autopilot, stop-hook, state-switch, stale-variable, cached-field, gate-reread, multi-link-failure, regression-recurrence, meta-lesson | → domains/stop-hook-state-machine.md
+- [2026-05-26] 状态机新增「flag」字段时，所有读取该字段的转换点必须同步处理 — 否则形成「半生效」bug | tags: autopilot, stop-hook, state-machine, flag-asymmetry, auto-approve, review-accept, transition-coverage, double-link, regression-pattern | → domains/stop-hook-state-machine.md
+- [2026-05-25] SKILL.md 关键 step 必须有「双重 grep」长效 CI 守护，单 grep 会被弱条件骗过 | tags: autopilot, skill-md, ci-guard, regression-prevention, acceptance-test, double-grep, inline-refactor, llm-instruction, behavior-contract | → domains/skill-authoring.md
 - [2026-05-24] 精简清单必须 wc -l + grep 复核，凭直觉估算行数是 case 反模式元复刻 | tags: autopilot, refactor, simplification, wc-verify, grep-verify, anti-rationalization, plan-reviewer, blocker, ai-assumption, meta-reproduction, false-precision | → patterns.md
 - [2026-05-24] 单个 commit 内多区域同步是 BLOCKER 元复刻陷阱（修表层漏整体） | tags: autopilot, plan-reviewer, blocker, partial-fix, fragment-sync, design-document, architecture-decision, table-vs-text, false-completion, multi-location-update | → patterns.md
-- [2026-05-30] AI 自由写入的状态机枚举字段：容错读取(机械归一→canonical)+越界自愈(点名闭集纠正prompt)，而非精确匹配后静默误路由 | tags: autopilot, stop-hook, state-machine, enum-field, ai-writer-shell-reader, canonical, normalize, self-heal, silent-misroute, get-enum-field, contract-ssot, anti-overfitting | → decisions.md
+- [2026-05-23] SKILL.md 重构任务的 Tier 1.5 必须含"不变量护栏" grep 场景 | tags: autopilot, qa, tier-1.5, skill-refactor, invariant-guard, grep-pattern, terminology-network, reference-chain, false-improvement, anti-pseudo-optimization | → domains/qa-testing.md
+- [2026-05-19] 静态 HTML 模板的 Tier 1.5 用 Chrome DevTools MCP + file:// 直接 evaluate_script | tags: autopilot, qa, tier-1.5, smoke-test, html-template, chrome-devtools-mcp, file-protocol, server-bypass | → patterns.md
+- [2026-05-17] documentation-only 变更的 QA 降级模式：Tier 1/3.5 N/A、Tier 1.5 用产出审阅替代浏览器冒烟 | tags: autopilot, qa, documentation-only, markdown, tier-1.5, smoke-test, content-review, prompt-engineering, fallback | → patterns.md
+- [2026-05-17] 设计阶段量化承诺（行数 / token 数 / 性能数）必须 grep 验证而非估算 | tags: autopilot, design, prediction, quantitative-commitment, grep-verify, estimate-bias, plan-reviewer, skill-extraction | → patterns.md
+- [2026-05-14] 契约规约中字段/占位符出现同义变体会让下游实现犹豫，必须单一字面量 | tags: autopilot, contract, plan-reviewer, placeholder, naming, single-source-of-truth, blue-team, red-team, ambiguity | → domains/qa-testing.md
+- [2026-05-14] 多占位符模板 str.replace 顺序敏感：原始用户内容占位必须最后替换 | tags: template, str-replace, render-order, placeholder, pollution, marked-js, latent-bug, defense, regression | → domains/qa-testing.md
+- [2026-05-14] HTML 模板用 dataset.X 设置 data-* 属性，红队字面 grep 命中失败 → 改 setAttribute | tags: dom-api, dataset, setattribute, acceptance-test, grep-literal, red-team, html-template, autopilot, plan-review | → domains/qa-testing.md
+- [2026-05-14] 事件委托双 listener 冲突：模板 JS 在 [data-choice] 守卫命中后立即 stopImmediatePropagation | tags: event-delegation, stopimmediatepropagation, click-handler, helper.js, autopilot, plan-review, dual-listener, pollution-defense | → domains/qa-testing.md
+- [2026-05-11] tail -c + jq 流式解析必须丢首行 + 走 fail-safe 兜底，否则在长会话下死循环 | tags: autopilot, stop-hook, jq, tail, byte-cut, fail-safe, fail-unsafe, has-pending-subagents, parse-error, detection-function | → domains/stop-hook-state-machine.md
+- [2026-05-10] skill 改动应一处真相不重复 N 处文件 | tags: autopilot, skill, single-source-of-truth, drift, integration, sbe, gojko, contract, references | → domains/skill-authoring.md
+- [2026-05-10] frontmatter 加豁免字段是 skill 演进的元任务安全模式 | tags: autopilot, skill, evolution, meta-task, frontmatter, opt-in, historical-exemption, contract-required, setup-sh | → domains/skill-authoring.md
+- [2026-05-10] 红/蓝队 prompt 改动应在现有 ⚠️ 铁律 内追加 bullet，禁止新增 ⚠️ 章节 | tags: autopilot, red-team, blue-team, prompt, warning-section, anti-pattern, decision-tree, dilution, contract | → domains/skill-authoring.md
+- [2026-05-10] git worktree list --porcelain 第一项稳定为主仓库，按位置跳过优于按路径比对 | tags: git, worktree, porcelain, position-stable, run-anywhere, doctor, autopilot, path-resolution | → domains/worktree-git.md
+- [2026-05-09] macOS `tail -F | grep -m1 | timeout` 退出码语义不可靠，依赖 stdout 非空判成功 | tags: bash, macos, tail, grep, timeout, exit-code, event-watching, wait-decision, autopilot | → domains/bash-shell-pitfalls.md
+- [2026-05-09] 主对话需等待外部 UI 操作时，前台同步 Bash + 长 timeout 优于 run_in_background | tags: autopilot, claude-code, bash-tool, run-in-background, ux, html-review, blocking-call | → domains/qa-testing.md
+- [2026-05-09] acceptance test 中 `TARGET_VERSION="X.Y.Z"` 是版本同步规则的隐藏盲区 | tags: autopilot, version-sync, acceptance-test, hardcoded, regression, blind-spot, autopilot-commit | → domains/skill-authoring.md
+- [2026-05-08] 字段反转默认值 + 复用现有 flag 优于新增 flag | tags: autopilot, design-decision, yagni, flag-design, default-inversion | → domains/skill-authoring.md
+- [2026-05-07] Shell 脚本要支持外部 source 测试，必须用 BASH_SOURCE[0] | tags: bash, shell, testing, source, BASH_SOURCE, autopilot, stop-hook | → domains/bash-shell-pitfalls.md
+- [2026-05-07] 顶层 `trap 'exit 0' ERR` 拦截函数内 `|| return 1` 短路链 | tags: bash, trap-err, return, source-mode, testing, stop-hook, autopilot | → domains/bash-shell-pitfalls.md
+- [2026-05-07] Cache 命中率高不等于 token 成本低 | tags: token-analysis, prompt-cache, methodology, autopilot | → domains/knowledge-token-arch.md
+- [2026-05-07] 函数支持"测试 mock 输入"分支会掩盖生产路径 bug | tags: autopilot, red-team, dual-path, function-signature, qa-blind-spot, production-vs-test | → domains/qa-testing.md
+- [2026-05-06] 新增兜底路径暴露 create / repair 功能不对称 | tags: autopilot, worktree, repair, create, asymmetry, fallback, idempotent, bootstrap | → domains/worktree-git.md
+- [2026-05-04] Worktree 检测使用 .git 文件/目录区分法 | tags: autopilot, worktree, shell, detection | → domains/worktree-git.md
+- [2026-04-17] SKILL.md 决策树中后置章节会被 AI 跳过 | tags: autopilot, skill, decision-tree, priority, plan-mode, auto-approve | → domains/skill-authoring.md
+- [2026-04-17] Early-exit 守卫阻断后续添加的合法代码路径 | tags: autopilot, stop-hook, guard, early-exit, ordering, knowledge-extracted | → domains/stop-hook-state-machine.md
+- [2026-04-12] "从缓存同步源码" 操作会连带回退不相关的文件改动 | tags: autopilot, cache-sync, regression, stop-hook, source-of-truth | → domains/stop-hook-state-machine.md
+- [2026-04-03] merge 阶段 Agent 化优于 Skill 调用 | tags: autopilot, token-optimization, merge, agent, cost | → domains/knowledge-token-arch.md
+- [2026-03-30] SKILL.md 文档文本中的标识符会干扰红队正则测试 | tags: autopilot, red-team, testing, indexOf, text-proximity, regex | → domains/qa-testing.md
+- [2026-03-27] Skill 规范不应硬编码项目特定的文件路径 | tags: autopilot-commit, skill, version, hardcoding, claude-md | → domains/skill-authoring.md
+- [2026-03-26] Tier 1.5 场景部分执行等于未执行 | tags: autopilot, qa, tier-1.5, smoke-test, partial-execution | → domains/qa-testing.md
+- [2026-03-25] 符号链接检测 ≠ worktree 检测，防御需多层 | tags: worktree, knowledge, symlink, fallback, defense-in-depth | → domains/worktree-git.md
+- [2026-03-24] 插件合并时红队路径假设容易出错 | tags: autopilot, red-team, testing, file-path, merge | → domains/qa-testing.md
+- [2026-03-24] SKILL.md 步骤标题需包含可搜索的"步骤"前缀 | tags: autopilot, skill, naming-convention, testing | → domains/skill-authoring.md
+- [2026-03-22] 通用编排器不应替代领域专业 Skill | tags: autopilot, skill-delegation, implement, domain-workflow | → domains/knowledge-token-arch.md
+- [2026-03-22] 外部审查后的修改必须重新验证 | tags: autopilot, qa, post-review, validation, framer-motion | → domains/qa-testing.md
+- [2026-03-22] Tier 1.5 验证场景必须匹配核心变更层级 | tags: autopilot, qa, tier-1.5, ui-testing, smoke-test | → domains/qa-testing.md
+- [2026-03-21] 多处引用同一数据（版本号 / 计数 / 路径）容易长期不同步 | tags: autopilot, doctor, consistency, version, dimension, lint | → domains/knowledge-token-arch.md
+- [2026-03-21] HTML comment tags 比 YAML frontmatter 更适合 AI 知识标签 | tags: knowledge, tags, ai-parsing | → domains/knowledge-token-arch.md
+- [2026-03-21] Skill 插件 Progressive Disclosure 重构模式 | tags: skill, progressive-disclosure, plugin, refactoring | → domains/skill-authoring.md
