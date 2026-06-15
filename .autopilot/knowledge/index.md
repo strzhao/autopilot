@@ -1,6 +1,7 @@
 # Knowledge Index
 
 ## Decisions
+- [2026-06-16] 判定时机问题根因是上下文不足（非时机）；状态字段写入点搬迁安全性看读者观测边界 | tags: autopilot, fast-mode, decision-timing, context-availability, iteration-boundary, stop-hook, relocation-invariant, skill-surgery, dogfood, probe-driven | → decisions.md
 - [2026-06-02] QA 假阳性根治：客观工具门禁不够，要更便宜的确定性硬信号（产物新鲜度 mtime / 测试篡改 git-sha hook backstop / coverage 反向否决 / na 可见化）+ 散文铁律转 hook | tags: autopilot, qa, false-positive, false-green, deterministic-signal, artifact-freshness, mtime, tamper-guard, git-sha-lock, na-visibility, fake-hard-gate, coverage-not-green, prose-iron-law-to-hook, dogfood, generator-verifier | → decisions.md
 - [2026-05-31] 对齐阶段(design)按 phase 边界放行交回用户，优于新增 gate 字段 | tags: autopilot, stop-hook, design, user-alignment, phase-boundary, systemMessage, decision-block, auto-loop-scope, minimal-state, flag-asymmetry-avoidance, anti-bypass | → decisions.md
 - [2026-05-30] AI-First 反过拟合判据：删伪精度数字/正则/重复/裸计数，留终止边界/信息隔离/契约/客观门禁 | tags: autopilot, skill, ai-first, overfitting, voodoo-constant, magic-number, degrees-of-freedom, guardrail-vs-overfitting, pseudo-precision, semantic-judgment, anti-pseudo-optimization | → decisions.md
