@@ -112,7 +112,7 @@ describe('场景 1：主仓库 session — .git 是目录', () => {
 });
 
 // ===========================================================================
-// 场景 2：新模式已配好 worktree（.autopilot 是真实目录 + sessions/ 子目录 + node_modules + local-config.json）
+// 场景 2：新模式已配好 worktree（.autopilot 是真实目录 + runtime/sessions/ 子目录 + node_modules + local-config.json）
 // 期望：exit 0，stderr 无 [autopilot] 输出（幂等 silent exit）
 // ===========================================================================
 describe('场景 2：新模式已配好 worktree — silent exit', () => {
@@ -123,8 +123,8 @@ describe('场景 2：新模式已配好 worktree — silent exit', () => {
     // 模拟 worktree：.git 是文件
     await writeFile(join(tmpDir, '.git'), 'gitdir: /some/main/repo/.git/worktrees/configured-new');
 
-    // 新模式：.autopilot 是真实目录，里面有 sessions/ 子目录
-    await mkdir(join(tmpDir, '.autopilot', 'sessions'), { recursive: true });
+    // 新模式：.autopilot 是真实目录，里面有 runtime/sessions/ 子目录（v3.35.0 二级分层后 sessions 在 runtime/ 下）
+    await mkdir(join(tmpDir, '.autopilot', 'runtime', 'sessions'), { recursive: true });
 
     await mkdir(join(tmpDir, 'node_modules'), { recursive: true });
     await writeFile(
@@ -151,7 +151,7 @@ describe('场景 2：新模式已配好 worktree — silent exit', () => {
 
     // 新模式齐全，唯独 local-config.json 缺失
     await writeFile(join(tmpDir, '.git'), 'gitdir: /some/main/repo/.git/worktrees/configured-new-no-cfg');
-    await mkdir(join(tmpDir, '.autopilot', 'sessions'), { recursive: true });
+    await mkdir(join(tmpDir, '.autopilot', 'runtime', 'sessions'), { recursive: true });
     await mkdir(join(tmpDir, 'node_modules'), { recursive: true });
 
     const mockPluginRoot = await makeTempDir('mock-plugin-cfg-new');
