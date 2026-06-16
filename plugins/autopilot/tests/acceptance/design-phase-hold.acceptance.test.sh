@@ -74,6 +74,7 @@ build_fixture() {
     local fast_mode_val="$3"     # "true" / "false" / "MISSING"
     local auto_approve_val="$4"  # "true" / "false" / "MISSING"
     local iteration="${5:-5}"
+    local design_doc="${6:-written}"   # "written"(审批点，实质设计文档) / "empty"(接力点，仅占位符)
 
     local dir
     dir="$(mktemp -d -t autopilot-design-hold-fix-XXXXXX)"
@@ -116,6 +117,26 @@ build_fixture() {
         echo ""
         echo "## 目标"
         echo "design-phase-hold 测试 fixture"
+        echo ""
+        echo "## 设计文档"
+        if [[ "$design_doc" == "written" ]]; then
+            # 实质设计文档（审批点）：主 SKILL 接力写入后形态，design_doc_written → true
+            echo "## Context"
+            echo "实现用户登录功能，解决无认证安全问题。"
+            echo ""
+            echo "## 整体架构设计"
+            echo "- 前端：登录表单 + token 存储"
+            echo "- 后端：/api/login 端点 + JWT 签发"
+            echo ""
+            echo "## 任务分解"
+            echo "1. 后端登录端点  2. 前端表单  3. token 拦截器"
+        else
+            # 仅占位符（接力点）：brainstorm 刚完成、主 SKILL 未接力，design_doc_written → false
+            echo "(待 design 阶段填充)"
+        fi
+        echo ""
+        echo "## 实现计划"
+        echo "(待 design 阶段填充)"
     } > "$dir/.autopilot/runtime/requirements/test-task/state.md"
 
     echo "$dir"
@@ -401,6 +422,43 @@ else
     fail "场景7c: 两字段均缺失时不应输出 block，实际 stdout: $body_s7c"
 fi
 rm -rf "$dir_s7c"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 场景8（v3.43.1 新增·接力点）：phase=design, standard, 设计文档仅占位符（empty）
+# → §7.6 design_doc_written=false 不命中 → fall through §9 输出 block（自动唤醒接力）
+# 验证 brainstorm 完成后不被误停、自动接力写设计文档（v3.43.0 回归 bug 的修复契约）。
+# 与场景1（审批点，设计文档已落盘 → 放行）互为反例，共同锁定 design_doc_written 边界。
+# 谓词: P1 contains "decision":"block"  P2 iteration 递增 5→6  P3 phase==design
+# ──────────────────────────────────────────────────────────────────────────────
+dir_s8="$(build_fixture design "" false false 5 empty)"
+ts_s8="$(make_empty_transcript "$dir_s8")"
+out_s8="$(run_hook "$dir_s8" "$ts_s8")"
+body_s8=$(echo "$out_s8" | grep -v '^__EXIT__')
+
+# P1: 输出 block（§9 接力，非放行）。kill-mutation：若 §7.6 退化为一刀切放行（删 design_doc_written
+# 前置），接力点也会被放行 → 此处不含 block → FAIL，守住"接力点必须自动推进"契约。
+if echo "$body_s8" | grep -qE '"decision"[[:space:]]*:[[:space:]]*"block"'; then
+    pass "场景8: design + 设计文档空（接力点）→ 输出 block（§9 自动唤醒接力）"
+else
+    fail "场景8: 接力点应 fall through §9 输出 block（brainstorm 后自动接力）。stdout: $body_s8"
+fi
+
+# P2: iteration 递增（§9 路径递增，与放行路径的"冻结"区分）
+iter_after_s8=$(get_state_field "$dir_s8" iteration)
+if [[ "$iter_after_s8" == "6" ]]; then
+    pass "场景8: iteration 递增 5 → 6（接力点走 §9，非放行冻结）"
+else
+    fail "场景8: 接力点 iteration 应递增为 6，实际: $iter_after_s8"
+fi
+
+# P3: phase 仍 design
+phase_after_s8=$(get_state_field "$dir_s8" phase)
+if [[ "$phase_after_s8" == "design" ]]; then
+    pass "场景8: phase 仍为 design（接力仍在 design 阶段）"
+else
+    fail "场景8: phase 应保持 design，实际: $phase_after_s8"
+fi
+rm -rf "$dir_s8"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 汇总

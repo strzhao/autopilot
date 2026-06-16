@@ -239,6 +239,42 @@ has_pending_subagents() {
     return 1
 }
 
+# design_doc_written — 检测 state.md「## 设计文档」区域是否已写入实质内容
+#
+# 用途：§7.6 据此区分 standard design 阶段两类「无 pending 结束回合」——
+#   - 接力点（brainstorm 刚完成、设计文档仍空）：应 fall through §9 自动唤醒接力写设计文档，
+#     不该停住。v3.43.1 前 §7.6 一刀切放行把接力点也停住，逼用户手动「继续」（回归 bug）。
+#   - 审批点（设计文档已落盘、等用户拍板）：应 §7.6 放行停住，防 §9 block 唤醒冲 implement。
+#
+# 信号选择：设计文档落盘对「审批用 AskUserQuestion 还是纯文本」「AskUserQuestion pending 时
+#   Stop hook 是否触发」均不敏感（两类审批点设计文档都已非空），比检测未闭合 AskUserQuestion
+#   鲁棒——后者前提（AskUserQuestion pending 触发 Stop hook）被官方 hooks 文档否定。
+#
+# 检测：awk 提取 ## 设计文档 到下一个已知 top section（实现计划/红队验收测试/QA 报告/变更日志/
+#   用户反馈）的正文——不能用泛 /^## /，否则设计文档内部 ## Context / ## 契约规约 子标题会
+#   误截断（实测：实质设计文档首行 ## Context 即把区域截成 0 字节）。去空行后 wc -c 统计字节。
+#   初始模板（setup.sh）该区域仅占位符「(待 design 阶段填充)」(UTF-8 ~25 字节)；主 SKILL 接力
+#   写入实质设计文档（数百字节以上）。阈值 80：远大于占位符、远小于真实设计文档，稳健区分。
+#
+# 返回：0 = 已写入实质内容（审批点）、1 = 空/仅占位符（接力点）或文件缺失。
+design_doc_written() {
+    local state_file="$1"
+    [ -f "$state_file" ] || return 1
+
+    local body
+    body=$(awk '
+        /^## 设计文档[[:space:]]*$/ { in_doc = 1; next }
+        in_doc && /^## (实现计划|红队验收测试|QA 报告|变更日志|用户反馈)[[:space:]]*$/ { in_doc = 0; next }
+        in_doc
+    ' "$state_file" 2>/dev/null)
+
+    local stripped n
+    stripped=$(printf '%s\n' "$body" | grep -vE '^[[:space:]]*$' || true)
+    n=$(printf '%s' "$stripped" | wc -c | tr -d ' ')
+    [[ "$n" =~ ^[0-9]+$ ]] || n=0
+    [[ "$n" -gt 80 ]]
+}
+
 # detect_smoke_eligible — 检测当前 diff 是否满足 smoke QA 条件，满足则设置 qa_scope=smoke
 #
 # 触发路径（v3.32.0+：fast_mode=true 不再因 diff 大小降级，相信用户/AI 判断）：
@@ -601,7 +637,10 @@ fi
 # 缺失字段 get_field 返回空串，"" != "true" 恒真 → 缺失即按 false（fail-safe 朝放行）。
 AUTO_APPROVE=$(get_enum_field "auto_approve" || true)
 FAST_MODE=$(get_enum_field "fast_mode" || true)
-if [[ "$PHASE" == "design" ]] && [[ "$AUTO_APPROVE" != "true" ]] && [[ "$FAST_MODE" != "true" ]]; then
+# v3.43.1 加 design_doc_written 前置：只在「设计文档已落盘」的审批点放行。brainstorm 刚完成的
+# 接力点设计文档仍空（仅占位符）→ 不命中 → fall through §9 自动唤醒接力写设计文档。
+# （一刀切放行会误停接力点，逼用户手动「继续」——v3.43.0 回归 bug，本次修复。）
+if [[ "$PHASE" == "design" ]] && [[ "$AUTO_APPROVE" != "true" ]] && [[ "$FAST_MODE" != "true" ]] && design_doc_written "$STATE_FILE"; then
     jq -n --arg msg "⏸️ autopilot · design 阶段暂停：控制权已交回用户，用户尚未确认设计方案。在用户明确表态前不要推进——用户认可后才进入 implement，用户给修改意见则留在 design 修订。" \
         '{"systemMessage": $msg}'
     exit 0
@@ -663,6 +702,11 @@ if [[ "$PHASE" == "design" ]]; then
     elif [[ "$FAST_MODE" == "true" ]]; then
         PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述, fast_mode=true: 砍所有 plan-review 类节点（红蓝对抗 / QA Wave 1+1.5 是核心，保留不变）. design 阶段: 跳过 brainstorm Q&A，只用 1 个 Explore agent 探索代码，不启动 scenario-generator / plan-reviewer Agent — 设计文档写入状态文件后按 references/plan-reviewer-prompt.md 6 维度自审（需求完整性/技术可行性/任务分解/验证方案/风险/范围控制）；自审通过后**直接设 phase: implement**（跳过 AskUserQuestion 审批，fast 信任 AI 判断）；自审失败修正一次，仍失败才回退 AskUserQuestion 交用户. implement 阶段: blue/red-team 双 Agent 照常启动，**跳过 contract-checker Agent**. 详见 SKILL.md Fast Mode 快速路径章节. 按照 autopilot skill 的 Phase: design 指引执行."
     else
+        # §7.6 安全网：正常 standard design（auto_approve≠true ∧ fast_mode≠true）在 §7.6
+        # 已输出 systemMessage 放行 exit，此处正常情况下不可达。保留作 §7.6 失效/条件漂移
+        # 时的 fallback——本分支 PROMPT 方向是"请求用户审批"，安全；切勿删除：删后 §7.6
+        # 万一失效，standard design 会落到无匹配分支、PROMPT 为空 → 空 reason 的 block 唤醒
+        # AI 却无指令，更易冲进 implement，与"防 design 绕过审批"目标相悖。
         # 默认含 brainstorm 探索流程（原 deep 行为）。plan_mode=="deep" 的历史 state.md 同样走此分支（兼容期）
         PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. 默认 standard 路径请走 \`Skill: autopilot-brainstorm\` 委托完成 Q&A 与方案共识，brainstorm skill 输出 brainstorm.md 后主 SKILL 接力写设计文档. ⚠️ 必须使用 Agent 工具启动 plan-reviewer sub-agent (model: sonnet) 审查设计方案, 参见 references/plan-reviewer-prompt.md. 审查通过后使用 AskUserQuestion 请求用户审批. 产出物写入 task_dir: $(get_field 'task_dir'). 按照 autopilot skill 的 Phase: design 指引执行."
     fi
