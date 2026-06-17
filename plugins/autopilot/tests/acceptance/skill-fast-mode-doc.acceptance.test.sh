@@ -106,11 +106,11 @@ if ! echo "$fast_section" | grep -qiE "AskUserQuestion|审批"; then
 fi
 pass "Fast Mode 子章节包含 AskUserQuestion 审批"
 
-# 断言 7：Fast Mode 子章节含自审描述（不使用 Plan Mode）
-if ! echo "$fast_section" | grep -qiE "自审|self.review"; then
-    fail "Fast Mode 子章节缺少自审描述（设计要求编排器自审后 AskUserQuestion 审批）"
+# 断言 7：Fast Mode 子章节【不】含自审描述（v3.45.0 移除 fast mode design 自审——自审无独立性、几乎不发现问题，纯浪费 token；fast 直接进 implement 或 HTML 评审）
+if echo "$fast_section" | grep -qiE "自审|self.review"; then
+    fail "Fast Mode 子章节仍含自审描述（v3.45.0 已移除 fast mode design 自审：自审无独立性、几乎不发现问题，应直接进 implement / HTML 评审）"
 fi
-pass "Fast Mode 子章节包含自审描述"
+pass "Fast Mode 子章节不含自审描述（已移除 fast mode design 自审）"
 
 # 断言 8：Fast Mode 子章节含 1 个 Explore agent 的描述
 if ! echo "$fast_section" | grep -qiE "Explore.*[Aa]gent|1.*[Ee]xplore|[Ee]xplore"; then
@@ -124,11 +124,11 @@ if ! echo "$fast_section" | grep -qiE "scenario.generator|scenario_generator"; t
 fi
 pass "Fast Mode 子章节包含 scenario-generator 相关描述（明确不启动）"
 
-# 断言 10：Fast Mode 子章节描述编排器自审（不启动 plan-reviewer）
-if ! echo "$fast_section" | grep -qiE "plan.reviewer|plan_reviewer|自审"; then
-    fail "Fast Mode 子章节未提及 plan-reviewer 或自审（设计要求编排器自审，不启动 plan-reviewer Agent）"
+# 断言 10：Fast Mode 子章节提及 plan-reviewer（明确不启动 plan-reviewer Agent）
+if ! echo "$fast_section" | grep -qiE "plan.reviewer|plan_reviewer"; then
+    fail "Fast Mode 子章节未提及 plan-reviewer（设计要求明确说明不启动 plan-reviewer Agent）"
 fi
-pass "Fast Mode 子章节包含 plan-reviewer/自审 描述"
+pass "Fast Mode 子章节包含 plan-reviewer 描述（明确不启动）"
 
 # ═══════════════════════════════════════════════════════
 # 改动点 4：QA smoke 分支行为

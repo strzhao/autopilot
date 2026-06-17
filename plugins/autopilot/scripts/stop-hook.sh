@@ -700,7 +700,7 @@ if [[ "$PHASE" == "design" ]]; then
     if [[ "$AUTO_APPROVE" == "true" ]]; then
         PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. auto_approve=true: 直接写设计文档到状态文件. ⚠️ 必须使用 Agent 工具启动 plan-reviewer sub-agent (model: sonnet) 审查设计方案, 参见 references/plan-reviewer-prompt.md. 审查通过则推进到 implement; 失败则设 auto_approve: false 回退到正常审批流程. 按照 autopilot skill 的 Phase: design 指引执行."
     elif [[ "$FAST_MODE" == "true" ]]; then
-        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述, fast_mode=true: 砍所有 plan-review 类节点（红蓝对抗 / QA Wave 1+1.5 是核心，保留不变）. design 阶段: 跳过 brainstorm Q&A，只用 1 个 Explore agent 探索代码，不启动 scenario-generator / plan-reviewer Agent — 设计文档写入状态文件后按 references/plan-reviewer-prompt.md 6 维度自审（需求完整性/技术可行性/任务分解/验证方案/风险/范围控制）；自审通过后**直接设 phase: implement**（跳过 AskUserQuestion 审批，fast 信任 AI 判断）；自审失败修正一次，仍失败才回退 AskUserQuestion 交用户. implement 阶段: blue/red-team 双 Agent 照常启动，**跳过 contract-checker Agent**. 详见 SKILL.md Fast Mode 快速路径章节. 按照 autopilot skill 的 Phase: design 指引执行."
+        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述, fast_mode=true: 砍所有 plan-review 类节点（红蓝对抗 / QA Wave 1+1.5 是核心，保留不变）. design 阶段: 跳过 brainstorm Q&A，只用 1 个 Explore agent 探索代码，不启动 scenario-generator / plan-reviewer Agent — 设计文档写入状态文件后**直接设 phase: implement**（跳过 AskUserQuestion 审批，fast 信任 AI 判断；html_review=true 时改走步骤 4c HTML 评审）. implement 阶段: blue/red-team 双 Agent 照常启动，**跳过 contract-checker Agent**. 详见 SKILL.md Fast Mode 快速路径章节. 按照 autopilot skill 的 Phase: design 指引执行."
     else
         # §7.6 安全网：正常 standard design（auto_approve≠true ∧ fast_mode≠true）在 §7.6
         # 已输出 systemMessage 放行 exit，此处正常情况下不可达。保留作 §7.6 失效/条件漂移
