@@ -10,7 +10,8 @@
 - [knowledge-token-arch](domains/knowledge-token-arch.md) — progressive disclosure / token / sub-agent / 架构 / doctor（11 entry）
 - [bash-shell-pitfalls](domains/bash-shell-pitfalls.md) — bash 陷阱 / exit-code / trap-err / set-u / macOS（3 entry）
 
-## Decisions（30）
+## Decisions（31）
+- [2026-06-17] knowledge 时效性信号用 prompt 层认知提示 + Evidence 锚点，不照搬 memdir 对话级记忆机制 | tags: autopilot, knowledge-engineering, staleness, time-decay, point-in-time, code-fact-staleness, minimal-mechanism, prompt-layer, memoryFreshnessText, memdir-comparison | → domains/knowledge-token-arch.md
 - [2026-06-16] 判定时机问题根因是上下文不足（非时机）；状态字段写入点搬迁安全性看读者观测边界 | tags: autopilot, fast-mode, decision-timing, context-availability, iteration-boundary, stop-hook, relocation-invariant, skill-surgery, dogfood, probe-driven | → decisions.md
 - [2026-06-02] QA 假阳性根治：客观工具门禁不够，要更便宜的确定性硬信号 + 散文铁律转 hook backstop | tags: autopilot, qa, false-positive, false-green, deterministic-signal, artifact-freshness, mtime, make-dependency, tamper-guard, git-sha-lock, na-visibility, fake-hard-gate, coverage-not-green, prose-iron-law-to-hook, dogfood, generator-verifier | → decisions.md
 - [2026-05-31] 对齐阶段(design)按 phase 边界放行交回用户，优于新增 gate 字段 | tags: autopilot, stop-hook, design, user-alignment, phase-boundary, systemMessage, decision-block, auto-loop-scope, minimal-state, flag-asymmetry-avoidance, anti-bypass | → decisions.md

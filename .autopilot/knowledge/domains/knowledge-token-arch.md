@@ -74,3 +74,11 @@
 **Lesson**: 用「绝对 token 数据 per-session」而非「cache 命中率 %」作为优化决策依据。命中率高反而说明该路径的 token 已经被有效平摊，对该路径继续做小优化 ROI 极低；应转向 cache 无法覆盖的成本源。具体方法：`jq` 解析 ~/.claude/projects/*/jsonl 累加单个 session 的 input/output/cache_read/cache_create，按总量降序找 top sessions，看 cache_create 异常值或大 Bash 输出，定位真实漏点。
 **Evidence**: 本轮（2026-05-07）三项优化均针对 cache 无法覆盖的成本：合并 qa reviewer（减 cold start）、stop-hook 自动压缩 QA 报告（减累积 Read 成本）。SKILL.md 行数从 699 → 675 仅减 24 行的"防合理化指南抽离"反而是收益最低的一项——前两轮已经把 SKILL.md 优化到 cache 命中率 95%+。
 
+### [2026-06-17] knowledge 时效性信号用 prompt 层认知提示 + Evidence 锚点，不照搬 memdir 对话级记忆机制
+<!-- tags: autopilot, knowledge-engineering, staleness, time-decay, point-in-time, code-fact-staleness, minimal-mechanism, prompt-layer, memoryFreshnessText, memdir-comparison -->
+**Background**: 调研 claude-code `memdir`（auto memory）后评估 autopilot knowledge 可借鉴的设计。memdir 是对话级记忆（Stop hook 每轮自动提取 + 语义检索 + system prompt 常驻 + 硬截断 + 一文件一事实），autopilot knowledge 是工程经验库（merge 闭环沉淀 + 关键词路由 + 入库共享 + 聚合文件 + Integration over Append）。两者定位不同，多数 memdir 机制照搬到工程知识场景是伪优化或定位错配。
+**Choice**: 仅吸收一个真缺口——「时效性信号」：Consumption 加载超阈值天数的旧条目时，引用其代码事实（字段名 / file:line / Tier 编号 / 函数名）前须先核对当前源码（认知提示，不阻断加载）；Extraction 在 Evidence 字段留「核对锚点」（日期 + 源码版本）。机制为 prompt/约束层（非脚本），因时效判断需结合当前代码事实做语义判断，正则无法判定"过时"，对齐 lint 走 AI 的既有原则。
+**Alternatives rejected**: (1) 一文件一事实（memdir 模式）——断 index→file 引用链，Integration over Append 用合并解决膨胀方向更优；(2) Stop hook 每轮自动提取——autopilot 是 per-task 闭环沉淀非 per-conversation，时机错配违反 minimal mechanism；(3) 硬截断——memdir 截断因 system prompt 常驻有 token 硬约束，autopilot knowledge 不常驻，硬截断丢知识收益低；(4) 确定性去重脚本——去重是语义判断应走 AI；(5) 语义检索（现在上）——多 sub-agent cold-start 违背「sub-agent 是 token 杠杆」决策，当前规模关键词够。
+**Trade-offs**: prompt 层提示依赖 AI 自觉执行（无确定性保证），但时效判断本就需结合当前代码语义判断，脚本化会误报/漏报；天数阈值为软触发不阻断，避免破坏 knowledge 加载的 always-available 语义。借鉴调研方法论本身也有价值：跨代码库对比时先厘清"定位差异"再决定借鉴点，多数"好机制"是定位错配的伪借鉴。
+**Evidence**: 调研 claude-code `src/memdir/memoryAge.ts`，其 `memoryFreshnessText` 注释明确动机为「file:line citations to code that has since changed being asserted as fact — the citation makes the stale claim sound more authoritative」；autopilot knowledge 实测代码事实引用密度高，随版本演进静默失效风险大（plan-reviewer 独立 grep 统计确认）。落地：knowledge-engineering.md Consumption Rules 新增 Staleness Awareness（>180 天核对）+ Extraction Rules 新增时效锚点 e 步（核对锚点：2026-06-17 autopilot v3.44.0）。
+
