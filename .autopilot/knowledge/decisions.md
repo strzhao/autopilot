@@ -93,4 +93,13 @@
 **Trade-offs**: 判定从"目标文本驱动"变"探针结果驱动"，依赖 AI 探针后正确判 fast/standard（AI First，框架红蓝+QA 兜底）；SKILL.md 净 0 行（搬迁+压缩）。
 **Evidence**: commit `4677d92`；SKILL.md `git diff --numstat` 4+/4- 净 0；`scripts/stop-hook.sh` git diff 空（P5）；红队 `fast-mode-decision-timing` 11 断言全 PASS（含 4 场景回归杀伤力）；qa-reviewer 独立验证 stop-hook 仅在迭代边界读 fast_mode（detect_smoke_eligible / §7.6 / §9）。
 
+### [2026-06-18] 编排器自审自己的产物 = 零独立性橡皮图章；零价值环节直接删，下游链覆盖则无需替换
+<!-- tags: autopilot, fast-mode, design, self-review, zero-independence, rubber-stamp, dogfood, deletion-over-replacement, downstream-coverage, ai-first, anti-pattern -->
+**Scenario**: autopilot Fast Mode（`fast_mode=true`）design 阶段有「编排器按 6 维度自审自己刚写的设计文档」环节。用户实测：几乎从未发现问题，纯浪费 token/时间，要求删除（"skill 要精简变少而非增多"）。
+**Lesson**: **产出者自审自己的产物 = 零独立性 = 橡皮图章**——让写设计的同一个 agent 审自己的设计，认知上无法跳出自身盲区发现真问题。这与 autopilot 自己写在 SKILL.md 的「不以编排器自审替代独立审查（自审无独立性是抽卡来源）」是同一原则的 design 阶段反例（dogfood：自己的 fast design 自审违反自己的 QA 原则）。关键判据：当一个自审环节**零独立性**且**下游已有独立验证覆盖同质量风险**时，正确动作是**直接删除而非替换**。这是 [2026-05-24]（AI 评审堆叠边际效益递减→换工具门禁）的另一面：那条讲"堆叠无效→换独立工具"，本条补"单点自审零价值→直接删，下游红队+QA+独立 Agent 已覆盖则不必替换"。
+**Choice**: 删 fast mode design 自审三处（SKILL.md Fast Mode 段 / design-modes.md §5 整节+§4 自审行 / stop-hook fast_mode PROMPT）+ 翻转 R7 断言 7 + 新增 R11 红队守删除。fast mode design 改为写完文档直进 implement（或 `html_review:true`→HTML 评审）。保留 `plan-reviewer-prompt.md`（standard/auto-approve 的**独立 sub-agent** 仍用，有独立性）+ QA smoke inline 代码自审（审真实 git diff，性质不同）。
+**Alternatives rejected**: (1) 换独立 plan-reviewer Agent 替代自审——fast mode 本是省 token 通道，加 sub-agent 违背初衷，小改/同质 search-replace 设计风险低不值得；(2) 保留自审但加置信度门槛——零独立性下加门槛仍是橡皮图章，治标不治本（[2026-05-30] AI-First：删伪精度而非加门槛）；(3) 顺手也删 QA smoke inline 自审——范围蔓延，用户只点名 design 的 plan review，QA 自审审代码非设计、性质不同（[2026-05-09] 最小集）。
+**Trade-offs**: fast mode design 失去一道（零价值的）自审，设计质量完全依赖下游红队 + QA Tier 1.5 + standard/auto-approve 独立 Agent。对 fast 通道（小改/同质）可接受。纯减法 net -12 行。
+**Evidence**: commit `df41f8f`（核对锚点：当前 HEAD）；SKILL.md Fast Mode 段 `grep -c 自审`=0；design-modes.md `grep -c 自审失败回退`=0（§5 已删）；stop-hook.sh fast PROMPT `grep -cE '6 维度自审|自审失败'`=0；红队 `fast-mode-self-review-removed`（R11）8 断言双向有效（HEAD 版断言 1/2/3 必 FAIL）；run-all 21/24→23/24（顺带修 version-sync/tier5/brainstorm 三个 README 版本同步既有失败）。
+
 > 历史归档（< 2026-05-17）按主题迁移至 domains/，详见 index.md
