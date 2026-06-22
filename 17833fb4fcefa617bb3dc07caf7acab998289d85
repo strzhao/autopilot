@@ -1,0 +1,83 @@
+plugins/autopilot/.claude-plugin/plugin.json
+  d0d3aa1396628e02 3
+.claude-plugin/marketplace.json
+  d0d3aa1396628e02 32
+plugins/autopilot/skills/autopilot/references/blue-team-prompt.md
+  d0d3aa1396628e02 28-31,40
+plugins/autopilot/tests/acceptance/blue-team-boundary.acceptance.test.sh
+  d0d3aa1396628e02 1-169
+CLAUDE.md
+  d0d3aa1396628e02 14
+plugins/autopilot/skills/autopilot/references/anti-rationalization.md
+  d0d3aa1396628e02 14-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "17833fb4fcefa617bb3dc07caf7acab998289d85",
+  "prompts": {
+    "38f776e52dc72a18": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eca2c-5d70-7cd0-8dc7-83aaf8e83aef",
+        "model": "gpt-5.4"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 2,
+      "accepted_lines": 0,
+      "overriden_lines": 1,
+      "per_file_stats": {
+        "codex/plugins/autopilot-codex/hooks.json": {
+          "additions": 2,
+          "deletions": 2,
+          "overriden_lines": 1
+        }
+      }
+    },
+    "d0d3aa1396628e02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "25fa255b-86ef-4693-9216-2f9cb772df28",
+        "model": "glm-5.2"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 180,
+      "total_deletions": 5,
+      "accepted_lines": 180,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        ".claude-plugin/marketplace.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "CLAUDE.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/tests/acceptance/blue-team-boundary.acceptance.test.sh": {
+          "additions": 169,
+          "accepted_lines": 169
+        },
+        "plugins/autopilot/skills/autopilot/references/anti-rationalization.md": {
+          "additions": 3,
+          "accepted_lines": 3
+        },
+        "plugins/autopilot/skills/autopilot/references/blue-team-prompt.md": {
+          "additions": 5,
+          "deletions": 2,
+          "accepted_lines": 5
+        },
+        "plugins/autopilot/.claude-plugin/plugin.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        }
+      }
+    }
+  }
+}
