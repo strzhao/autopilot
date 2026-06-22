@@ -1,0 +1,54 @@
+.autopilot/knowledge/decisions.md
+  d0d3aa1396628e02 105-113
+.autopilot/knowledge/index.md
+  d0d3aa1396628e02 13-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "48798f058782c567bf8ecac28f5cf2c886810e24",
+  "prompts": {
+    "38f776e52dc72a18": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eca2c-5d70-7cd0-8dc7-83aaf8e83aef",
+        "model": "gpt-5.4"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "codex/plugins/autopilot-codex/hooks.json": {
+          "accepted_lines": 1
+        }
+      }
+    },
+    "d0d3aa1396628e02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "25fa255b-86ef-4693-9216-2f9cb772df28",
+        "model": "glm-5.2"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 11,
+      "total_deletions": 1,
+      "accepted_lines": 11,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        ".autopilot/knowledge/decisions.md": {
+          "additions": 9,
+          "accepted_lines": 9
+        },
+        ".autopilot/knowledge/index.md": {
+          "additions": 2,
+          "deletions": 1,
+          "accepted_lines": 2
+        }
+      }
+    }
+  }
+}
