@@ -10,7 +10,8 @@
 - [knowledge-token-arch](domains/knowledge-token-arch.md) — progressive disclosure / token / sub-agent / 架构 / doctor（11 entry）
 - [bash-shell-pitfalls](domains/bash-shell-pitfalls.md) — bash 陷阱 / exit-code / trap-err / set-u / macOS（3 entry）
 
-## Decisions（32）
+## Decisions（33）
+- [2026-06-22] 红蓝对抗蓝队"多做"越界：消解职责重叠 + AI 决策心智 + 终止边界复用[!] | tags: autopilot, red-blue-team, blue-team, qa-tier-1.5, scope-creep, over-verification, role-boundary, ai-semantic-judgment, termination-boundary, topology-as-semantic, ai-first, dogfood | → decisions.md
 - [2026-06-18] 编排器自审自己的产物 = 零独立性橡皮图章；零价值环节直接删，下游链覆盖则无需替换 | tags: autopilot, fast-mode, design, self-review, zero-independence, rubber-stamp, dogfood, deletion-over-replacement, downstream-coverage, ai-first, anti-pattern | → decisions.md
 - [2026-06-17] knowledge 时效性信号用 prompt 层认知提示 + Evidence 锚点，不照搬 memdir 对话级记忆机制 | tags: autopilot, knowledge-engineering, staleness, time-decay, point-in-time, code-fact-staleness, minimal-mechanism, prompt-layer, memoryFreshnessText, memdir-comparison | → domains/knowledge-token-arch.md
 - [2026-06-16] 判定时机问题根因是上下文不足（非时机）；状态字段写入点搬迁安全性看读者观测边界 | tags: autopilot, fast-mode, decision-timing, context-availability, iteration-boundary, stop-hook, relocation-invariant, skill-surgery, dogfood, probe-driven | → decisions.md
