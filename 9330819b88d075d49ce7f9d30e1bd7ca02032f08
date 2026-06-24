@@ -1,0 +1,104 @@
+plugins/autopilot/.claude-plugin/plugin.json
+  694f0ffba59fcf1d 3
+plugins/autopilot/scripts/stop-hook.sh
+  694f0ffba59fcf1d 668-769
+plugins/autopilot/tests/acceptance/skill-md-net-shrinkage.acceptance.test.sh
+  694f0ffba59fcf1d 1-123
+.claude-plugin/marketplace.json
+  694f0ffba59fcf1d 32
+plugins/autopilot/tests/acceptance/acceptance-staging-contract.acceptance.test.sh
+  694f0ffba59fcf1d 1-234
+plugins/autopilot/skills/autopilot/SKILL.md
+  694f0ffba59fcf1d 248-249
+CLAUDE.md
+  694f0ffba59fcf1d 14
+plugins/autopilot/skills/autopilot/references/implement-phase.md
+  694f0ffba59fcf1d 52-54
+plugins/autopilot/skills/autopilot/references/red-team-prompt.md
+  694f0ffba59fcf1d 58,69-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "9330819b88d075d49ce7f9d30e1bd7ca02032f08",
+  "prompts": {
+    "38f776e52dc72a18": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eca2c-5d70-7cd0-8dc7-83aaf8e83aef",
+        "model": "gpt-5.4"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "codex/plugins/autopilot-codex/hooks.json": {
+          "accepted_lines": 1
+        }
+      }
+    },
+    "694f0ffba59fcf1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "15aeb66f-639f-46ba-abe1-292d1b33498e",
+        "model": "glm-5.2"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 541,
+      "total_deletions": 88,
+      "accepted_lines": 472,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "plugins/autopilot/skills/autopilot/references/implement-phase.md": {
+          "additions": 3,
+          "deletions": 7,
+          "accepted_lines": 3
+        },
+        ".claude-plugin/marketplace.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/.claude-plugin/plugin.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "CLAUDE.md": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/skills/autopilot/SKILL.md": {
+          "additions": 2,
+          "deletions": 4,
+          "accepted_lines": 2
+        },
+        "plugins/autopilot/tests/acceptance/skill-md-net-shrinkage.acceptance.test.sh": {
+          "additions": 133,
+          "deletions": 10,
+          "accepted_lines": 123
+        },
+        "plugins/autopilot/tests/acceptance/acceptance-staging-contract.acceptance.test.sh": {
+          "additions": 261,
+          "deletions": 27,
+          "accepted_lines": 234
+        },
+        "plugins/autopilot/skills/autopilot/references/red-team-prompt.md": {
+          "additions": 5,
+          "deletions": 5,
+          "accepted_lines": 5
+        },
+        "plugins/autopilot/scripts/stop-hook.sh": {
+          "additions": 133,
+          "deletions": 31,
+          "accepted_lines": 102
+        }
+      }
+    }
+  }
+}
