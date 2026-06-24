@@ -19,3 +19,9 @@
 **Lesson**: bash ERR trap 对"函数返回非零"的触发条件取决于调用上下文：在 `if`/`while`/`until` 条件、`||` `&&` 链、`!` 否定中调用 → 不触发；裸调用（顶层 simple command）→ 触发。这意味着脚本的"生产正确性"和"测试可观察性"在 trap ERR 存在时是两套语义。修复模式：trap 仅在直接执行模式安装（`if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then trap 'exit 0' ERR; fi`），让 source 测试模式下函数 return 直接传递给 spawnSync。子 shell 包装也行不通——子 shell 仍继承父 shell 的 ERR trap。
 **Evidence**: 实测 `trap "echo TRAP; exit 0" ERR; foo() { return 1; }; foo` 输出 `TRAP` 退出，但 `if foo; then ...; fi` 不触发。本次 QA 轮次 1 红队测试 7/10 失败，root cause 定位通过 5 行最小复现脚本在 `bash -c` 中直接验证。
 
+### [2026-06-24] `set -u` 下中文字符串内 `$VAR（全角）` 词法分析误报 unbound variable
+<!-- tags: bash, set-u, unicode, variable-expansion, fullwidth-parenthesis, acceptance-test, quoting, word-boundary -->
+**Scenario**: 红队验收测试 `set -uo pipefail`，pass 消息含 `$PATH_HAS_TMP（场景5.P1...`——`$VAR` 后紧跟全角括号「（」（U+FF08）。变量实际已定义并赋值，但 bash 词法分析器把多字节字符的字节并入变量名 → 解析出 `PATH_HAS_TMP` + 非法字节，`set -u` 报 `PATH_HAS_TMP�: unbound variable`。该行此前因另一断言先 FAIL exit 没跑到（latent bug，改了上一条断言后暴露）。
+**Lesson**: bash `set -u` 下，双引号内 `$VAR` 后紧跟**非 ASCII / 多字节字符**（全角括号、中文、Unicode 符号）时，词法分析器可能把多字节字符的字节并入变量名 → 误报 unbound。**修复**：用 `${VAR}` 花括号明确界定变量名边界（`pass "...${PATH_HAS_TMP}（场景..."`）。判据：`set -u` + 双引号 + `$VAR` + 紧邻多字节字符 = 必须用 `${VAR}`。同类：含 `$VAR` 插值的 pass/fail 消息避免 `$VAR` 直接接全角字符；中文字符串内 `$((...))` 算术展开也有类似词法问题。`$VAR `（后接半角空格/ASCII）无此问题——半角空格是变量名截止符。
+**Evidence**: acceptance-staging-contract.acceptance.test.sh:231 `$PATH_HAS_TMP（` 报 unbound（bash -n 通过，纯运行时 set -u 暴露），改 `${PATH_HAS_TMP}` 后全 PASS。同文件 `$PATH_HAS_RUNTIME ` / `$STAGING_IN_BLUE `（半角空格分隔）均无问题，证明确是全角字符边界问题。
+

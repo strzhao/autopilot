@@ -8,9 +8,10 @@
 - [qa-testing](domains/qa-testing.md) — QA 判定 / red-team / mutation / contract / 量化门禁（15 entry）
 - [worktree-git](domains/worktree-git.md) — worktree 检测 / symlink / git porcelain / 文件管理（7 entry）
 - [knowledge-token-arch](domains/knowledge-token-arch.md) — progressive disclosure / token / sub-agent / 架构 / doctor（11 entry）
-- [bash-shell-pitfalls](domains/bash-shell-pitfalls.md) — bash 陷阱 / exit-code / trap-err / set-u / macOS（3 entry）
+- [bash-shell-pitfalls](domains/bash-shell-pitfalls.md) — bash 陷阱 / exit-code / trap-err / set-u / macOS（4 entry）
 
-## Decisions（33）
+## Decisions（34）
+- [2026-06-24] 红蓝编译耦合根治——验收测试暂存区 + stop-hook 确定性合流；机械活下沉 hook / 智力活留 agent（自由度匹配） | tags: autopilot, red-blue-team, compile-coupling, acceptance-staging, stop-hook, determinism, skill-fragility, ai-first, degrees-of-freedom, mechanical-vs-intellectual | → decisions.md
 - [2026-06-22] 红蓝对抗蓝队"多做"越界：消解职责重叠 + AI 决策心智 + 终止边界复用[!] | tags: autopilot, red-blue-team, blue-team, qa-tier-1.5, scope-creep, over-verification, role-boundary, ai-semantic-judgment, termination-boundary, topology-as-semantic, ai-first, dogfood | → decisions.md
 - [2026-06-18] 编排器自审自己的产物 = 零独立性橡皮图章；零价值环节直接删，下游链覆盖则无需替换 | tags: autopilot, fast-mode, design, self-review, zero-independence, rubber-stamp, dogfood, deletion-over-replacement, downstream-coverage, ai-first, anti-pattern | → decisions.md
 - [2026-06-17] knowledge 时效性信号用 prompt 层认知提示 + Evidence 锚点，不照搬 memdir 对话级记忆机制 | tags: autopilot, knowledge-engineering, staleness, time-decay, point-in-time, code-fact-staleness, minimal-mechanism, prompt-layer, memoryFreshnessText, memdir-comparison | → domains/knowledge-token-arch.md
