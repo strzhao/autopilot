@@ -245,10 +245,8 @@ preview: |
 #### 2. 合流 — 两个 Agent 都完成后
 
 1. **收集蓝队产出**：实现摘要、文件列表、困难任务标记
-2. **收集红队产出**：将红队生成的测试文件写入项目（如果 Agent 在 worktree 隔离中运行则需要手动写入）
-3. `git add` 红队的测试文件
-4. **写入测试锁**：调用 `lock_acceptance_tests "$task_dir/.acceptance-lock" <测试文件列表>`（lib.sh 函数），将验收测试文件的 sha256 写入 `$task_dir/.acceptance-lock`（runtime，不入库）。stop-hook 据此在 implement→qa 转入时检测篡改。
-5. 更新 frontmatter：`phase: "qa"`
+2. **红队验收测试合流由 stop-hook 在 implement→qa 转换时自动完成**（暂存→target 搬运 + `git add` + `lock_acceptance_tests` + 写状态文件 `## 红队验收测试` 区域），编排器无需手动操作；详见 `scripts/stop-hook.sh` §8.5.0.5
+3. 更新 frontmatter：`phase: "qa"`
 
 #### 3. 降级策略
 

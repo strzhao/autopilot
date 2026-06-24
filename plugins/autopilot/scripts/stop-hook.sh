@@ -665,6 +665,108 @@ fi
 if [[ "$NEW_PHASE" == "qa" ]]; then
     detect_smoke_eligible || true
 
+    # ── 8.5.0.5 验收测试合流（implement→qa 转入时确定性搬运，C3） ──
+    # 自门控：仅当 $TASK_DIR/acceptance-staging/manifest 存在时执行，否则完全 no-op（向后兼容旧任务）。
+    # 读 manifest（每条两行 staging:/target:）→ 逐文件 mv → git add 成功文件 → lock_acceptance_tests
+    # → 写状态文件 ## 红队验收测试 = target_path 列表。
+    # 时序：必须在 §8.5.1 tamper 守卫之前（lock 在此写）。
+    # 失败 solve-don't-punt：单文件 mv 失败标 [!] 不纳入 lock；manifest 缺失/全失败 → 降级，不阻塞。
+    _merge_acceptance_staging() {
+        [ -n "${TASK_DIR}" ] || return 0
+        local staging_dir="${TASK_DIR}/acceptance-staging"
+        local manifest="${staging_dir}/manifest"
+        [ -f "$manifest" ] || return 0   # 自门控：无 manifest = 无红队暂存，no-op
+
+        local staging="" target="" moved_ok="" failed=""
+        local line
+        while IFS= read -r line; do
+            case "$line" in
+                staging:*)
+                    staging="${line#staging:}"
+                    staging="${staging#"${staging%%[![:space:]]*}"}"   # strip 前导空白（容错多空格/tab，I2）
+                    ;;
+                target:*)
+                    target="${line#target:}"
+                    target="${target#"${target%%[![:space:]]*}"}"
+                    # 四分支：格式错 / staging 在 / 幂等已搬 / 幽灵（I1：幂等不误报全失败）
+                    if [ -z "$staging" ] || [ -z "$target" ]; then
+                        failed+="${staging:-<empty-staging>}"$'\n'      # manifest 格式错
+                    elif [ -f "$staging" ]; then
+                        if mkdir -p "$(dirname "$target")" 2>/dev/null && mv "$staging" "$target" 2>/dev/null; then
+                            moved_ok+="${target}"$'\n'
+                        else
+                            failed+="${staging}"$'\n'                   # mv 失败
+                        fi
+                    elif [ -f "$target" ]; then
+                        moved_ok+="${target}"$'\n'                      # 幂等：staging 已搬、target 在 → 重纳重新锁，不报失败
+                    else
+                        failed+="${staging}"$'\n'                       # 幽灵：staging/target 都不在
+                    fi
+                    staging=""; target=""
+                    ;;
+            esac
+        done < "$manifest"
+
+        # 有成功搬运 → git add + lock + 写状态文件 ## 红队验收测试 区域
+        if [ -n "$moved_ok" ]; then
+            # git add 成功搬运的 target 文件（逐行，容错含空格路径）
+            local f
+            while IFS= read -r f; do
+                [ -n "$f" ] && git add -- "$f" 2>/dev/null || true
+            done <<< "$moved_ok"
+            # lock_acceptance_tests（lib.sh 既有函数）：仅锁成功搬运的 target 文件 sha256。
+            # 用数组收集路径以正确传递（lib.sh 函数签名 lock_acceptance_tests <lock> <file...>）。
+            local -a ok_files=()
+            while IFS= read -r f; do
+                [ -n "$f" ] && ok_files+=("$f")
+            done <<< "$moved_ok"
+            if [ "${#ok_files[@]}" -gt 0 ]; then
+                lock_acceptance_tests "${TASK_DIR}/.acceptance-lock" "${ok_files[@]}" 2>/dev/null || true
+            fi
+
+            # 写状态文件 ## 红队验收测试 区域 = target_path 列表（非 staging）
+            _write_acceptance_section "$STATE_FILE" "$moved_ok"
+        fi
+
+        # 全失败 / manifest 空内容 → 不写 lock，留降级提示
+        if [ -z "$moved_ok" ] && [ -n "$failed" ]; then
+            echo "⚠️ autopilot stop-hook: 验收测试全部 mv 失败，留暂存区，QA 走文本清单降级" >&2
+        elif [ -n "$failed" ]; then
+            echo "⚠️ autopilot stop-hook: 部分验收测试 mv 失败（见 staging），已成功部分正常合流" >&2
+        fi
+        return 0
+    }
+
+    # _write_acceptance_section <state_file> <target_paths(multiline)>
+    # 用 awk 精确替换 ## 红队验收测试 区域内容（到下一个 top section 为止），避免 Write 重写整个文件。
+    # paths 多行通过临时文件喂给 awk（awk -v 不支持多行字符串）。
+    _write_acceptance_section() {
+        local sf="$1" paths="$2"
+        [ -f "$sf" ] || return 0
+        local paths_file tmp
+        paths_file=$(mktemp) || return 0
+        tmp=$(mktemp "${sf}.XXXXXX") || { rm -f "$paths_file"; return 0; }
+        printf '%s\n' "$paths" | grep -vE '^[[:space:]]*$' > "$paths_file" 2>/dev/null || true
+        # 两文件流：状态文件 + paths 文件（FILENAME 区分）。遇到状态文件的 ## 红队验收测试
+        # 标题后，立即把 paths_file 全部内容吐出，然后跳过旧区域直到下一个 top section。
+        awk -v paths_file="$paths_file" '
+            FILENAME == paths_file { next }
+            /^## 红队验收测试[[:space:]]*$/ {
+                print
+                while ((getline pline < paths_file) > 0) print pline
+                close(paths_file)
+                skip = 1
+                next
+            }
+            skip && /^## (QA 报告|变更日志|用户反馈|实现计划|设计文档|验收场景)[[:space:]]*$/ { skip = 0 }
+            skip { next }
+            { print }
+        ' "$sf" "$paths_file" > "$tmp" 2>/dev/null && mv "$tmp" "$sf" || rm -f "$tmp"
+        rm -f "$paths_file"
+    }
+
+    _merge_acceptance_staging || true
+
     # ── 8.5.1 测试篡改守卫（implement→qa 转入时一次性检测） ──
     # 自门控：仅当 .acceptance-lock 存在且 sha 不匹配时触发。
     # 无锁文件 → acceptance_tests_tampered 返回 1（no-lock）→ 不触发（零副作用）。
