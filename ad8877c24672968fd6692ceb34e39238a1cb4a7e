@@ -1,0 +1,29 @@
+HANDOFF-验证方案单点强化.md
+  fbfa1d4b23e60b08 1-121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "ad8877c24672968fd6692ceb34e39238a1cb4a7e",
+  "prompts": {
+    "fbfa1d4b23e60b08": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "afeb2611-2702-4a21-8544-5feefcd7d867",
+        "model": "glm-5.2"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 121,
+      "total_deletions": 0,
+      "accepted_lines": 121,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "HANDOFF-验证方案单点强化.md": {
+          "additions": 121,
+          "accepted_lines": 121
+        }
+      }
+    }
+  }
+}
