@@ -1,5 +1,7 @@
 # autopilot — AI 自动驾驶工程套件
 
+> **v3.49.0**：删 worktree-repair 死代码 skill（bootstrap SessionStart 自动覆盖同命令 + disable-model-invocation 不在可用列表，[2026-06-18] 零价值删除）+ doctor:289 gitignore 检查 -F 单模式升级 -E 双模式覆盖 local-config.json（拓扑外 autopilot 产物纳入 Layer 3 防御，[2026-05-23] 拓扑即语义）+ doctor:230 指引改「重进 worktree 触发 SessionStart 自动 repair」消除悬空引用；skill md 净减 27 行、红队 grep 不变量。
+
 > **v3.48.1**：**snapshot_re 覆盖补丁 + §8.5.2 端到端行为断言**。独立 claude -p 验证 v3.48.0 发现两处问题：① N1 snapshot_re 漏 Playwright 默认目录 `tests/<spec>.spec.ts-snapshots/`（自门控把漏检静默化为 n/a 假阴性）→ 加 `__screenshots__`/`cypress/snapshots`/`snapshots`/`[^/]*-snapshots/` 条目覆盖；② N2 §8.5.2 只有 grep 接线断言（可命中注释）→ 升级为构造 tainted worktree + state.md(phase=qa) 直接跑 stop-hook 断 `decision=="block"` 的端到端行为断言。红队 test 加路径 6（Playwright 真实默认目录，防 fixture 掩盖）。skill md 净增 0。
 
 > **v3.48.0**：**快照 oracle 污染守卫——确定性硬信号检测快照 baseline 重录，逼 AI 提供独立 oracle**。治 a56a55fe 实证缺陷：AI 删除快照 baseline 重录后，用 14/14 快照断言冒充 T1.5 谓词全 PASS，但全程从未启动 app——重录后的快照断言对任何输入恒真，判别力归零。机制层双点落地（严格参照 §8.5.1 tamper 守卫同构）：① `lib.sh snapshot_oracle_regened`（git status --porcelain -uall 检测快照/baseline 改动或删除，三态 rc 0=clean / 2=tainted / 1=n/a；路径模式覆盖 `__snapshots__/*.snap`、`e2e/tests/visual-report/snapshots/`、`.baselines/`；-uall 必需，默认 -unormal 对未跟踪目录只显顶层目录名会漏文件级快照）；② `stop-hook §8.5.2`（implement→qa 转入时一次性检测，rc==2 或 stdout 含 ORACLE-REGHEN → decision:block 注入确定性 prompt「快照判别力失效，依赖快照 artifact 的 T1.5 谓词不得 PASS，需独立 oracle：真机截图 / 非快照断言 / freshness 类硬信号」）。自门控：非 git 仓库 rc=1 不触发。**SKILL.md 零改动**（确定性硬信号层兜底，skill 本就无快照相关散文可删；遵守"skill 只减不增"铁律）。

@@ -227,7 +227,7 @@ done || true
 | 3-4 | 工具已安装但 hooks 未激活 |
 | 0 | 无 Git 工作流工具 |
 
-> **worktree 健康抽查解读**：检查输出含 `broken-symlink` / `missing:` 时，**不直接扣分**，而是在改进建议中列出具体 worktree 路径并建议 `cd <wt> && /worktree-repair`。worktree 抽查为空（无 worktree 或全 PASS）→ 不影响 Dim 8 评分。
+> **worktree 健康抽查解读**：检查输出含 `broken-symlink` / `missing:` 时，**不直接扣分**，而是在改进建议中列出具体 worktree 路径并建议重进 worktree 触发 SessionStart 自动 repair，或 `node "${CLAUDE_PLUGIN_ROOT}/scripts/worktree.mjs" repair <wt>`。worktree 抽查为空（无 worktree 或全 PASS）→ 不影响 Dim 8 评分。
 
 ### Dim 9: 依赖与安全基线（权重 6%）
 
@@ -286,7 +286,7 @@ head -30 .autopilot/knowledge/decisions.md 2>/dev/null; \
 head -30 .autopilot/knowledge/patterns.md 2>/dev/null; \
 # 文件分类正确性（v3.35 三层防御 Layer 3）
 echo "--- gitignore 规则 ---"; \
-grep -F '.autopilot/runtime/' .gitignore 2>/dev/null || echo "MISSING: .autopilot/runtime/ rule"; \
+grep -E '\.autopilot/runtime/|local-config\.json' .gitignore 2>/dev/null || echo "MISSING: autopilot 产物 ignore 规则（.autopilot/runtime/ 和 local-config.json）"; \
 echo "--- runtime 误入库检测 ---"; \
 git ls-files .autopilot/runtime 2>/dev/null
 ```
