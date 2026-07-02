@@ -249,33 +249,85 @@ if ! echo "${out5}" | grep -q "home.png"; then
 fi
 pass "路径5 playwright 视觉快照: 重录 → rc!=0 + stdout 含 ORACLE + 列出文件"
 
-# ── §8.5.2 集成：stop-hook 守卫在 phase→qa 时检测到 oracle 重录 → block ─────────
-# INTEGRATION: 留 QA 真机判定
-#
-# 说明：§8.5.2 守卫在 stop-hook.sh 中作为 bash 分支块内联执行（参照 §8.5.1
-#       的结构：if rc==2 || stdout 含 ORACLE → jq 注入 decision:block + exit 0），
-#       与 stop-hook 的 PHASE/TASK_DIR 上下文/状态文件读取强耦合，单元级不易隔离调用
-#       （需构造完整 stop-hook 输入 JSON + state.md + .acceptance-lock + phase=qa）。
-#       本集成点交由 QA Tier 1.5 真机判定覆盖：
-#         (a) phase 转 qa、存在快照重录 fixture 时，stop-hook 输出 JSON
-#             decision=="block"
-#         (b) block reason 含被重录文件清单（stdout 中的路径）
-#         (c) block reason 含确定性字面量"依赖快照的 T1.5 谓词不得 PASS，须独立 oracle"
-#         (d) n/a 场景（rc==1）stop-hook 不触发 block（自门控透传）
-#       不 soft-skip：上面路径1-5 已对 snapshot_oracle_regened 函数做完整断言，
-#       §8.5.2 的 block 注入逻辑文风与 §8.5.1 同构（设计契约明确），QA 真机复跑即可。
-#
-#       但此处保留一条「成文存在性」强断言——证明蓝队确实把 §8.5.2 落到了 stop-hook
-#       里（防止蓝队只写函数不接守卫，这是设计契约的两半必须同时落地）：
+# ── 路径6 playwright 默认目录 <spec>-snapshots/（N1 修复覆盖盲区）─────────────────
+# v3.48.0 初版 snapshot_re 漏检 Playwright 默认目录 tests/<spec>.spec.ts-snapshots/，
+# 独立 claude -p 验证发现 N1：自门控把漏检静默化为 n/a（无信号）。v3.48.1 snapshot_re
+# 加 [^/]*-snapshots/ 条目覆盖。本路径用 Playwright 真实默认目录验证（防 fixture 掩盖）。
+R6_REPO="$(mk_repo)"; CLEANUP_DIRS+=("${R6_REPO}")
+mkdir -p "${R6_REPO}/tests/foo.spec.ts-snapshots"
+SNAP6="${R6_REPO}/tests/foo.spec.ts-snapshots/home-chromium.png"
+printf 'PW_DEFAULT_v1\n' > "${SNAP6}"
+git -C "${R6_REPO}" add -A
+git -C "${R6_REPO}" commit -q -m "playwright default dir baseline"
+printf 'PW_DEFAULT_v2_REGEN\n' > "${SNAP6}"   # 重录
+out6=$(invoke_oracle "${R6_REPO}") ; rc6=$?
+if [[ ${rc6} -eq 0 ]]; then
+    fail "路径6 playwright 默认目录: <spec>-snapshots/ 快照被改后 rc 应 !=0，实际 rc=${rc6}（N1 盲区回归）"
+fi
+if ! echo "${out6}" | grep -q "ORACLE"; then
+    fail "路径6 playwright 默认目录: stdout 应含 'ORACLE'，实际='${out6}'（N1 盲区回归）"
+fi
+pass "路径6 playwright 默认目录 <spec>-snapshots/: N1 修复后检出（rc!=0 + ORACLE）"
 
+# ── §8.5.2 集成：接线 grep + 端到端行为（N2 加固，闭合 INTEGRATION）──────────────
+# 接线存在性（防"只写函数不接守卫"）：
 if ! grep -qE 'snapshot_oracle_regened' "${STOP_HOOK}"; then
-    fail "§8.5.2 集成: stop-hook.sh 未引用 snapshot_oracle_regened（设计契约要求 §8.5.2 守卫调用此函数）"
+    fail "§8.5.2 接线: stop-hook.sh 未引用 snapshot_oracle_regened（设计契约要求 §8.5.2 守卫调用此函数）"
 fi
-# §8.5.2 的 block reason 应含确定性字面量（设计契约原文：须独立 oracle）
 if ! grep -qE '独立 oracle|独立oracle' "${STOP_HOOK}"; then
-    fail "§8.5.2 集成: stop-hook.sh 未含 '须独立 oracle' 确定性字面量（设计契约要求 block prompt 含此字面量）"
+    fail "§8.5.2 接线: stop-hook.sh 未含 '须独立 oracle' 确定性字面量（block prompt 契约）"
 fi
-pass "§8.5.2 集成: stop-hook 引用 snapshot_oracle_regened + 含 '须独立 oracle' 字面量"
+pass "§8.5.2 接线: stop-hook 引用 snapshot_oracle_regened + 含 '须独立 oracle' 字面量"
 
-echo "[OK ] R_ORACLE oracle-snapshot-taint-guard — 全部断言通过（路径1-5 函数契约 + §8.5.2 成文接线断言）"
+# 端到端行为（N2 加固：v3.48.0 初版只有 grep 接线断言，独立 claude -p 指出 grep 可命中
+# 注释、无法证明真在 implement→qa 触发 block。v3.48.1 构造 tainted worktree + state.md
+# (phase=qa) 直接跑 stop-hook，断言 decision=="block"）。
+PW_REPO="$(mk_repo)"; CLEANUP_DIRS+=("${PW_REPO}")
+PW_SLUG="20260702-oracle-behavior"
+PW_TASK_DIR="${PW_REPO}/.autopilot/runtime/requirements/${PW_SLUG}"
+mkdir -p "${PW_TASK_DIR}"
+printf '%s\n' "${PW_SLUG}" > "${PW_REPO}/.autopilot/runtime/active.ptr"
+cat > "${PW_TASK_DIR}/state.md" <<EOF_STATE_PW
+---
+active: true
+phase: "qa"
+gate: ""
+iteration: 1
+max_iterations: 30
+max_retries: 3
+retry_count: 0
+mode: ""
+plan_mode: ""
+fast_mode:
+brief_file: ""
+next_task: ""
+auto_approve: false
+knowledge_extracted: ""
+task_dir: "${PW_TASK_DIR}"
+session_id: "pw-behavior-session"
+started_at: "2026-07-02T00:00:00Z"
+contract_required: false
+html_review: false
+---
+
+## 目标
+pw behavior
+EOF_STATE_PW
+# tainted：commit 快照 + 删（删除式重录）
+mkdir -p "${PW_REPO}/__Snapshots__"
+printf 'PW_v1\n' > "${PW_REPO}/__Snapshots__/behavior.png"
+git -C "${PW_REPO}" add -A && git -C "${PW_REPO}" commit -q -m "baseline"
+rm -f "${PW_REPO}/__Snapshots__/behavior.png"
+# 跑 stop-hook（stdin JSON：cwd + session_id 匹配 state）
+stop_out=$(printf '{"cwd":"%s","session_id":"pw-behavior-session","transcript_path":""}' "${PW_REPO}" \
+    | bash "${STOP_HOOK}" 2>&1)
+if ! echo "${stop_out}" | grep -qE '"decision"[[:space:]]*:[[:space:]]*"block"'; then
+    fail "§8.5.2 行为: tainted worktree + phase=qa 跑 stop-hook 应输出 decision:block，实际='${stop_out}'"
+fi
+if ! echo "${stop_out}" | grep -q '独立 oracle'; then
+    fail "§8.5.2 行为: block reason 应含 '独立 oracle'，实际='${stop_out}'"
+fi
+pass "§8.5.2 行为: tainted worktree + phase=qa → stop-hook 输出 decision:block + 须独立 oracle（N2 端到端闭合）"
+
+echo "[OK ] R_ORACLE oracle-snapshot-taint-guard — 全部断言通过（路径1-6 函数契约 + §8.5.2 接线 + 端到端行为）"
 exit 0

@@ -298,7 +298,7 @@ snapshot_oracle_regened() {
     git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
 
     # 快照/baseline 路径模式（n/a 自门控与 diff 检测共用；grep -E，路径含空格也按行匹配）
-    local snapshot_re='(^|/)(__snapshots__|__Snapshots__|e2e/snapshots|tests/snapshots|tests/visual|visual-report/snapshots|storybook-static/snapshots)/|__snapshots__/.*\.snap$|\.snap$|\.baselines?/'
+    local snapshot_re='(^|/)(__snapshots__|__Snapshots__|__screenshots__|e2e/snapshots|tests/snapshots|tests/visual|cypress/snapshots|visual-report/snapshots|storybook-static/snapshots|snapshots)/|(^|/)[^/]*-snapshots/|__snapshots__/.*\.snap$|\.snap$|\.baselines?/'
 
     # n/a 自门控：仓库无快照类文件（tracked + untracked）→ 不适用，no-op（rc=1）。
     # 治契约三态「项目无快照类文件 = n/a」——避免对纯后端/CLI 项目无意义运行。
