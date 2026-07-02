@@ -239,13 +239,14 @@ cd "$REPO_ROOT" || fail "无法 cd 到 REPO_ROOT: $REPO_ROOT"
 stop_hook_diff=$(git diff -- "plugins/autopilot/scripts/stop-hook.sh")
 stop_hook_diff_lines=$(echo -n "$stop_hook_diff" | grep -c '' || true)
 
-# 主断言：空 diff
+# 主断言（v3.43.0 搬迁时的「空 diff」代理已失效：v3.43.0 后 stop-hook 持续正当演进——
+# v3.42 §8.5.1 / v3.47 §8.5.0.5 / v3.48 §8.5.2 等，空 diff 不再成立）。
+# 降级为 DIAG 提醒：非空 diff 是正当演进，不 fail；真实意图「对 fast_mode 路由零影响」
+# 由下方辅断言（不含 fast_mode 启发式）精准守护。
 if [[ -n "$stop_hook_diff" ]]; then
-    echo "[DIAG] stop-hook.sh 非空 diff（$stop_hook_diff_lines 行）:" >&2
-    echo "$stop_hook_diff" >&2
-    fail "P5 失败：stop-hook.sh 应字节不变（空 diff），实际有改动（$stop_hook_diff_lines 行）"
+    echo "[DIAG] P5: stop-hook.sh $stop_hook_diff_lines 行 diff（v3.43.0 后正当演进；路由零影响由辅断言守护）" >&2
 fi
-pass "P5: stop-hook.sh git diff 为空（搬迁对路由零影响）"
+pass "P5: stop-hook.sh diff 不再要求为空（辅断言守护 fast_mode 路由零影响）"
 
 # 稳健辅断言：stop-hook.sh 中不应出现新增的 fast_mode 决策启发式。
 # 设计明确：判定逻辑在 SKILL.md（AI 行为层），stop-hook.sh 是确定性路由层。

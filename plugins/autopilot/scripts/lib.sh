@@ -279,6 +279,65 @@ acceptance_tests_tampered() {
     return 0
 }
 
+# snapshot_oracle_regened → stdout: ORACLE-REGHEN(modified|deleted): <path>  （仅 tainted 时输出）
+#
+# 检测本轮快照 oracle 是否被重录（baseline 重录污染判别力）。
+# 治 a56a55fe 实证：AI 删快照 baseline 重录后用 14/14 冒充 T1.5 谓词全 PASS，但从未启动 app。
+#
+# 信号：git diff（HEAD vs worktree）命中快照/baseline 文件改动（modified 或 deleted）。
+#   路径模式覆盖 Jest __snapshots__/*.snap、Storybook/playwright 快照目录下 *.png|*.txt|*.yaml、
+#   以及常见 baseline 目录（__Snapshots__、__snapshots__、e2e/snapshots、visual-report/snapshots）。
+#
+# 退出码语义（与 acceptance_tests_tampered 同构的双信号）：
+#   0 = clean（无快照文件改动，或项目无快照类文件且 git diff 为空）
+#   2 = tainted（检测到快照/baseline 改动或删除）
+#   1 = n/a   （git 不可用 / 非仓库，自门控 no-op）
+# tainted 时 stdout 列出被重录文件（每行一条 ORACLE-REGHEN 行），参照 TAMPER 文风。
+snapshot_oracle_regened() {
+    command -v git >/dev/null 2>&1 || return 1
+    git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
+
+    # 快照/baseline 路径模式（n/a 自门控与 diff 检测共用；grep -E，路径含空格也按行匹配）
+    local snapshot_re='(^|/)(__snapshots__|__Snapshots__|e2e/snapshots|tests/snapshots|tests/visual|visual-report/snapshots|storybook-static/snapshots)/|__snapshots__/.*\.snap$|\.snap$|\.baselines?/'
+
+    # n/a 自门控：仓库无快照类文件（tracked + untracked）→ 不适用，no-op（rc=1）。
+    # 治契约三态「项目无快照类文件 = n/a」——避免对纯后端/CLI 项目无意义运行。
+    git ls-files --cached --others --exclude-standard 2>/dev/null | grep -qE "$snapshot_re" || return 1
+
+    # 用 git status --porcelain -uall 抓 worktree 全部改动（modified/added/deleted/untracked）。
+    # -uall 必需：默认 -unormal 对未跟踪目录只显示顶层目录名（?? e2e/），不展开到文件，
+    # 会漏掉 e2e/snapshots/home.png 这类快照；-uall 展开到文件级。
+    # 比 git diff HEAD 更全：重录常表现为「删旧 baseline + 建新 untracked」，diff 漏 untracked。
+    local diff_out
+    diff_out=$(git status --porcelain -uall 2>/dev/null) || diff_out=""
+    [ -z "$diff_out" ] && return 0   # 无任何改动 → clean
+    # porcelain v1：XY 两列状态码 + 路径（rename 形如 "R  old -> new"，取 new）。
+    local xy path bad=0
+    while IFS= read -r line; do
+        xy="${line:0:2}"
+        path="${line:3}"
+        # rename/copy：取箭头后的新路径
+        case "$path" in
+            *" -> "*) path="${path##* -> }" ;;
+        esac
+        [ -z "$path" ] && continue
+        # xy 两列任非空（含 ?? untracked / D 删除 / M 改 / A 新增 / R 重命名）即改动。
+        # 空格+空格不会出现在 porcelain（无改动不入列表），此处只要路径命中快照模式即污染。
+        if printf '%s' "$path" | grep -qE "$snapshot_re"; then
+            # 判 deleted：第二列为 D（worktree 删除）或首列 D（staged 删除）
+            if [[ "$xy" == *D* ]]; then
+                echo "ORACLE-REGHEN(deleted): ${path}"
+            else
+                echo "ORACLE-REGHEN(modified): ${path}"
+            fi
+            bad=1
+        fi
+    done <<< "$diff_out"
+
+    [ "$bad" -eq 1 ] && return 2
+    return 0
+}
+
 # ── Task Slug 生成 ──────────────────────────────────────────────
 
 # 生成需求管理文件夹的 slug。格式: YYYYMMDD-<目标前30字符清洗>

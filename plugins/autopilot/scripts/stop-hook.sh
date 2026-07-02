@@ -787,6 +787,22 @@ if [[ "$NEW_PHASE" == "qa" ]]; then
             exit 0
         fi
     fi
+
+    # ── 8.5.2 快照 oracle 污染守卫（implement→qa 转入时一次性检测） ──
+    # 治 a56a55fe 实证：AI 删快照 baseline 重录后用 14/14 冒充 T1.5 谓词全 PASS，但未启动 app。
+    # 自门控：snapshot_oracle_regened 在 git 不可用/非仓库时返回 1（n/a）→ 不触发。
+    # 与 §8.5.1 同构：双信号判定（rc==2 或 stdout 含 ORACLE-REGHEN）→ decision:block 注入确定性 prompt。
+    if [[ -n "${TASK_DIR}" ]]; then
+        _oracle_rc=0
+        _oracle_out=$(snapshot_oracle_regened 2>/dev/null) || _oracle_rc=$?
+        if [[ "${_oracle_rc}" -eq 2 ]] || echo "${_oracle_out}" | grep -q "ORACLE-REGHEN"; then
+            _oracle_reason="检测到本轮快照 oracle 重录（${_oracle_out}）。这些快照判别力已失效：删/改 baseline 重录会让任何快照断言无条件 PASS。依赖快照 artifact 的 T1.5 谓词不得 PASS，必须提供独立 oracle（真机截图 / 非快照断言 / freshness 类硬信号）。"
+            jq -n --arg reason "${_oracle_reason}" \
+                --arg msg "autopilot stop-hook: 快照 oracle 污染守卫触发（implement→qa），快照判别力失效，需独立 oracle" \
+                '{"decision":"block","reason":$reason,"systemMessage":$msg}'
+            exit 0
+        fi
+    fi
 fi
 
 # ── 9. 构造 block JSON ──
