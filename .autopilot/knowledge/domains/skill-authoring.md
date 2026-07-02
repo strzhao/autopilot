@@ -96,6 +96,12 @@ heading_hits=$(echo "$SECTION" | grep -cE "^#### [0-9.]+ <Step Title>" || true)
 **Evidence**: 本次 wave 1 selective auto-fix 修了 4 处：3 个 bash 测试 TARGET_VERSION + 1 处 README 顶部变更说明。修完 run-all.sh 7/10 → 10/10。下次 autopilot-commit 优化时把 acceptance test + README 一并加入 grep。
 **Update [2026-05-23]**：根治方案落地——把 `TARGET_VERSION="X.Y.Z"` 改为 `TARGET_VERSION=$(grep '"version"' plugin.json | sed ...)`，从 plugin.json 动态读取作为 single source of truth。此后 acceptance test 自动跟随 plugin.json 升级，**永久消除该盲区**（commit `651ba81`，v3.35.0）。优于"扩大 grep 范围"治标方案，因为治标方案要求每个新增 hardcoded 位置都被记得纳入 grep，仍依赖人工自律；动态化是结构性根治。
 
+### [2026-07-03] 删 skill 时引用链 grep 须覆盖仓库根 README.md（不只 plugins/）
+<!-- tags: autopilot, skill, reference-chain, grep-scope, blind-spot, dead-code-removal, qa-reviewer, readme, dogfood -->
+**Scenario**: 删 autopilot 死代码 skill（worktree-repair）时，设计探针 grep 限定在 `plugins/ document/ .claude-plugin/`，命中 doctor SKILL.md:230 + knowledge-engineering.md:145，漏了**仓库根 README.md:59**「Worktree 自动初始化」章节的 `/worktree-repair 可手动修复配置缺失` 活指引文案。skill 删除后该指引变悬空引用（用户照做 → skill not found）。
+**Lesson**: 删 skill / 改跨文件引用时，引用链清零 grep 范围必须覆盖**仓库根 README.md**——autopilot 仓库根 README 有「Worktree 自动初始化」等章节含**活指引文案**（非 changelog），删 skill 后会变悬空。与 [2026-05-09]（版本同步盲区）同族但不同维度：那条治版本号 grep 范围，本条治**引用链活引用** grep 范围。兜底防线：qa-reviewer Section A「不信任、独立验证」能发现探针遗漏（本案 [置信度 88] 抓住），但探针阶段覆盖仓库根 README 能更早、省一次 auto-fix iteration。
+**Evidence**: v3.49.0 删 worktree-repair，设计探针漏 README.md:59，qa-reviewer Section A 独立审查发现悬空活引用 → auto-fix 改 SessionStart 自动 repair 口径。关联 [2026-06-18] 零价值环节删除（死代码删除判据）、[2026-05-09]（同族 grep 范围盲区）。
+
 ### [2026-03-21] Skill 插件 Progressive Disclosure 重构模式
 <!-- tags: skill, progressive-disclosure, plugin, refactoring -->
 **Scenario**: npm-toolkit SKILL.md 内联所有内容（排障/模板/高级用法），导致行数膨胀（195+311 行），不符合 <500 行最佳实践
