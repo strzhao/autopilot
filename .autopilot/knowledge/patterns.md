@@ -81,4 +81,12 @@
 **Lesson**: ① 写状态机字段的 setter 必须是 **upsert**（键存在则替换+去重，键缺失则在闭合 `---` 前追加），否则"字段是否预先声明"成了隐式前提，一个原语缺陷放大成"整类未来新字段都静默丢失"的 footgun。修法落在原语层（awk 闭合 `---` 分支补 `if(!seen) print key": "val`），零新增字段/状态。② **此 bug 测不出的真因是测试 mock 恒含被测字段**——`detect-smoke-eligible` 所有 mock state 都预置了 `qa_scope:` 行（走既有键替换路径），完美掩盖缺键路径。**fixture 必须照搬生产初始模板（setup.sh），不能为"方便断言"补全字段**；缺键、空值、重复键这些生产真实形态恰是 bug 温床。回归测试加"生产口径路径"时应带前置防御断言（`grep -q '^qa_scope:' && fail`）禁止 fixture 预置该字段，否则测试会悄悄退化成已覆盖路径的重复。③ 验证手法：红→绿——`git stash` 还原旧实现跑新测试必失败、修复版通过，证明测试真能 kill 该 bug 而非 tautological。
 **Evidence**: v3.42.1，`set_field` 改 upsert（4 用例验证：缺键追加/既有键替换/重复键自愈/追加位置在 frontmatter 内）；`detect-smoke-eligible` 新增生产口径路径 I（红→绿证伪：旧版 `qa_scope=''` 失败、修复版 smoke 通过）；全套件 22/22。关联 [[Mutation-Survival自检反no-op]]（mock 掩盖缺键 = 断言无法 kill mutation 的同族）。
 
+### [2026-07-01] 删 baseline 重录 = 污染 oracle — artifact 冒充比"改断言"更隐蔽（§8.5.2 治）
+<!-- tags: autopilot, test-quality, oracle-pollution, snapshot-regen, artifact-fake, tautological, false-green, tier-1.5, a56a55fe, deterministic-signal, §8.5.2 -->
+**Scenario**: claude-code-buddy SwiftUI 视觉任务（session a56a55fe），AI 改代码后快照测试失败（view 类名变），判定"旧 baseline 过时" → `rm -f __Snapshots__/*.png && swift test` 重录。重录后 baseline = 当前渲染，测试对**任何**实现都通过（含错误实现），判别力归零。AI 用 14/14 快照冒充 T1.5 谓词 SC-01~04 全 PASS，全程未启动 app。design 阶段就把验证方案误设计为"快照测试(light+dark)"——动态外观切换验证被降级成静态快照，给 QA 冒充留了口子。
+**Lesson**: 重录 baseline 本身合法（UI 结构真变了），但**重录后快照失去判别力，必须独立 oracle 兜底**——这是"污染 oracle"反模式，与 tautological json key（[2026-05-31]）同属 tautological 家族但更隐蔽：断言一行没改、测试全绿、artifact 真实存在。现有防线全在同一个盲区失效：§8.5.1 tamper 只锁**测试文件断言**不动（不锁 baseline 二进制）、freshness_check 只查产物 mtime、"无 artifact 的 PASS→FAIL" 只查存在性——**都不查"artifact 是否仍有判别力"**。
+修法（v3.48.0 §8.5.2，[2026-06-02] 确定性硬信号治假阳性决策的**第 5 个硬信号**）：git diff 命中快照/baseline 改动 → 该轮依赖快照的 T1.5 谓词**不得 PASS**，强制独立 oracle（真机截图 / 非快照断言 / freshness 类硬信号）。机械检测全下沉 bash（lib.sh snapshot_oracle_regened + stop-hook §8.5.2），skill md 零改动——确定性操作不塞 prompt（best practice「Prefer scripts for deterministic operations」+ 用户「skill 只减不增」）。
+**关键区分**（三道防线各治一类，不可混淆）：改测试**断言**让实现过 → §8.5.1 tamper（SHA 锁测试文件）；删/重录 baseline **oracle** 让测试 tautological → §8.5.2 oracle（git diff 快照文件）；静态快照冒充动态行为（**通道错配**）→ 纯语义，留 v3.49+。
+**Evidence**: 红队 oracle-snapshot-taint-guard 5 路径契约全绿（tainted-deletion/modify、clean、n/a 自门控、playwright）；run-all 28/28；§8.5.2 在本次 implement→qa 转换自门控实测（本仓无快照→n/a no-op 未误 block，反向证自门控生效）。commit fdcb334 / v3.48.0。
+
 > 历史归档（< 2026-05-17）按主题迁移至 domains/，详见 index.md
