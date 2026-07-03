@@ -322,14 +322,14 @@ detect_quantitative_tools() {
         if echo "$deps_text" | grep -qE '"(jest|vitest)"[[:space:]]*:'; then
             # test script 含 --coverage 或 config 含 collectCoverage
             if grep -qE '"test".*--coverage' "$pkg" 2>/dev/null \
-               || ls jest.config.* vitest.config.* 2>/dev/null | grep -q . \
+               || [ -n "$(compgen -G 'jest.config.*')" ] || [ -n "$(compgen -G 'vitest.config.*')" ] \
                && { grep -qE 'collectCoverage' jest.config.* vitest.config.* 2>/dev/null; }; then
                 has_jest_cov=true
             fi
             # vitest 默认支持 coverage（有 vitest + 任意 vite/coverage 配置即视为可用）
             if echo "$deps_text" | grep -qE '"vitest"[[:space:]]*:'; then
                 if grep -qE '"@vitest/coverage' "$pkg" 2>/dev/null \
-                   || ls vitest.config.* 2>/dev/null | grep -q . \
+                   || [ -n "$(compgen -G 'vitest.config.*')" ] \
                       && grep -qE 'coverage' vitest.config.* 2>/dev/null; then
                     has_jest_cov=true
                 fi
@@ -338,9 +338,9 @@ detect_quantitative_tools() {
     fi
 
     # config 文件兜底（无 package.json 依赖但 config 存在也算装了）
-    if ls stryker.conf.* 2>/dev/null | grep -q .; then has_stryker=true; fi
-    if ls .c8rc* 2>/dev/null | grep -q .; then has_c8=true; fi
-    if ls .nycrc* 2>/dev/null | grep -q .; then has_nyc=true; fi
+    if [ -n "$(compgen -G 'stryker.conf.*')" ]; then has_stryker=true; fi
+    if [ -n "$(compgen -G '.c8rc*')" ]; then has_c8=true; fi
+    if [ -n "$(compgen -G '.nycrc*')" ]; then has_nyc=true; fi
 
     if command -v jq >/dev/null 2>&1; then
         jq -n \

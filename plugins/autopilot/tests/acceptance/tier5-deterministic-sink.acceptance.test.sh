@@ -383,7 +383,7 @@ cat > "$TMP_C5/mutation_pass.json" <<'EOF'
 }
 EOF
 
-out_c5p=$(invoke_lib tier5_mutation_check "$TMP_C5/mutation_pass.json"); rc_c5p=$?
+out_c5p=$(invoke_lib tier5_mutation_check "$TMP_C5/mutation_pass.json")
 kr_p=$(echo "$out_c5p" | jq -r '.kill_rate // empty' 2>/dev/null)
 # 注：bool 字段不能用 `// empty`（jq 把 false 视为 null-ish 会吞掉），用 tostring
 ps_p=$(echo "$out_c5p" | jq -r '.passed | tostring' 2>/dev/null)
@@ -424,7 +424,7 @@ cat > "$TMP_C5/mutation_fail.json" <<'EOF'
 }
 EOF
 
-out_c5f=$(invoke_lib tier5_mutation_check "$TMP_C5/mutation_fail.json"); rc_c5f=$?
+out_c5f=$(invoke_lib tier5_mutation_check "$TMP_C5/mutation_fail.json")
 kr_f=$(echo "$out_c5f" | jq -r '.kill_rate // empty' 2>/dev/null)
 ps_f=$(echo "$out_c5f" | jq -r '.passed | tostring' 2>/dev/null)
 
