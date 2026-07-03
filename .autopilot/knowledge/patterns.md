@@ -89,4 +89,10 @@
 **关键区分**（三道防线各治一类，不可混淆）：改测试**断言**让实现过 → §8.5.1 tamper（SHA 锁测试文件）；删/重录 baseline **oracle** 让测试 tautological → §8.5.2 oracle（git diff 快照文件）；静态快照冒充动态行为（**通道错配**）→ 纯语义，留 v3.49+。
 **Evidence**: 红队 oracle-snapshot-taint-guard 5 路径契约全绿（tainted-deletion/modify、clean、n/a 自门控、playwright）；run-all 28/28；§8.5.2 在本次 implement→qa 转换自门控实测（本仓无快照→n/a no-op 未误 block，反向证自门控生效）。commit fdcb334 / v3.48.0。
 
+### [2026-07-04] claude -p 跑普通需求客观验证 autopilot 改动 + 缓存多版本路径重装坑
+<!-- tags: autopilot, verification, claude-p, dogfood, cache, multi-version-path, plugin-reinstall, objective-test, no-guidance, runtime-vs-static -->
+**Scenario**: 验证 v3.50.0 §8.5.3 是否真实运行生效。静态测试（红队 + run-all）全绿，但都是源码层断言——运行时 Claude Code 加载哪个缓存不确定。用 `claude -p "用 autopilot 给 X 加 usage 函数"`（**普通需求，prompt 不提 Tier 5/§8.5.3/验证，避免引导 AI 刻意渲染**）跑 autopilot 完整流程，到 qa 看 state.md tier5_status 是否自发 set。
+**Lesson**: ① **claude -p 不引导验证**是捕捉"静态测不到的运行时问题"的客观方法——autopilot 改动要确认真实运行生效（非只源码对），跑 claude -p 普通需求看机制自发工作；不引导（不提被验证项）保证客观（AI 不刻意）。② **缓存多版本路径坑**：Claude Code 插件缓存有多个版本目录（autopilot 有 3.43.1/3.47.0/3.48.1/3.49.0），claude 加载**最新版号**路径。改源码后重装须 `cp 源码 → 所有缓存路径`（尤其最新版号），只覆盖一个会"改了不生效"（首次验证只覆盖 3.47.0 而 claude 用 3.49.0，tier5_status 空，误判改动失效）。③ **plugin.json 版本号 vs 缓存路径名**：拷贝源码到缓存时路径名（3.47.0）与 plugin.json 版本（v3.50.0）不匹配可能致加载异常——重装保持各路径 plugin.json 原版本号，只覆盖 scripts/skills/references 内容。
+**Evidence**: v3.50.0 claude -p 验证：第 1 次（只覆盖 3.47.0）tier5_status 空（claude 用 3.49.0 旧版）；第 2 次（全 4 路径覆盖）tier5_status=skipped 自发 set ✅。对比静态测试（红队 40/0 + run-all 30/30 全绿）——静态全绿但运行时用错缓存，只有 claude -p 暴露。
+
 > 历史归档（< 2026-05-17）按主题迁移至 domains/，详见 index.md

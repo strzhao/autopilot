@@ -11,6 +11,7 @@
 - [bash-shell-pitfalls](domains/bash-shell-pitfalls.md) — bash 陷阱 / exit-code / trap-err / set-u / macOS（4 entry）
 
 ## Decisions（34）
+- [2026-07-04] 自由度匹配边界——systemMessage 注入治机制层不治展示层（Tier 5 报告渲染栏需 low freedom 硬约束） | tags: autopilot, tier-5, degrees-of-freedom, systemMessage, prompt-layer, rendering-layer, low-freedom, claude-p-verification | → decisions.md
 - [2026-06-24] 红蓝编译耦合根治——验收测试暂存区 + stop-hook 确定性合流；机械活下沉 hook / 智力活留 agent（自由度匹配） | tags: autopilot, red-blue-team, compile-coupling, acceptance-staging, stop-hook, determinism, skill-fragility, ai-first, degrees-of-freedom, mechanical-vs-intellectual | → decisions.md
 - [2026-06-22] 红蓝对抗蓝队"多做"越界：消解职责重叠 + AI 决策心智 + 终止边界复用[!] | tags: autopilot, red-blue-team, blue-team, qa-tier-1.5, scope-creep, over-verification, role-boundary, ai-semantic-judgment, termination-boundary, topology-as-semantic, ai-first, dogfood | → decisions.md
 - [2026-06-18] 编排器自审自己的产物 = 零独立性橡皮图章；零价值环节直接删，下游链覆盖则无需替换 | tags: autopilot, fast-mode, design, self-review, zero-independence, rubber-stamp, dogfood, deletion-over-replacement, downstream-coverage, ai-first, anti-pattern | → decisions.md
@@ -48,6 +49,7 @@
 - [2026-03-21] 知识工程采用三层 Progressive Disclosure 而非单层扩展 | tags: knowledge, architecture, progressive-disclosure | → domains/knowledge-token-arch.md
 
 ## Patterns（50）
+- [2026-07-04] claude -p 跑普通需求客观验证 autopilot 改动 + 缓存多版本路径重装坑 | tags: autopilot, verification, claude-p, dogfood, cache, multi-version-path, plugin-reinstall, no-guidance | → patterns.md
 - [2026-06-02] `$(cmd || true); rc=$?` 把退出码永久吞成 0；要保留 rc 又不触发 trap ERR 用 `cmd || rc=$?` | tags: bash, exit-code, command-substitution, or-true, rc-masking, trap-err, double-signal, stop-hook, lib-sh, defensive-edit, qa-reviewer-catch | → patterns.md
 - [2026-06-02] frontmatter set_field 必须 upsert（键缺失追加），且测试 mock 不能恒含被测字段 | tags: autopilot, lib.sh, set_field, upsert, no-op, frontmatter, qa_scope, smoke, test-mock-masking, latent-bug, production-only-bug, fixture-realism | → patterns.md
 - [2026-05-31] 用"静默放行/等待"修死循环时，必须补"用户可见 + 活性自救"，否则把吵闹死循环换成无声卡死（反面同族） | tags: autopilot, stop-hook, silent-wait, liveness, observability, exit-0, iteration-freeze, max-iterations-backstop, system-message, false-positive-stall, inverse-failure-mode, has-pending-subagents | → patterns.md
