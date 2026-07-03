@@ -79,15 +79,11 @@ cat package.json | grep -E '"(c8|nyc|istanbul)"' 2>/dev/null; \
 ls .c8rc* .nycrc* 2>/dev/null
 ```
 
-**`detect_quantitative_tools()` 函数定义**（业界对齐 `detect_*` 命名）：
+**`detect_quantitative_tools()` 函数引用**（业界对齐 `detect_*` 命名）：
 
-- **输入**：项目根目录（package.json + 配置文件）
-- **检测项**：4 类工具（stryker / c8 / nyc / jest_coverage）
-  - `stryker`: package.json 含 `@stryker-mutator/core` 依赖 **或** 存在 `stryker.conf.{js,json,cjs,mjs}`
-  - `c8`: package.json 含 `c8` 依赖 **或** 存在 `.c8rc*`
-  - `nyc`: package.json 含 `nyc` 依赖 **或** 存在 `.nycrc*`
-  - `jest_coverage`: package.json 含 `jest` 依赖 **且**（test script 含 `--coverage` 或 jest.config 含 `collectCoverage`）
-- **输出**：JSON `{stryker: bool, c8: bool, nyc: bool, jest_coverage: bool}`
+- **实现载体**：`plugins/autopilot/scripts/lib.sh` 的 `detect_quantitative_tools()`（SSOT，doctor 引用不重复实现）
+- **检测项**：5 类工具（stryker / c8 / nyc / istanbul / jest_coverage），检测口径（依赖名 + config 文件）见 autopilot skill 的 `references/quantitative-metrics.md` §2 接口契约表格
+- **输出**：JSON `{stryker: bool, c8: bool, nyc: bool, istanbul: bool, jest_coverage: bool}`
 - **下游消费**：Dim 1 评分 + doctor-report.md "工具安装建议"段（缺失时给字面命令 `npm install --save-dev @stryker-mutator/core @stryker-mutator/jest-runner c8`）
 
 **L2 路由检测策略**：优先用 `find app/api` 检测 Next.js App Router 路由数，如果为 0 则用 `grep router/app.get` 检测 Express/Fastify 路由数。两者都为 0 时判定"项目无 API 路由，L2 不适用"，不因此降分。

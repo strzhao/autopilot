@@ -10,6 +10,7 @@
 - `retry_count`: auto-fix 重试计数，AI 在 auto-fix 阶段递增
 - `mode`: 任务模式，AI 在 design 阶段 1.5 步骤检测后写入。**合法值（闭合枚举）：""（空）/ single / project / project-qa**
 - `qa_scope`: 选择性重跑标记，AI 更新。**合法值（闭合枚举）：""（空，默认全量 QA）/ smoke（diff 小或 fast_mode 触发，跳过 Wave 2 qa-reviewer）/ selective（auto-fix 后只重跑失败 Tier）**
+- `tier5_status`: Tier 5 量化指标门禁判定。**合法值（闭合枚举）：""（空，未判）/ na（无 mutation/coverage 工具）/ skipped（smoke 路径主动跳过）/ pass / fail**。**写入者**：stop-hook §8.5.3（na/skipped 自动判，幂等：仅 tier5_status 空时写）/ 编排器（pass/fail，跑工具后调 lib.sh `tier5_coverage_check` / `tier5_mutation_check` 据结果写）。**读者**：stop-hook（gate=review-accept 时校验合规，缺失/越界 → block 回 qa 补判）。详见 references/quantitative-metrics.md
 - `next_task`: 下一个就绪任务 ID（项目模式 merge 阶段写入，触发 auto-chain）
 - `knowledge_extracted`: 知识提取完成标记，AI 在 merge 阶段设为 `"true"`（有新增）或 `"skipped"`（无新增）。**合法值（闭合枚举）：""（空）/ true / skipped**。stop-hook 的 phase=done 守卫检查此字段，缺失或空值会回滚到 merge
 - `fast_mode`: 三态字段。`""`（默认/未定）/`"true"`（fast）/`"false"`（standard）。setup.sh 的 `--fast` / `--standard` flag 时直接写入；为空时 AI 在 design 步骤 1 探针后按自适应规则写回（bug 修复/小改动/单一概念跨文件 search-replace→true，架构权衡/新抽象/探索未知模块→false，不确定→true），写入后整个生命周期不再修改
@@ -55,7 +56,7 @@
 (任务间信息传递的关键内容)
 ```
 
-> **枚举归一说明**：shell 会对上述 5 个枚举字段（phase/gate/mode/qa_scope/knowledge_extracted）的值机械归一大小写、下划线↔连字符；越界值（不在闭合枚举内）会触发 stop-hook 纠正并退回 AI 提示。**不要依赖近义词或大小写变体**，请严格使用上述列出的 canonical 值。
+> **枚举归一说明**：shell 会对上述枚举字段（phase/gate/mode/qa_scope/knowledge_extracted/tier5_status）的值机械归一大小写、下划线↔连字符；越界值（不在闭合枚举内）会触发 stop-hook 纠正并退回 AI 提示。**不要依赖近义词或大小写变体**，请严格使用上述列出的 canonical 值。
 
 ## 更新原则
 

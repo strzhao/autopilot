@@ -279,6 +279,257 @@ acceptance_tests_tampered() {
     return 0
 }
 
+# detect_quantitative_tools → stdout JSON {stryker,c8,nyc,istanbul,jest_coverage}（5 bool），rc=0
+#
+# 检测当前项目是否具备 Tier 5 量化指标门禁所需工具（mutation / coverage）。
+# 按子项独立检测（package.json 依赖 + config 文件存在），缺一不影响另一。
+# SSOT：本函数是工具检测的唯一实现（qm.md §2 = 接口契约表格；doctor SKILL.md 引用本函数名）。
+#
+# 检测项：
+#   strker       : package.json 含 @stryker-mutator/core 依赖 或 stryker.conf.{js,json,cjs,mjs}
+#   c8           : package.json 含 c8 依赖 或 .c8rc* / package.json c8 字段
+#   nyc          : package.json 含 nyc 依赖 或 .nycrc* / package.json nyc 字段
+#   istanbul     : package.json 含 istanbul / istanbul-lib-coverage 依赖（独立检测，治 I4 欠拟合）
+#   jest_coverage: package.json 含 jest/vitest 依赖 且（test script 含 --coverage 或 jest/vitest.config 含 collectCoverage）
+#
+# 错误契约（solve-don't-punt）：无 package.json / 无 config → 全 false（rc=0，不报错）。
+# jq 优先输出 JSON；jq 缺失时降级手工拼 JSON 字面（不硬依赖 jq）。
+detect_quantitative_tools() {
+    local pkg="./package.json"
+    local has_stryker=false has_c8=false has_nyc=false has_istanbul=false has_jest_cov=false
+    local deps_text=""
+
+    if [ -f "$pkg" ]; then
+        # 提取 dependencies + devDependencies 文本块（grep -A 容错无块时返回空）
+        deps_text=$(sed -n '/"dependencies"/,/^    }/p; /"devDependencies"/,/^    }/p' "$pkg" 2>/dev/null || true)
+        # stryker
+        if echo "$deps_text" | grep -qE '"@stryker-mutator/(core|jest-runner)"'; then
+            has_stryker=true
+        fi
+        # c8
+        if echo "$deps_text" | grep -qE '"c8"[[:space:]]*:'; then
+            has_c8=true
+        fi
+        # nyc
+        if echo "$deps_text" | grep -qE '"nyc"[[:space:]]*:'; then
+            has_nyc=true
+        fi
+        # istanbul（独立检测，治 I4：istanbul / istanbul-lib-coverage / nyc 内嵌 istanbul 不算）
+        if echo "$deps_text" | grep -qE '"istanbul(-lib-coverage|-reports)?"[[:space:]]*:'; then
+            has_istanbul=true
+        fi
+        # jest_coverage / vitest coverage
+        if echo "$deps_text" | grep -qE '"(jest|vitest)"[[:space:]]*:'; then
+            # test script 含 --coverage 或 config 含 collectCoverage
+            if grep -qE '"test".*--coverage' "$pkg" 2>/dev/null \
+               || ls jest.config.* vitest.config.* 2>/dev/null | grep -q . \
+               && { grep -qE 'collectCoverage' jest.config.* vitest.config.* 2>/dev/null; }; then
+                has_jest_cov=true
+            fi
+            # vitest 默认支持 coverage（有 vitest + 任意 vite/coverage 配置即视为可用）
+            if echo "$deps_text" | grep -qE '"vitest"[[:space:]]*:'; then
+                if grep -qE '"@vitest/coverage' "$pkg" 2>/dev/null \
+                   || ls vitest.config.* 2>/dev/null | grep -q . \
+                      && grep -qE 'coverage' vitest.config.* 2>/dev/null; then
+                    has_jest_cov=true
+                fi
+            fi
+        fi
+    fi
+
+    # config 文件兜底（无 package.json 依赖但 config 存在也算装了）
+    if ls stryker.conf.* 2>/dev/null | grep -q .; then has_stryker=true; fi
+    if ls .c8rc* 2>/dev/null | grep -q .; then has_c8=true; fi
+    if ls .nycrc* 2>/dev/null | grep -q .; then has_nyc=true; fi
+
+    if command -v jq >/dev/null 2>&1; then
+        jq -n \
+            --argjson stryker "$has_stryker" \
+            --argjson c8 "$has_c8" \
+            --argjson nyc "$has_nyc" \
+            --argjson istanbul "$has_istanbul" \
+            --argjson jest_coverage "$has_jest_cov" \
+            '{stryker:$stryker,c8:$c8,nyc:$nyc,istanbul:$istanbul,jest_coverage:$jest_coverage}'
+    else
+        # grep 降级：手工拼 JSON（bool 字面无引号）
+        printf '{"stryker":%s,"c8":%s,"nyc":%s,"istanbul":%s,"jest_coverage":%s}\n' \
+            "$has_stryker" "$has_c8" "$has_nyc" "$has_istanbul" "$has_jest_cov"
+    fi
+    return 0
+}
+
+# tier5_coverage_check <coverage_summary.json> <changed_files_list>
+#   → stdout JSON {line,branch,uncovered_critical:[{file,line}],passed}，rc=0
+#
+# 解析 istanbul/c8/vitest coverage-summary.json（业界标准 schema）。
+# **file 级过滤**（治 I1）：只产出 changed_files_list 中的未覆盖行，非全量（全量=海量伪精度）。
+# passed 按 §8 反向否决口径：uncovered_critical 空 → pass=true（覆盖率达标不作 PASS 信号，
+# 唯一用途是反向否决：改动行有未覆盖 → pass=false）。总覆盖率 < 80% 不判 fail。
+#
+# 阈值（沿用 quantitative-metrics.md §1）：coverage_line_threshold=80, coverage_branch_threshold=70。
+# 阈值仅用于参考产出（line/branch 数值），passed 判定只看 uncovered_critical。
+#
+# 错误契约：文件缺失/格式错 → {passed:false,uncovered_critical:[],line:null} rc=0（不抛错给编排器）。
+tier5_coverage_check() {
+    local cov_json="${1:-}"
+    local changed_list="${2:-}"
+
+    # fail-safe：文件缺失 → 空结果（rc=0）
+    if [ -z "$cov_json" ] || [ ! -f "$cov_json" ]; then
+        if command -v jq >/dev/null 2>&1; then
+            jq -n '{line:null,branch:null,uncovered_critical:[],passed:false}'
+        else
+            printf '{"line":null,"branch":null,"uncovered_critical":[],"passed":false}\n'
+        fi
+        return 0
+    fi
+
+    # 解析总覆盖率（total 行）+ 按 changed_files 过滤未覆盖行
+    local line_pct=null branch_pct=null
+    local uncovered_json="[]"
+    local jq_available=false
+    command -v jq >/dev/null 2>&1 && jq_available=true
+
+    if [ "$jq_available" = "true" ]; then
+        # 总覆盖率（istanbul/c8/vitest summary 标准格式：total.lines.pct / total.branches.pct，复数）
+        line_pct=$(jq -r '.total.lines.pct // empty' "$cov_json" 2>/dev/null || echo null)
+        branch_pct=$(jq -r '.total.branches.pct // empty' "$cov_json" 2>/dev/null || echo null)
+        [ -z "$line_pct" ] && line_pct=null
+        [ -z "$branch_pct" ] && branch_pct=null
+
+        # uncovered_critical：file 级过滤（summary 格式无行级 .s，按 lines.pct<100 判该文件有未覆盖）
+        # 治 I1：只产 changed_files 中 pct<100 的文件（非全量）。契约 uncovered_critical=[{file}]（file 级）。
+        # 容错：changed_list 参数可能是文件路径（红队 C4 传路径）或换行分隔内容字符串
+        local f changed_content="$changed_list"
+        if [[ -f "$changed_list" ]]; then
+            changed_content=$(cat "$changed_list" 2>/dev/null || echo "")
+        fi
+        if [ -n "$changed_content" ]; then
+            uncovered_json="[]"
+            while IFS= read -r f; do
+                [ -z "$f" ] && continue
+                # 路径归一化：去前导 ./ （coverage key 通常是绝对/相对路径）
+                f=$(echo "$f" | sed 's#^\./##')
+                # 在 coverage json 里找匹配该文件名的 key（容错路径前缀差异）
+                local key pct
+                key=$(jq -r --arg f "$f" 'to_entries | map(select(.key | endswith($f))) | .[0].key // empty' "$cov_json" 2>/dev/null || true)
+                [ -z "$key" ] && continue
+                # 该文件 lines.pct（summary 格式）；pct<100 → 有未覆盖 → 产 {file}
+                pct=$(jq -r --arg k "$key" '.[$k].lines.pct // 100' "$cov_json" 2>/dev/null || echo 100)
+                if [[ -n "$pct" ]] && [[ "$pct" =~ ^[0-9.]+$ ]] && awk "BEGIN{exit !($pct < 100)}" 2>/dev/null; then
+                    uncovered_json=$(echo "$uncovered_json" | jq --arg f "$f" '. + [{file:$f}]')
+                fi
+            done <<< "$changed_content"
+        fi
+
+        # passed = uncovered_critical 为空（反向否决口径）；格式错（line_pct=null 解析失败）→ passed=false（错误契约，治 qa-reviewer Medium-1）
+        local passed
+        if [[ "$line_pct" == "null" ]]; then
+            passed=false
+        else
+            passed=$(echo "$uncovered_json" | jq 'if length == 0 then true else false end')
+        fi
+
+        jq -n \
+            --argjson line "$line_pct" \
+            --argjson branch "$branch_pct" \
+            --argjson uncovered "$uncovered_json" \
+            --argjson passed "$passed" \
+            '{line:$line,branch:$branch,uncovered_critical:$uncovered,passed:$passed}'
+    else
+        # grep 降级：无 jq 时尽力解析 total 行（istanbul/c8 格式 total": {"lines":{"pct":85}}，复数）
+        line_pct=$(grep -oE '"total"[[:space:]]*:[[:space:]]*\{[^}]*"lines"[[:space:]]*:[[:space:]]*\{[^}]*"pct"[[:space:]]*:[[:space:]]*[0-9]+' "$cov_json" 2>/dev/null | grep -oE '"pct"[[:space:]]*:[[:space:]]*[0-9]+' | grep -oE '[0-9]+' | head -1 || echo null)
+        branch_pct=$(grep -oE '"total"[[:space:]]*:[[:space:]]*\{[^}]*"branches"[[:space:]]*:[[:space:]]*\{[^}]*"pct"[[:space:]]*:[[:space:]]*[0-9]+' "$cov_json" 2>/dev/null | grep -oE '"pct"[[:space:]]*:[[:space:]]*[0-9]+' | grep -oE '[0-9]+' | head -1 || echo null)
+        # grep 降级无法可靠做 file 级过滤 → uncovered_critical=[]（保守，passed=false）
+        printf '{"line":%s,"branch":%s,"uncovered_critical":[],"passed":false}\n' "${line_pct:-null}" "${branch_pct:-null}"
+    fi
+    return 0
+}
+
+# tier5_mutation_check <mutation.json> → stdout JSON {kill_rate,killed,total_valid,survived_mutants[],passed}, rc=0
+#
+# 解析 stryker reports/mutation/mutation.json（metrics.killed / metrics.totalValid）。
+# kill_rate = killed * 100 / total_valid（整数百分比），比 60 阈值 → passed。
+# 阈值（沿用 quantitative-metrics.md §1）：mutation_threshold=60。
+#
+# survived_mutants[]：从 stryker mutation.json 的 files.<file>.mutants 中提取 status!=Killed 的条目
+#   （含 Survived/NoCoverage/Timeout 等），产 {file,line,mutator}。
+#
+# 错误契约：文件缺失/格式错 → {kill_rate:null,killed:0,total_valid:0,survived_mutants:[],passed:false} rc=0。
+tier5_mutation_check() {
+    local mut_json="${1:-}"
+    local threshold=60
+
+    # fail-safe：文件缺失 → 空结果（rc=0）
+    if [ -z "$mut_json" ] || [ ! -f "$mut_json" ]; then
+        if command -v jq >/dev/null 2>&1; then
+            jq -n '{kill_rate:null,killed:0,total_valid:0,survived_mutants:[],passed:false}'
+        else
+            printf '{"kill_rate":null,"killed":0,"total_valid":0,"survived_mutants":[],"passed":false}\n'
+        fi
+        return 0
+    fi
+
+    if command -v jq >/dev/null 2>&1; then
+        local killed total_valid kill_rate passed survived
+        killed=$(jq -r '.mutationMetrics // .metrics // {} | .killed // 0' "$mut_json" 2>/dev/null || echo 0)
+        total_valid=$(jq -r '.mutationMetrics // .metrics // {} | .totalValid // 0' "$mut_json" 2>/dev/null || echo 0)
+        # 兼容 stryker schema：顶层 .metrics.killed 或 .mutationMetrics.killed
+        if [ "$killed" = "0" ] && [ "$total_valid" = "0" ]; then
+            killed=$(jq -r '.metrics.killed // 0' "$mut_json" 2>/dev/null || echo 0)
+            total_valid=$(jq -r '.metrics.totalValid // 0' "$mut_json" 2>/dev/null || echo 0)
+        fi
+        # 数值校验（防 null/字符串）
+        [[ "$killed" =~ ^[0-9]+$ ]] || killed=0
+        [[ "$total_valid" =~ ^[0-9]+$ ]] || total_valid=0
+
+        if [ "$total_valid" -gt 0 ]; then
+            kill_rate=$(( killed * 100 / total_valid ))
+        else
+            kill_rate=0
+        fi
+        if [ "$kill_rate" -ge "$threshold" ]; then
+            passed=true
+        else
+            passed=false
+        fi
+
+        # survived_mutants：遍历 files.<file>.mutants[]，status != Killed
+        survived=$(jq -r '
+            (.files // {}) | to_entries | map(
+                .key as $file | .value.mutants // [] | map(
+                    select(.status != "Killed") | {file:$file, line:(.location.start.line // 0), mutator:(.mutatorName // .mutator // "unknown")}
+                )
+            ) | add // []
+        ' "$mut_json" 2>/dev/null || echo "[]")
+
+        jq -n \
+            --argjson kr "$kill_rate" \
+            --argjson k "$killed" \
+            --argjson tv "$total_valid" \
+            --argjson surv "$survived" \
+            --argjson passed "$passed" \
+            '{kill_rate:$kr,killed:$k,total_valid:$tv,survived_mutants:$surv,passed:$passed}'
+    else
+        # grep 降级：尽力提取 metrics.killed / totalValid（格式 "killed": 60, "totalValid": 100）
+        local killed total_valid kill_rate
+        killed=$(grep -oE '"killed"[[:space:]]*:[[:space:]]*[0-9]+' "$mut_json" 2>/dev/null | grep -oE '[0-9]+' | head -1 || echo 0)
+        total_valid=$(grep -oE '"totalValid"[[:space:]]*:[[:space:]]*[0-9]+' "$mut_json" 2>/dev/null | grep -oE '[0-9]+' | head -1 || echo 0)
+        [[ "$killed" =~ ^[0-9]+$ ]] || killed=0
+        [[ "$total_valid" =~ ^[0-9]+$ ]] || total_valid=0
+        if [ "$total_valid" -gt 0 ]; then
+            kill_rate=$(( killed * 100 / total_valid ))
+        else
+            kill_rate=0
+        fi
+        local passed=false
+        [ "$kill_rate" -ge "$threshold" ] && passed=true
+        printf '{"kill_rate":%s,"killed":%s,"total_valid":%s,"survived_mutants":[],"passed":%s}\n' \
+            "$kill_rate" "$killed" "$total_valid" "$passed"
+    fi
+    return 0
+}
+
 # snapshot_oracle_regened → stdout: ORACLE-REGHEN(modified|deleted): <path>  （仅 tainted 时输出）
 #
 # 检测本轮快照 oracle 是否被重录（baseline 重录污染判别力）。

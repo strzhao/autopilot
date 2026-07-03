@@ -302,7 +302,7 @@ preview: |
 
 #### Wave 1 — 命令执行（并行）
 
-**在同一轮响应中发出多个 Bash 工具调用**，所有命令独立运行、互不依赖。**例外**：Tier 3.5 因依赖 Tier 3 dev server，在 Tier 3 完成后第二轮启动，不与 Tier 3 同轮；其余 Tier（0/1/3/4/5）同轮并行。
+**在同一轮响应中发出多个 Bash 工具调用**，所有命令独立运行、互不依赖。**例外**：Tier 3.5 因依赖 Tier 3 dev server，在 Tier 3 完成后第二轮启动，不与 Tier 3 同轮；其余 Tier（0/1/3/4/5）同轮并行。**Tier 5: 量化指标门禁** 判定由 stop-hook §8.5.3 + lib.sh 产出 `tier5_status`，详见 references/quantitative-metrics.md。
 
 **Tier 0: 红队验收测试**（最高判定权重 — 失败=实现偏离设计；执行上与 Tier 1 同轮并行）
 - 运行所有 `.acceptance.test` 文件（从状态文件 `## 红队验收测试` 读取列表）
@@ -310,8 +310,6 @@ preview: |
 - 红队未生成测试时，降级为 Wave 2 中 AI 逐项人工验证
 
 **Tier 1: 基础验证**（四项并行）：类型检查(`tsc --noEmit`) | Lint(`eslint`) | 单元测试(`jest/vitest`) | 构建(`npm run build`)，各超时 60s
-
-**Tier 5: 量化指标门禁**（条件性，工具可用时强制）：Stryker mutation score ≥ 60% + Istanbul/c8 coverage line ≥ 80% / branch ≥ 70%；任一未达 → ❌ → auto-fix（不可 ⚠️ 复盘绕过）；两子项均无工具 → `na`，**必须**渲染"⚠️ 测试有效性维度未验证（无 mutation/coverage 工具）"（na 不等于 PASS，不得静默放行）+ doctor 推荐。详见 references/quantitative-metrics.md §7 na 可见化规则。
 
 **Tier 3: 集成验证**（条件性）：Dev server 启动、API 端点验证、导入完整性
 

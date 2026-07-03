@@ -572,6 +572,56 @@ if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]] && \
     echo "🔗 auto-approve: review-accept → merge (auto-chain subtask)" >&2
 fi
 
+# ── 5.6 Tier 5 合规校验（gate=review-accept 时，照 §8.5.1 block+systemMessage 模式） ──
+# 编排器设 gate=review-accept 时，校验 tier5_status ∈ {na,skipped,pass,fail}。
+#
+# **空值兜底补判**（治沉默缺席但不破坏 R12 审批流）：
+#   tier5_status 空 → 先内联补判（复用 §8.5.3 同款逻辑：smoke→skipped / 无工具→na / 有工具→留空）。
+#   补判后非空 → 放行落入 §6；补判后仍空（有工具但编排器漏判）或越界 → block 回 qa 补判。
+#
+# **路径区分**（治 B2）：tier5_status block = "回 qa 补判定"，**非 auto-fix**
+# （auto-fix 是 Tier 0/1/1.5 失败修复路径，retry_count 不计 tier5 缺失）。
+# stop-hook 清 gate + 注入 prompt"只补 Tier 5 判定"，编排器重跑仅 Tier 5。
+# **死锁防护**：与 retry_count 解耦，不耗 max_retries。na/skip 不阻塞合并，阻塞的仅"越界/有工具却漏判"。
+if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]]; then
+    _tier5_status=$(get_enum_field tier5_status 2>/dev/null || true)
+    # 空值兜底：内联补判（与 §8.5.3 同款，幂等——§8.5.3 已判过则 tier5_status 非空不会进此分支）
+    if [[ -z "$_tier5_status" ]]; then
+        _qa_scope_t5=$(get_enum_field qa_scope 2>/dev/null || true)
+        if [[ "$_qa_scope_t5" == "smoke" ]]; then
+            set_field "tier5_status" '"skipped"'
+            append_changelog "stop-hook §5.6 兜底：qa_scope=smoke，tier5_status=skipped"
+            _tier5_status="skipped"
+        else
+            _tools_json_t5=$(detect_quantitative_tools 2>/dev/null || \
+                printf '{"stryker":false,"c8":false,"nyc":false,"istanbul":false,"jest_coverage":false}')
+            if echo "$_tools_json_t5" | grep -qE '"(stryker|c8|nyc|istanbul|jest_coverage)"[[:space:]]*:[[:space:]]*true'; then
+                : # 有工具 → 留空（编排器应跑工具后写 pass/fail，落入下方越界 block 分支治漏判）
+            else
+                set_field "tier5_status" '"na"'
+                append_changelog "stop-hook §5.6 兜底：无量化工具，tier5_status=na"
+                _tier5_status="na"
+            fi
+        fi
+    fi
+    case "${_tier5_status}" in
+        na|skipped|pass|fail)
+            # 合规值（含兜底补判的 na/skipped）→ 放行，落入 §6 正常审批门
+            :
+            ;;
+        *)
+            # 越界或"有工具却漏判"（空）→ block 回 qa 补判定（非 auto-fix，不耗 retry_count）
+            _tier5_reason="Tier 5 量化指标门禁判定缺失或越界（tier5_status=「${_tier5_status}」）。合法值仅 na/skipped/pass/fail。请只补 Tier 5 判定后重设 gate=review-accept：若有量化工具则跑 mutation/coverage 后用 Edit 设 tier5_status 为 pass/fail；无工具则设 na；smoke 路径则设 skipped。此 block 不耗 max_retries（非 auto-fix 路径）。"
+            set_field "gate" '""'
+            GATE=""
+            jq -n --arg reason "${_tier5_reason}" \
+                --arg msg "autopilot stop-hook: Tier 5 判定缺失（tier5_status 空/越界），回 qa 补判后重设 gate" \
+                '{"decision":"block","reason":$reason,"systemMessage":$msg}'
+            exit 0
+            ;;
+    esac
+fi
+
 # ── 6. 审批门检查 ──
 
 if [[ -n "$GATE" ]]; then
@@ -803,6 +853,57 @@ if [[ "$NEW_PHASE" == "qa" ]]; then
             exit 0
         fi
     fi
+
+    # ── 8.5.3 Tier 5 量化门禁判定（na/skip 自动判，幂等前置治 B1） ──
+    # 治真实 session Tier 5 三态失效（沉默缺席/措辞偏离/smoke 自觉跳过）：机械活下沉脚本，
+    # 智力活（coverage 反向否决的 diff 语义、跑工具命令）留编排器。
+    #
+    # **幂等铁律**（治 B1）：tier5_status 非空时守卫跳过自动 set（不覆盖编排器已设的 pass/fail）。
+    # 仅 `tier5_status 空 ∧ phase=qa` 时判（detect_smoke_eligible 已先于此设 qa_scope）：
+    #   - qa_scope=smoke → set tier5_status=skipped（smoke 主动跳过）
+    #   - detect_quantitative_tools 全 false → set tier5_status=na + jq 注入 §7 规定文案 systemMessage
+    #   - 有工具 → 不 set（留编排器 Wave 1 跑 + 调 lib.sh + set pass/fail）
+    #
+    # 自门控：无 package.json / 非 qa 阶段（本 §8.5 区已限定 qa）→ no-op。
+    # 失败不阻断 stop-hook（|| true 兜底）。
+    _tier5_guard() {
+        local tier5_status
+        tier5_status=$(get_enum_field tier5_status 2>/dev/null || true)
+        # 幂等前置：tier5_status 非空（编排器已设 pass/fail 或本守卫已跑）→ 不覆盖
+        [[ -n "$tier5_status" ]] && return 0
+
+        local qa_scope
+        qa_scope=$(get_enum_field qa_scope 2>/dev/null || true)
+        # smoke 路径 → skipped + 注入 systemMessage（治 smoke 报告渲染沉默：让 AI 在报告渲染 Tier 5: skipped 栏）
+        if [[ "$qa_scope" == "smoke" ]]; then
+            set_field "tier5_status" '"skipped"'
+            append_changelog "stop-hook: qa_scope=smoke，tier5_status=skipped（§8.5.3 自动判 + systemMessage 可见化）"
+            _TIER5_MSG="⚠️ Tier 5: skipped（smoke 主动跳过量化门禁）。tier5_status=skipped 已自动判定。QA 报告必须显式渲染 Tier 5 栏标注 skipped（让用户知晓此维度被 smoke 跳过，不得静默无此栏）。"
+            return 0
+        fi
+
+        # 检测量化工具（lib.sh 唯一实现，SSOT）
+        local tools_json any_tool=false
+        tools_json=$(detect_quantitative_tools 2>/dev/null || \
+            printf '{"stryker":false,"c8":false,"nyc":false,"istanbul":false,"jest_coverage":false}')
+        if echo "$tools_json" | grep -qE '"(stryker|c8|nyc|istanbul|jest_coverage)"[[:space:]]*:[[:space:]]*true'; then
+            any_tool=true
+        fi
+
+        if [[ "$any_tool" != "true" ]]; then
+            # 无任何量化工具 → na。文案存全局变量 _TIER5_MSG，由 §9 合并进 decision JSON 的 systemMessage
+            # （不独立 jq 输出 JSON——避免与 §9 的 decision JSON 形成 double JSON 破坏 hook 协议，治 qa-reviewer Critical-1）
+            set_field "tier5_status" '"na"'
+            append_changelog "stop-hook: 无 mutation/coverage 工具，tier5_status=na（§8.5.3 自动判 + systemMessage 可见化）"
+            _TIER5_MSG="⚠️ 测试有效性维度未验证（无 mutation/coverage 工具）：tier5_status=na。na 表示无法求值（无工具评估测试套件的 kill-rate 与覆盖有效性），不计入放行依据，不得静默放行，QA 报告必须显式渲染此标注且不得含「PASS/绿灯/通过」字样。建议运行 /autopilot doctor 获取安装命令。"
+            return 0
+        fi
+
+        # 有工具 → 不 set（留编排器 Wave 1 跑 + 调 tier5_coverage_check/tier5_mutation_check + set pass/fail）
+        return 0
+    }
+
+    _tier5_guard || true
 fi
 
 # ── 9. 构造 block JSON ──
@@ -844,6 +945,12 @@ else
 fi
 MODE=$(get_enum_field "mode" || true)
 SYSTEM_MSG="autopilot iteration ${NEXT_ITERATION} | phase: ${PHASE}${MODE:+ | mode: $MODE}"
+# §8.5.3 na/smoke 路径的可见化文案合并进 systemMessage（单 JSON 输出，治 qa-reviewer Critical-1 double JSON + smoke 渲染沉默）
+if [[ -n "${_TIER5_MSG:-}" ]]; then
+    SYSTEM_MSG="${SYSTEM_MSG}
+
+${_TIER5_MSG}"
+fi
 
 jq -n \
     --arg prompt "$PROMPT" \

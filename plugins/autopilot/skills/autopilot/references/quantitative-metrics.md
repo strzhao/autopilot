@@ -23,6 +23,8 @@ coverage_branch_threshold: 70
 
 **目的**：在 QA Wave 1 前判定 Tier 5 是否触发（按子项独立触发，缺一仍跑另一项）。
 
+**实现载体**：`plugins/autopilot/scripts/lib.sh`（唯一实现，SSOT）。doctor SKILL.md 引用本函数名。
+
 **检测项**（package.json 依赖 + config 文件存在）：
 
 | 工具 | 依赖名 | Config 文件 |
@@ -30,9 +32,10 @@ coverage_branch_threshold: 70
 | stryker | `@stryker-mutator/core` | `stryker.conf.{js,json,cjs,mjs}` |
 | c8 | `c8` | `.c8rc*` / package.json `c8` 字段 |
 | nyc | `nyc` | `.nycrc*` / package.json `nyc` 字段 |
-| jest_coverage | `jest` | `jest --coverage` script 或 jest.config 含 `collectCoverage` |
+| istanbul | `istanbul` / `istanbul-lib-coverage` / `istanbul-reports` | （依赖检测为主，独立于 nyc） |
+| jest_coverage | `jest` / `vitest` | `jest --coverage` script 或 jest/vitest.config 含 `collectCoverage` |
 
-**返回**：JSON `{stryker: bool, c8: bool, nyc: bool, jest_coverage: bool}`
+**返回**：JSON `{stryker: bool, c8: bool, nyc: bool, istanbul: bool, jest_coverage: bool}`
 
 ---
 
@@ -57,6 +60,8 @@ coverage_branch_threshold: 70
 ---
 
 ## 4. tier5-report.json Schema（OC-4 契约）
+
+> **实现载体**（治 I3）：state.md frontmatter 的 `tier5_status` 字段是 stop-hook 校验的实现载体（写入者 stop-hook §8.5.3 / 编排器，读者 stop-hook §5.6）。下方 `tier5-report.json` schema 为规划中的结构化产物——`survived_mutants` / `uncovered_critical` 实际由 lib.sh 函数 `tier5_mutation_check` / `tier5_coverage_check` 的 stdout 直接产出，消费端读函数输出，不经 report.json 文件；frontmatter.tier5_status 是其 state 摘要投影。
 
 ```json
 {
@@ -130,6 +135,8 @@ coverage_branch_threshold: 70
 ```
 
 **与 N/A 区分**：`skipped` = 主动不跑（fast/smoke 模式选择），`na` = 项目无工具（被动无法跑）。
+
+**报告可见化现状**（claude -p 真实验证）：smoke 路径 §8.5.3 自动 set tier5_status=skipped + 注入 systemMessage 提示渲染。但 AI 实际渲染是 high freedom（claude -p 验证：fast mode 报告 AI 不渲染 Tier 5 栏）。**机制层**（tier5_status 确定性 set）达成；**展示层**（AI 渲染栏）待 future low-freedom 硬约束（SKILL.md/qa-report-template Tier 5 栏必填）。
 
 ---
 

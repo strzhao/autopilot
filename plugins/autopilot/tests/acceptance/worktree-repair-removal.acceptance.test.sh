@@ -45,8 +45,9 @@ if [[ -z "${REPO_ROOT}" ]]; then
     REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 fi
 
-# 期望版本号（设计文档明示：v3.48.1 -> v3.49.0）
-EXPECTED_VERSION="3.49.0"
+# 期望版本号（动态读 plugin.json，根治硬编码盲区——参照 R12 版本同步守护）
+EXPECTED_VERSION=$(grep -m1 '"version"' "$REPO_ROOT/plugins/autopilot/.claude-plugin/plugin.json" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+[ -z "$EXPECTED_VERSION" ] && EXPECTED_VERSION="3.49.0"   # fallback
 
 FAIL=0
 
