@@ -171,4 +171,12 @@
 **附：审谓词与三元组质量**（有 `## 验收场景` 时）：
 - **Tautological 谓词当场打回**：`assert:` 是 `element visible` / `不报错` / `存在` 这类对 no-op 实现也成立的弱断言 → BLOCKER（合格示例：`height >= 44`、`exit == 0`，详见 `references/test-mutation-survival.md`）。
 - **artifact 真实性**：逐条核验 Tier 1.5 三元组里每个 PASS 引的 artifact 真实存在且支持该判定；artifact 缺失/不匹配 → 该谓词改判 FAIL，写入 Critical。
-- 这两项也计入 Critical。
+- **谓词充分性反查**（基于共同准备已读的代码改动 `git diff` + 变更文件全文）：反向枚举本次改动触及的风险面 —— 新增分支与错误处理路径 / 对外部输入（用户输入、legacy 数据、第三方返回）的假设 / 向后兼容·降级契约（字段 optional vs required、旧格式）/ 同一行为的多个执行入口 / 并发·异步·状态机路径。**语义判断哪些与本次改动真正相关**，逐个反查 `## 验收场景` 是否有谓词覆盖。未覆盖的风险面列入下表（Important，置信度 80+，**非 BLOCKER** —— 漏覆盖 ≠ 实现错）。
+- Tautological 与 artifact 两项计入 Critical；**充分性反查计入 Important**（缺口触发编排器按 SKILL「## 验收场景 为 N/A 时现场推导谓词」机制补谓词并重求值 SKILL.md:354 —— 补的谓词 FAIL 才真卡闸门，软触发硬验证）。
+
+**谓词充分性缺口**（Important，基于上面反查）：
+
+| 风险面（代码依据 file:line） | 对应谓词 | 状态 |
+|---|---|---|
+| legacy 输入缺字段向后兼容（Plugin.swift:42 decode 路径） | 无 | ❌ 未覆盖 |
+| command AI 流第二入口（LauncherManager.submit:742） | 无 | ❌ 未覆盖 |

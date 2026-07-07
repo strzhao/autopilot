@@ -31,6 +31,8 @@
 6. **范围控制**：子任务数是否明显超出当前目标所需（范围蔓延信号）？有无与目标无关的"顺手改进"？
 7. **契约完整性**（仅当 frontmatter `contract_required: true` 且设计文档应有 `## 契约规约` 时检查）：契约规约存在 ✓，边界值用 DbC 谓词 `≤`/`≥` ✓，字段名代码标记 ✓，错误码枚举名 ✓。详细规则参 references/contract-protocol.md。任一缺失 → BLOCKER。
 8. **Mutation-Survival 抗性**（仅当变更涉及用户交互且有 E2E/集成/交互测试场景时检查）：验证方案的真实测试场景是否对每个"用户交互"步骤声明了 Observable State Transitions？所有交互场景仅断言终态/stable 元素 visible → BLOCKER。详情参 `references/test-mutation-survival.md`。
+9. **knowledge 盲区对照**（仅当项目根目录 `.autopilot/knowledge/` 存在时检查；不存在则跳过）：Read 项目 `.autopilot/knowledge/`（有 index.md 则按 tags 按需加载，无则读 patterns.md + decisions.md），提取与本次目标相关的历史盲区元模式（tags 含 blind-spot / backward-compat / dual-path / masked / false-green）。对照 `## 验收场景` 谓词：是否存在与历史盲区同构的覆盖缺口（只覆盖主路径漏非主路径 / helper 默认值掩盖缺字段向后兼容 / 断言对 no-op 也成立）？有 → 列入「场景覆盖分析」"未覆盖历史盲区"，致命者升 BLOCKER。
+10. **契约元素覆盖**（仅当 `contract_required: true` 且设计文档有 `## 契约规约` 时检查）：Read `## 契约规约` 的每个字段/参数/错误码枚举值（闭集客观可数），对照 `## 验收场景` 谓词，每个契约元素是否有 ≥1 谓词覆盖（含正向 + ≥1 异常/边界变体，如字段缺失/非法值/向后兼容旧格式）。未覆盖的契约元素（尤其 required 字段缺向后兼容变体）→ 列入「场景覆盖分析」"未覆盖契约元素"，升 BLOCKER。分母为契约闭集（客观），是 requirements traceability coverage 的非伪精度子集（[2026-05-30]）。
 
 ## 严重度（语义判断，无需打分）
 - BLOCKER：你确信会导致实施阶段失败（需求遗漏 / 引用的文件·函数·依赖不存在 / 契约缺失 / 交互场景仅断言稳定元素）→ 必须报告，判 FAIL
