@@ -95,4 +95,18 @@
 **Lesson**: ① **claude -p 不引导验证**是捕捉"静态测不到的运行时问题"的客观方法——autopilot 改动要确认真实运行生效（非只源码对），跑 claude -p 普通需求看机制自发工作；不引导（不提被验证项）保证客观（AI 不刻意）。② **缓存多版本路径坑**：Claude Code 插件缓存有多个版本目录（autopilot 有 3.43.1/3.47.0/3.48.1/3.49.0），claude 加载**最新版号**路径。改源码后重装须 `cp 源码 → 所有缓存路径`（尤其最新版号），只覆盖一个会"改了不生效"（首次验证只覆盖 3.47.0 而 claude 用 3.49.0，tier5_status 空，误判改动失效）。③ **plugin.json 版本号 vs 缓存路径名**：拷贝源码到缓存时路径名（3.47.0）与 plugin.json 版本（v3.50.0）不匹配可能致加载异常——重装保持各路径 plugin.json 原版本号，只覆盖 scripts/skills/references 内容。
 **Evidence**: v3.50.0 claude -p 验证：第 1 次（只覆盖 3.47.0）tier5_status 空（claude 用 3.49.0 旧版）；第 2 次（全 4 路径覆盖）tier5_status=skipped 自发 set ✅。对比静态测试（红队 40/0 + run-all 30/30 全绿）——静态全绿但运行时用错缓存，只有 claude -p 暴露。
 
+### [2026-07-08] smoke 模式编排器本能 deferred real-process 谓词，stop-hook Tier 1.5 铁律 E≥N 强制真跑（dogfood 自我纠偏）
+<!-- tags: autopilot, smoke, tier-1.5, deferred, real-process, stop-hook, dogfood, self-correction, ai-self-aware-unreliable, e-ge-n, predicate-iron-law, v3.51.0 -->
+**Scenario**: dogfood v3.51.0 自身改动，stop-hook 判 qa_scope=smoke（diff 小+纯 markdown）。编排器在 smoke QA 把 SC4 real-process dry-run 标 deferred（想省 token，用内联语义评估替代真跑 agent）。stop-hook 迭代 3 反馈强调「Tier 1.5 铁律不变：必须执行每一个真实测试场景，场景计数 E≥N」—— 推动真跑 dry-run，结果实证落点 A/A'/B 非橡皮图章（维度 9/10 双 BLOCKER + 第三条发现 AI 流缺口）。
+**Lesson**: smoke 模式省的是 qa-reviewer Agent（Wave 2 独立审查），**不省 Tier 1.5 real-process 谓词求值**。编排器在 smoke 下本能把 real-process 降级 deferred（"内联评估够了"），但 [2026-05-17] 明确「deferred 是合规未验证非 PASS」。stop-hook 的 E≥N 铁律是 [2026-05-07]「AI 自觉不可靠须 hook 兜底」的活体实例：编排器想偷懒 → hook 铁律兜底 → 真实验证 → 实证方案有效性。**smoke 降级仅适用 qa-reviewer（独立性可弃于小改），不适用 Tier 1.5（real-process 是方案核心验证，deferred 等于跳过裁决）。**
+**How to apply**: smoke QA 时，编排器若想把 real-process 谓词标 deferred，先自问"这是 qa-reviewer 独立性降级（smoke 可接受）还是 Tier 1.5 谓词求值跳过（违反 E≥N）"。后者必须真跑（启动 sub-agent dry-run，构造 fixture 喂改后 prompt）。stop-hook E≥N 反馈是强制信号，不可忽略。
+**Evidence**: v3.51.0 dogfood QA 轮次 2——编排器首标 SC4 deferred（内联语义评估），stop-hook 迭代 3 E≥N 反馈后真跑 dry-run，SC4.P5/P6/P10 real-process 实证 PASS（plan-reviewer 维度 9/10 + qa-reviewer 第三条发现盲区）。
+
+### [2026-07-08] plan-reviewer 在 claude -p（headless）下难触发——fast 跳过 / standard 经 brainstorm 卡（autopilot 可改进点）
+<!-- tags: autopilot, claude-p, headless, plan-reviewer, fast-mode, standard, brainstorm, verification, dogfood, limitation, future-improvement, v3.51.0 -->
+**Scenario**: v3.51.0 用 claude -p dogfood 验证改后 plan-reviewer prompt（维度 9/10）。两次尝试：①fast mode——编排器判 fast（小改自动）跳过 plan-reviewer；②锁 fast_mode=standard 强制跑——编排器启动+扩展设计文档（步骤 2）但卡在 brainstorm 流程（-p headless 交互限制 + 360s timeout），无 plan-reviewer 报告。**autopilot design 的 fast/standard 二分使 -p 下 plan-reviewer 几乎不可触发。**
+**Lesson**: plan-reviewer 仅在 standard 模式 + brainstorm 完成后跑。claude -p（headless）下 brainstorm 的 AskUserQuestion 交互不畅，standard 难跑完；fast 跳过 plan-reviewer。**[2026-07-04] claude -p dogfood 验证法对 fast 路径机制有效（验证缓存加载/知识消费），但对 plan-reviewer / standard-only 环节有盲区。** 改后 prompt 有效性验证更可靠的是直接启动 sub-agent dry-run（SC4 模式，绕过 autopilot 完整流程，构造 mini 输入指定读改后源码路径）。
+**How to apply**: claude -p 验证 plan-reviewer 类 standard-only 环节时，不要依赖 autopilot 完整流程触发，直接构造 mini 输入启动 plan-reviewer sub-agent（指定读改后源码路径绕过缓存多版本坑 [2026-07-04]）。autopilot 本身可改进：plan-reviewer 触发条件（fast 也跑？）或 brainstorm 的 -p fallback。
+**Evidence**: v3.51.0 claude -p dogfood（缓存同步 5 版本 ✓ + fast 跑通加载改后缓存 + knowledge 消费正常，但 plan-reviewer fast 跳/standard 卡 brainstorm）；SC4 dry-run 直接启动 sub-agent 实证有效。
+
 > 历史归档（< 2026-05-17）按主题迁移至 domains/，详见 index.md

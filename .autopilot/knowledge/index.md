@@ -10,7 +10,8 @@
 - [knowledge-token-arch](domains/knowledge-token-arch.md) — progressive disclosure / token / sub-agent / 架构 / doctor（11 entry）
 - [bash-shell-pitfalls](domains/bash-shell-pitfalls.md) — bash 陷阱 / exit-code / trap-err / set-u / macOS（4 entry）
 
-## Decisions（34）
+## Decisions（35）
+- [2026-07-08] QA 谓词覆盖率机制——复用独立 agent 加维度非新增环节；客观闭集子集非伪精度 | tags: autopilot, qa, predicate-coverage, plan-reviewer, qa-reviewer, knowledge-loop, closed-set, requirements-traceability, oracle-adequacy, mutation-testing, ai-first, dogfood, v3.51.0 | → decisions.md
 - [2026-07-04] 自由度匹配边界——systemMessage 注入治机制层不治展示层（Tier 5 报告渲染栏需 low freedom 硬约束） | tags: autopilot, tier-5, degrees-of-freedom, systemMessage, prompt-layer, rendering-layer, low-freedom, claude-p-verification | → decisions.md
 - [2026-06-24] 红蓝编译耦合根治——验收测试暂存区 + stop-hook 确定性合流；机械活下沉 hook / 智力活留 agent（自由度匹配） | tags: autopilot, red-blue-team, compile-coupling, acceptance-staging, stop-hook, determinism, skill-fragility, ai-first, degrees-of-freedom, mechanical-vs-intellectual | → decisions.md
 - [2026-06-22] 红蓝对抗蓝队"多做"越界：消解职责重叠 + AI 决策心智 + 终止边界复用[!] | tags: autopilot, red-blue-team, blue-team, qa-tier-1.5, scope-creep, over-verification, role-boundary, ai-semantic-judgment, termination-boundary, topology-as-semantic, ai-first, dogfood | → decisions.md
@@ -48,7 +49,9 @@
 - [2026-03-26] doctor Dim 1 测试金字塔分层评估优于文件计数 | tags: autopilot, doctor, testing, test-pyramid, scoring | → domains/knowledge-token-arch.md
 - [2026-03-21] 知识工程采用三层 Progressive Disclosure 而非单层扩展 | tags: knowledge, architecture, progressive-disclosure | → domains/knowledge-token-arch.md
 
-## Patterns（50）
+## Patterns（52）
+- [2026-07-08] smoke 模式编排器本能 deferred real-process 谓词，stop-hook Tier 1.5 铁律 E≥N 强制真跑（dogfood 自我纠偏） | tags: autopilot, smoke, tier-1.5, deferred, real-process, stop-hook, dogfood, self-correction, e-ge-n, predicate-iron-law, v3.51.0 | → patterns.md
+- [2026-07-08] plan-reviewer 在 claude -p（headless）下难触发——fast 跳过/standard 经 brainstorm 卡 | tags: autopilot, claude-p, headless, plan-reviewer, fast-mode, standard, brainstorm, dogfood, limitation, future-improvement, v3.51.0 | → patterns.md
 - [2026-07-04] claude -p 跑普通需求客观验证 autopilot 改动 + 缓存多版本路径重装坑 | tags: autopilot, verification, claude-p, dogfood, cache, multi-version-path, plugin-reinstall, no-guidance | → patterns.md
 - [2026-06-02] `$(cmd || true); rc=$?` 把退出码永久吞成 0；要保留 rc 又不触发 trap ERR 用 `cmd || rc=$?` | tags: bash, exit-code, command-substitution, or-true, rc-masking, trap-err, double-signal, stop-hook, lib-sh, defensive-edit, qa-reviewer-catch | → patterns.md
 - [2026-06-02] frontmatter set_field 必须 upsert（键缺失追加），且测试 mock 不能恒含被测字段 | tags: autopilot, lib.sh, set_field, upsert, no-op, frontmatter, qa_scope, smoke, test-mock-masking, latent-bug, production-only-bug, fixture-realism | → patterns.md
