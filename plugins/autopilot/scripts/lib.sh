@@ -409,7 +409,7 @@ tier5_coverage_check() {
             while IFS= read -r f; do
                 [ -z "$f" ] && continue
                 # 路径归一化：去前导 ./ （coverage key 通常是绝对/相对路径）
-                f=$(echo "$f" | sed 's#^\./##')
+                f="${f#./}"
                 # 在 coverage json 里找匹配该文件名的 key（容错路径前缀差异）
                 local key pct
                 key=$(jq -r --arg f "$f" 'to_entries | map(select(.key | endswith($f))) | .[0].key // empty' "$cov_json" 2>/dev/null || true)
@@ -589,6 +589,160 @@ snapshot_oracle_regened() {
     return 0
 }
 
+# validate_predicate_driver <state_file>
+#
+# 校验 ## 验收场景 谓词的 driver 字段与观测语义一致性（反向判定）。
+# 治编排器用 node-script 驱动冒充网络/外部依赖观测：node-script 不得跑
+# curl/fetch/playwright/overmind/pylon/mysql，须改用对应真实驱动类型。
+#
+# 谓词格式（fullwidth ｜ 分隔，见 scenario-generator-prompt.md）：
+#   - **<id> [channel]** <描述> ｜ observe: <观测> ｜ assert: <DbC> ｜ driver: <type>:<target> ｜ artifact: <path>
+#
+# 退出码语义（与 acceptance_tests_tampered / snapshot_oracle_regened 同构的双信号）：
+#   0 = 合规（有谓词且有 driver 字段，无违规）
+#   2 = 违规（driver type=node-script 但描述或观测含网络/外部依赖关键字）
+#   1 = no-op（## 验收场景 无谓词，或谓词全无 driver 字段）
+# 违规时 stdout 含 "PRED-DRIVER-VIOLATION: <id> <reason>"，参照 TAMPER/ORACLE-REGHEN 文风。
+validate_predicate_driver() {
+    local state_file="${1:-}"
+    [ -f "$state_file" ] || return 1
+    local rc=0 out
+    out=$(awk '
+        BEGIN { in_scn = 0; bad = 0; saw_pred = 0; saw_driver = 0 }
+        /^## 验收场景[[:space:]]*$/ { in_scn = 1; next }
+        in_scn && /^## / { in_scn = 0 }
+        in_scn && /^[[:space:]]*-[[:space:]]/ {
+            saw_pred = 1
+            line = $0
+            # 提取 id（首个 ** ** 内文本，去 [channel]）
+            id = ""
+            if (match(line, /\*\*[^*]+\*\*/)) {
+                id = substr(line, RSTART+2, RLENGTH-4)
+                sub(/[[:space:]]*\[.*$/, "", id)
+                gsub(/[[:space:]]/, "", id)
+            }
+            # 提取 driver type（driver: <type>:<target>，type 为首个 : 之前）
+            driver_type = ""
+            if (match(line, /driver:[[:space:]]*/)) {
+                saw_driver = 1
+                rest = substr(line, RSTART + RLENGTH)
+                if (match(rest, /^[^:]+/)) {
+                    driver_type = substr(rest, RSTART, RLENGTH)
+                    gsub(/[[:space:]]/, "", driver_type)
+                }
+            }
+            # 反向判定：node-script 驱动 + 网络/外部依赖关键字 → 违规
+            if (driver_type == "node-script") {
+                # description = id 粗体闭合后到首个 ｜
+                desc = ""
+                if (match(line, /\*\*/)) {
+                    after = substr(line, RSTART + RLENGTH)
+                    if (match(after, /\*\*/)) {
+                        after2 = substr(after, RSTART + RLENGTH)
+                        if (match(after2, /｜/)) {
+                            desc = substr(after2, 1, RSTART - 1)
+                        } else {
+                            desc = after2
+                        }
+                    }
+                }
+                # observe = observe: 后到首个 ｜
+                observe = ""
+                if (match(line, /observe:[[:space:]]*/)) {
+                    after = substr(line, RSTART + RLENGTH)
+                    if (match(after, /｜/)) {
+                        observe = substr(after, 1, RSTART - 1)
+                    } else {
+                        observe = after
+                    }
+                }
+                blob = tolower(desc " " observe)
+                if (blob ~ /(curl|fetch|playwright|overmind|pylon|mysql)/) {
+                    print "PRED-DRIVER-VIOLATION: " id " driver=node-script 但描述/观测含网络或外部依赖关键字（须改用 curl/playwright 等真实驱动类型）"
+                    bad = 1
+                }
+            }
+        }
+        END {
+            if (bad) exit 2
+            else if (!saw_driver) exit 1
+            else exit 0
+        }
+    ' "$state_file") || rc=$?
+    [ -n "$out" ] && printf '%s\n' "$out"
+    case "$rc" in
+        2) return 2 ;;
+        1) return 1 ;;
+        *) return 0 ;;
+    esac
+}
+
+# validate_predicate_artifacts <state_file>
+#
+# 校验 ## 验收场景 谓词声明的 artifact 路径真实存在且非空（方案 A 确定性路径）。
+# 治编排器用 mock 单测输出冒充 Tier 1.5 真实产物：artifact 字段填
+# /tmp/autopilot-artifacts/<pred-id>.out，编排器 QA 时写入，stop-hook §5.7 校验存在性。
+# 不依赖 ## QA 报告（v3.37+ 已不持久化）。
+#
+# 退出码语义（与 acceptance_tests_tampered 同构的双信号）：
+#   0 = 合规（全部 artifact 存在且非空，或谓词全无 artifact 字段）
+#   2 = 缺失（任一 artifact 文件不存在或大小为 0）
+#   1 = no-op（## 验收场景 无谓词）
+# 缺失时 stdout 含 "PRED-ARTIFACT-MISSING: <id> <path>"，参照 TAMPER 文风。
+validate_predicate_artifacts() {
+    local state_file="${1:-}"
+    [ -f "$state_file" ] || return 1
+    local saw_pred=0 bad=0
+    local tag id artifact
+    while IFS=$'\t' read -r tag id artifact; do
+        case "$tag" in
+            NOPRED) continue ;;
+            ART)
+                saw_pred=1
+                [ -n "$artifact" ] || continue
+                if [[ -f "$artifact" ]] && [[ "$(wc -c < "$artifact" 2>/dev/null)" -gt 0 ]]; then
+                    :
+                else
+                    echo "PRED-ARTIFACT-MISSING: ${id} ${artifact}"
+                    bad=1
+                fi
+                ;;
+        esac
+    done < <(awk '
+        BEGIN { in_scn = 0; saw_pred = 0 }
+        /^## 验收场景[[:space:]]*$/ { in_scn = 1; next }
+        in_scn && /^## / { in_scn = 0 }
+        in_scn && /^[[:space:]]*-[[:space:]]/ {
+            saw_pred = 1
+            line = $0
+            id = ""
+            if (match(line, /\*\*[^*]+\*\*/)) {
+                id = substr(line, RSTART+2, RLENGTH-4)
+                sub(/[[:space:]]*\[.*$/, "", id)
+                gsub(/[[:space:]]/, "", id)
+            }
+            artifact = ""
+            if (match(line, /artifact:[[:space:]]*/)) {
+                rest = substr(line, RSTART + RLENGTH)
+                if (match(rest, /｜/)) {
+                    artifact = substr(rest, 1, RSTART - 1)
+                } else {
+                    artifact = rest
+                }
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", artifact)
+            }
+            print "ART\t" id "\t" artifact
+        }
+        END {
+            if (!saw_pred) print "NOPRED\t\t"
+        }
+    ' "$state_file") || true
+
+    if [ "$saw_pred" -eq 0 ]; then return 1; fi
+    [ "$bad" -eq 1 ] && return 2
+    return 0
+}
+
 # ── Task Slug 生成 ──────────────────────────────────────────────
 
 # 生成需求管理文件夹的 slug。格式: YYYYMMDD-<目标前30字符清洗>
@@ -599,7 +753,7 @@ generate_task_slug() {
     date_prefix=$(date +%Y%m%d)
     # 取前 30 字符，替换空格和特殊字符为连字符，去除尾部连字符
     local slug
-    slug=$(printf '%.30s' "$goal" | tr ' /:*?"<>|\\' '-' | sed 's/-*$//' | sed 's/^-*//')
+    slug=$(printf '%.30s' "$goal" | tr " /:*?\"<>|\\" '-' | sed 's/-*$//' | sed 's/^-*//')
     # 空 slug 时使用时间戳
     if [[ -z "$slug" ]]; then
         slug="task-$(date +%H%M%S)"

@@ -622,6 +622,40 @@ if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]]; then
     esac
 fi
 
+# ── 5.7 谓词驱动/产物真实性守卫（gate=review-accept 时，照 §5.6 block 模式） ──
+# 治编排器用 mock 单测输出冒充 Tier 1.5 真实产物 artifact：stop-hook 机械校验
+#   (a) driver type 与观测语义一致（node-script 不得跑网络/外部依赖——应改 curl/playwright）
+#   (b) artifact 字段声明的路径真实存在且非空（确定性路径 /tmp/autopilot-artifacts/<pred-id>.out）
+# 自门控：无谓词或全无 driver/artifact 字段 → validate 函数返回 1（no-op）→ 不触发。
+# 任一 rc2 → block 回 qa 补真实 artifact（非 auto-fix，不耗 retry_count），与 §8.5.1/§8.5.2 同构。
+# 设计 SSOT：谓词格式见 references/scenario-generator-prompt.md；artifact 路径约定见
+# references/state-file-guide.md。
+if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]]; then
+    _pred_driver_rc=0
+    _pred_driver_out=$(validate_predicate_driver "${STATE_FILE}" 2>/dev/null) || _pred_driver_rc=$?
+    # 双信号判定：rc==2 或 stdout 含 PRED-DRIVER-VIOLATION（防 rc 歧义，参照 §8.5.1）
+    if [[ "${_pred_driver_rc}" -eq 2 ]] || echo "${_pred_driver_out}" | grep -q "PRED-DRIVER-VIOLATION"; then
+        _pred_reason="QA 谓词驱动类型与观测语义不一致（${_pred_driver_out}）。node-script 驱动不得执行网络/外部依赖（curl/fetch/playwright/overmind/pylon/mysql），须改用对应真实驱动类型并在 ## 验收场景 预注册 driver 字段后重设 gate=review-accept。此 block 不耗 max_retries（非 auto-fix 路径）。"
+        set_field "gate" '""'
+        GATE=""
+        jq -n --arg reason "${_pred_reason}" \
+            --arg msg "autopilot stop-hook §5.7: 谓词驱动类型违规，回 qa 改用真实驱动类型后重设 gate" \
+            '{"decision":"block","reason":$reason,"systemMessage":$msg}'
+        exit 0
+    fi
+    _pred_art_rc=0
+    _pred_art_out=$(validate_predicate_artifacts "${STATE_FILE}" 2>/dev/null) || _pred_art_rc=$?
+    if [[ "${_pred_art_rc}" -eq 2 ]] || echo "${_pred_art_out}" | grep -q "PRED-ARTIFACT-MISSING"; then
+        _pred_reason="QA 谓词产物 artifact 缺失或为空（${_pred_art_out}）。每条 PASS 谓词须将真实驱动输出写入 ## 验收场景 预注册的 artifact 路径（/tmp/autopilot-artifacts/<pred-id>.out），stop-hook §5.7 校验存在性，不得用 mock 单测输出冒充。此 block 不耗 max_retries（非 auto-fix 路径）。"
+        set_field "gate" '""'
+        GATE=""
+        jq -n --arg reason "${_pred_reason}" \
+            --arg msg "autopilot stop-hook §5.7: 谓词 artifact 缺失，回 qa 补真实产物后重设 gate" \
+            '{"decision":"block","reason":$reason,"systemMessage":$msg}'
+        exit 0
+    fi
+fi
+
 # ── 6. 审批门检查 ──
 
 if [[ -n "$GATE" ]]; then
@@ -799,7 +833,7 @@ if [[ "$NEW_PHASE" == "qa" ]]; then
         printf '%s\n' "$paths" | grep -vE '^[[:space:]]*$' > "$paths_file" 2>/dev/null || true
         # 两文件流：状态文件 + paths 文件（FILENAME 区分）。遇到状态文件的 ## 红队验收测试
         # 标题后，立即把 paths_file 全部内容吐出，然后跳过旧区域直到下一个 top section。
-        awk -v paths_file="$paths_file" '
+        if awk -v paths_file="$paths_file" '
             FILENAME == paths_file { next }
             /^## 红队验收测试[[:space:]]*$/ {
                 print
@@ -811,7 +845,11 @@ if [[ "$NEW_PHASE" == "qa" ]]; then
             skip && /^## (QA 报告|变更日志|用户反馈|实现计划|设计文档|验收场景)[[:space:]]*$/ { skip = 0 }
             skip { next }
             { print }
-        ' "$sf" "$paths_file" > "$tmp" 2>/dev/null && mv "$tmp" "$sf" || rm -f "$tmp"
+        ' "$sf" "$paths_file" > "$tmp" 2>/dev/null; then
+            mv "$tmp" "$sf"
+        else
+            rm -f "$tmp"
+        fi
         rm -f "$paths_file"
     }
 
