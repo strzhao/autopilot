@@ -11,7 +11,8 @@
 - [bash-shell-pitfalls](domains/bash-shell-pitfalls.md) — bash 陷阱 / exit-code / trap-err / set-u / macOS（4 entry）
 - [2026-07-08] skill md 减行硬约束下新守卫全部下沉 bash，skill md 删散文净减行（v3.52.0 §5.7 谓词守卫） | tags: autopilot, skill, shrink-only, enforce-bash, stop-hook, predicate-guard, mock-cheating, trust-chain, v3.52.0 | → domains/skill-authoring.md
 
-## Decisions（35）
+## Decisions（36）
+- [2026-07-09] 红队铁律 escape hatch——复用既有 lock 函数解确定性守卫冲突，dogfood 实证 retry_count=0 治耗尽 | tags: autopilot, red-team, iron-law, escape-hatch, deterministic-guard, sha-lock, lock-acceptance-tests, reuse-over-new, progressive-disclosure, ai-first, dogfood, claude-p, v3.53.0, skill-shrinkage | → decisions.md
 - [2026-07-08] QA 谓词覆盖率机制——复用独立 agent 加维度非新增环节；客观闭集子集非伪精度 | tags: autopilot, qa, predicate-coverage, plan-reviewer, qa-reviewer, knowledge-loop, closed-set, requirements-traceability, oracle-adequacy, mutation-testing, ai-first, dogfood, v3.51.0 | → decisions.md
 - [2026-07-04] 自由度匹配边界——systemMessage 注入治机制层不治展示层（Tier 5 报告渲染栏需 low freedom 硬约束） | tags: autopilot, tier-5, degrees-of-freedom, systemMessage, prompt-layer, rendering-layer, low-freedom, claude-p-verification | → decisions.md
 - [2026-06-24] 红蓝编译耦合根治——验收测试暂存区 + stop-hook 确定性合流；机械活下沉 hook / 智力活留 agent（自由度匹配） | tags: autopilot, red-blue-team, compile-coupling, acceptance-staging, stop-hook, determinism, skill-fragility, ai-first, degrees-of-freedom, mechanical-vs-intellectual | → decisions.md
