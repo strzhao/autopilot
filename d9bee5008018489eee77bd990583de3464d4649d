@@ -1,0 +1,137 @@
+plugins/autopilot/.claude-plugin/plugin.json
+  cd15883710e47ffb 3
+plugins/autopilot/skills/autopilot/references/state-file-guide.md
+  cd15883710e47ffb 77-82
+plugins/autopilot/tests/acceptance/predicate-driver-guard.acceptance.test.sh
+  cd15883710e47ffb 1-499
+plugins/autopilot/scripts/lib.sh
+  cd15883710e47ffb 412,592-745,756
+plugins/autopilot/skills/autopilot/references/scenario-generator-prompt.md
+  cd15883710e47ffb 44-45,49,62-64
+plugins/autopilot/scripts/stop-hook.sh
+  cd15883710e47ffb 625-658,836,848-852
+.claude-plugin/marketplace.json
+  cd15883710e47ffb 32
+CLAUDE.md
+  cd15883710e47ffb 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "d9bee5008018489eee77bd990583de3464d4649d",
+  "prompts": {
+    "1ca5e00f89bf8f91": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d54bf965-a62f-444c-bd77-0ce06273bafc",
+        "model": "glm-5.2"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 326,
+      "total_deletions": 11,
+      "accepted_lines": 0,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        ".predguard/scn5.md": {
+          "additions": 14,
+          "deletions": 1
+        },
+        ".predguard/scn3.md": {
+          "additions": 14,
+          "deletions": 1
+        },
+        ".predguard/artifacts/s3-P3.out": {
+          "additions": 3
+        },
+        ".predguard/scn4.md": {
+          "additions": 13
+        },
+        ".predguard/drive.sh": {
+          "additions": 51,
+          "deletions": 7
+        },
+        ".predguard/scn2.md": {
+          "additions": 14,
+          "deletions": 1
+        },
+        ".predguard/artifacts.awk": {
+          "additions": 39
+        },
+        ".predguard/scn1.md": {
+          "additions": 14,
+          "deletions": 1
+        },
+        ".predguard/artifacts_perfile.awk": {
+          "additions": 43
+        },
+        ".predguard/stdin_template.json": {
+          "additions": 1
+        },
+        ".predguard/driver_perfile.awk": {
+          "additions": 63
+        },
+        ".predguard/driver.awk": {
+          "additions": 57
+        }
+      }
+    },
+    "cd15883710e47ffb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "97753dcc-577c-49c0-8f78-1be513c82274",
+        "model": "glm-5.2"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 718,
+      "total_deletions": 21,
+      "accepted_lines": 710,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "plugins/autopilot/.claude-plugin/plugin.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/skills/autopilot/references/scenario-generator-prompt.md": {
+          "additions": 6,
+          "deletions": 3,
+          "accepted_lines": 6
+        },
+        "plugins/autopilot/tests/acceptance/predicate-driver-guard.acceptance.test.sh": {
+          "additions": 506,
+          "deletions": 7,
+          "accepted_lines": 499
+        },
+        "plugins/autopilot/skills/autopilot/SKILL.md": {
+          "deletions": 3
+        },
+        "plugins/autopilot/scripts/stop-hook.sh": {
+          "additions": 40,
+          "deletions": 2,
+          "accepted_lines": 40
+        },
+        ".claude-plugin/marketplace.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/scripts/lib.sh": {
+          "additions": 156,
+          "deletions": 2,
+          "accepted_lines": 156
+        },
+        "plugins/autopilot/skills/autopilot/references/state-file-guide.md": {
+          "additions": 6,
+          "accepted_lines": 6
+        },
+        "CLAUDE.md": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 1
+        }
+      }
+    }
+  }
+}
