@@ -377,8 +377,12 @@ describe('Structural integrity: no regressions in SKILL.md', () => {
   it('should still contain red team rules', async () => {
     content ??= await readContent(SKILL_MD);
     assert.ok(
-      content.includes('绝对不允许修改红队验收测试'),
-      'Must retain red team test immutability rule'
+      content.includes('默认不允许修改红队验收测试'),
+      'Must retain red team test rule (default immutable, with user-confirm escape hatch)'
+    );
+    assert.ok(
+      content.includes('AskUserQuestion'),
+      'Must retain user-confirm escape hatch for red team test exceptions'
     );
   });
 

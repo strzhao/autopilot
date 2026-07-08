@@ -103,7 +103,8 @@ N/A — CSS only
 
 ### 红队遇到模糊契约
 - 在测试文件**顶部**添加注释 `// CONTRACT_AMBIGUOUS: <具体歧义点>`
-- 字段命名用与契约**最贴近的真实命名**（不要用 `EXPECTED_FIELD_NAME_FROM_CONTRACT` 之类**无法 lint 的占位符变量**）
+- 注入点用**设计文档 `## 契约规约` 已声明的接口名**（不得推测设计文档未声明的私有成员；不要用 `EXPECTED_FIELD_NAME_FROM_CONTRACT` 之类**无法 lint 的占位符变量**）
+- 无处可注（设计文档确未声明该接口）→ 标记并在报告末尾列出，**编排器 contract-checker 识别后走既有蓝队 contract-change-request 通路（见下节）回 design 补声明**，红队不自行推测
 - 在产出报告「验收标准摘要」末尾列出所有 CONTRACT_AMBIGUOUS 标记
 
 ### 蓝队遇到模糊契约

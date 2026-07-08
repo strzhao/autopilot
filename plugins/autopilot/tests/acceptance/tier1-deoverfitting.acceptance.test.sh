@@ -225,7 +225,7 @@ fi
 # ── P8：护栏 — 信息隔离铁律、终止边界未被误伤 ──────────────────────────────────
 # 谓词：
 #   - red-team-prompt.md 含「绝对不能」且含「实现代码」（或「只看设计」）
-#   - auto-fix-phase.md 仍含「绝对不允许修改红队验收测试」
+#   - auto-fix-phase.md 仍含「默认不允许修改红队验收测试」
 #   - SKILL.md 仍含「最多 2 轮」（终止边界本次故意不动）
 echo ""
 echo "--- P8: 护栏 — 信息隔离铁律 + 终止边界未被误伤 ---"
@@ -247,8 +247,8 @@ else
 fi
 
 if [[ -f "$AUTO_FIX_PHASE" ]]; then
-    if ! grep -q "绝对不允许修改红队验收测试" "$AUTO_FIX_PHASE" 2>/dev/null; then
-        fail "P8: auto-fix-phase.md 缺少「绝对不允许修改红队验收测试」，红队保护护栏被误删"
+    if ! grep -q "默认不允许修改红队验收测试" "$AUTO_FIX_PHASE" 2>/dev/null; then
+        fail "P8: auto-fix-phase.md 缺少「默认不允许修改红队验收测试」，红队保护护栏被误删（默认禁+例外语义）"
         P8_FAIL=1
     fi
 else

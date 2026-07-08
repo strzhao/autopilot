@@ -868,7 +868,7 @@ if [[ "$NEW_PHASE" == "qa" ]]; then
         _tamper_out=$(acceptance_tests_tampered "${_lock_file}" 2>/dev/null) || _tamper_rc=$?
         # 双信号判断：rc==2 或 stdout contains "TAMPER"（防 rc 歧义）
         if [[ "${_tamper_rc}" -eq 2 ]] || echo "${_tamper_out}" | grep -q "TAMPER"; then
-            _tamper_reason="红队验收测试被修改（${_tamper_out}）。autopilot 铁律：问题在实现不在测试，绝对不允许修改红队测试文件。必须 git checkout -- <测试文件> 还原后重修实现，再推进到 QA 阶段。"
+            _tamper_reason="红队验收测试被修改（${_tamper_out}）。autopilot 铁律：默认不允许修改红队测试文件——问题在实现不在测试。若判定属红队测试本身问题（断言与契约矛盾/引用未声明私有seam/断言机制错），须先 AskUserQuestion 询问用户确认，确认后改测试并 source scripts/lib.sh 调 lock_acceptance_tests 重锁放行（详见 references/auto-fix-phase.md §6）；未经此流程不得直接改，必须 git checkout -- <测试文件> 还原后重修实现，再推进到 QA 阶段。"
             jq -n --arg reason "${_tamper_reason}" \
                 --arg msg "autopilot stop-hook: 验收测试篡改守卫触发（implement→qa），还原测试后重修实现" \
                 '{"decision":"block","reason":$reason,"systemMessage":$msg}'
