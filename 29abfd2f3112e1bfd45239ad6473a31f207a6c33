@@ -1,0 +1,35 @@
+.autopilot/knowledge/domains/skill-authoring.md
+  cd15883710e47ffb 136-144
+.autopilot/knowledge/index.md
+  cd15883710e47ffb 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "29abfd2f3112e1bfd45239ad6473a31f207a6c33",
+  "prompts": {
+    "cd15883710e47ffb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "97753dcc-577c-49c0-8f78-1be513c82274",
+        "model": "glm-5.2"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 10,
+      "total_deletions": 0,
+      "accepted_lines": 10,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        ".autopilot/knowledge/index.md": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        ".autopilot/knowledge/domains/skill-authoring.md": {
+          "additions": 9,
+          "accepted_lines": 9
+        }
+      }
+    }
+  }
+}
