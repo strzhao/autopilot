@@ -9,6 +9,7 @@
 - [worktree-git](domains/worktree-git.md) — worktree 检测 / symlink / git porcelain / 文件管理（7 entry）
 - [knowledge-token-arch](domains/knowledge-token-arch.md) — progressive disclosure / token / sub-agent / 架构 / doctor（11 entry）
 - [bash-shell-pitfalls](domains/bash-shell-pitfalls.md) — bash 陷阱 / exit-code / trap-err / set-u / macOS（4 entry）
+- [2026-07-08] skill md 减行硬约束下新守卫全部下沉 bash，skill md 删散文净减行（v3.52.0 §5.7 谓词守卫） | tags: autopilot, skill, shrink-only, enforce-bash, stop-hook, predicate-guard, mock-cheating, trust-chain, v3.52.0 | → domains/skill-authoring.md
 
 ## Decisions（35）
 - [2026-07-08] QA 谓词覆盖率机制——复用独立 agent 加维度非新增环节；客观闭集子集非伪精度 | tags: autopilot, qa, predicate-coverage, plan-reviewer, qa-reviewer, knowledge-loop, closed-set, requirements-traceability, oracle-adequacy, mutation-testing, ai-first, dogfood, v3.51.0 | → decisions.md

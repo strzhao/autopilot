@@ -133,3 +133,12 @@ heading_hits=$(echo "$SECTION" | grep -cE "^#### [0-9.]+ <Step Title>" || true)
 **Counter-example**: 本次 brainstorm 默认化任务初版方案 B 设计了 --quick 新增 flag，与现有 --fast 中间档差距其实很小（仅 sub-agent 审查严格性差异）；用户在审批时主动提出复用 --fast，方案演进为 B'，flag 数量从 +1 变为 0，决策树从 4→3 档进一步简化。
 **Lesson**: flag 设计的 YAGNI 原则——"假想中间需求"不应作为新 flag 的设计依据。如果未来真出现高频需求再加 flag 也不晚，向前兼容性只在不删字段时存在风险。事实弃用的字段应保留兼容期（不立即删除）以避免历史持久化文件解析错误。
 
+
+### [2026-07-08] skill md 减行硬约束下，新守卫逻辑全部下沉 bash，skill md 删散文净减行
+<!-- tags: autopilot, skill, shrink-only, enforce-bash, stop-hook, lib-sh, predicate-guard, mock-cheating, trust-chain, mechanical-enforcement, v3.52.0 -->
+**Scenario**: 给 autopilot 加 QA 谓词驱动证据守卫（治编排器用 mock 单测输出冒充 Tier 1.5 真实产物），但项目已有 `skill-md-net-shrinkage.acceptance.test.sh` 硬断言锁死 skill md 四文件（red-team/blue-team/implement-phase/SKILL.md）合计净行数只能减不能增。新守卫若写在 SKILL.md 会违反约束。
+**Choice**: 执法力量全部下沉 stop-hook.sh / lib.sh（bash，不计 md 减行约束）：lib.sh +2 校验函数（validate_predicate_driver 反向判定 + validate_predicate_artifacts 存在性校验），stop-hook +§5.7 gate=review-accept 时机械执法。skill md 反向做减法——删除被守卫取代的散文要求（"每条 PASS 必须引真实 artifact"等），SKILL.md 净删 3 行。谓词格式规约（driver/artifact 字段）写到减行约束外的 scenario-generator-prompt.md / state-file-guide.md。
+**Alternatives rejected**: (1) 在 SKILL.md 加守卫指令 → 违反减行硬约束，acceptance test FAIL；(2) 用 frontmatter 豁免字段绕过减行约束 → 治标不治本，且本次守卫自门控（无 driver 字段则 no-op）不需要新字段；(3) 引入 verify/run skill 做真机验证 → 用户明确"skill 只能减不能增加"，且增加 skill 调用违背最小依赖。
+**Trade-offs**: 守卫逻辑在 bash 不在 SKILL.md 决策树，规避 [[2026-04-17]]「后置章节跳读」风险（AI 不会跳过 bash 守卫）。代价：skill md 失去"需产出 artifact 路径"的引导——用 state-file-guide.md（约束外）补一行精简指令 + §5.7 block reason 文案承担引导。这是 [[2026-06-24]]「机械活下沉 hook / 智力活留 agent」模式在"减行约束"场景的应用：bash 执法不受 md 行数限制，skill md 做减法反而把散文压力转移给机械守卫。
+**Evidence**: v3.52.0（commit d9bee50）§5.7 上线。红队测试 predicate-driver-guard.acceptance.test.sh 21 断言全绿（8 条 det-machine 谓词）；独立 subagent 盲测 7 场景（合规放行/mock 冒充 block/artifact 缺失 block/旧 task no-op/反向判定边界）全符合预期；skill-md-net-shrinkage PASS（SKILL.md 净删 3 行）；CI success（run 28926783901）。治 session a14383e0 实证：编排器用 mock overmind 冒充 /api/align/issues 真实驱动，§5.7 现在精确拦截（driver=node-script + observe 含 curl → block）。
+**Lesson**: 当 skill md 有减行/零增硬约束时，新守卫的执法逻辑必须下沉 bash（stop-hook/lib.sh），skill md 删散文做减法（被守卫取代的要求删掉）。关键判据：守卫是"机械活"（可 bash 判定）还是"智力活"（需 AI 判断）——机械活下沉不受 md 约束，智力活才留 skill。本次 driver 类型一致性 + artifact 存在性都是机械活，完美适合 bash。关联 [[2026-06-24]]（机械活下沉 hook 总则）、[[2026-07-08]] smoke Tier 1.5 铁律（铁律已有但缺机械执法，本次补）。
