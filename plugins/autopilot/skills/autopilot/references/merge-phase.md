@@ -19,7 +19,7 @@
 
 如果 frontmatter `brief_file` 非空（任务来自项目 DAG）：
 
-1. 从 `brief_file` 路径推导 handoff 路径：将 `.md` 替换为 `.handoff.md`（如 `tasks/001-wire-schema.md` → `tasks/001-wire-schema.handoff.md`）
+1. 从 `brief_file` 路径推导 handoff 路径：将 `.md` 替换为 `.handoff.md`（如 `tasks/<id>.md` → `tasks/<id>.handoff.md`）
 2. 写入 handoff 文件（≤500 字），包含：实现摘要、文件变更列表、下游须知、偏差说明
 3. 更新 `.autopilot/project/dag.yaml` 中对应任务的 `status` 从 `pending`/`in_progress` 改为 `done`
 

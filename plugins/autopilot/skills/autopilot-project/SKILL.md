@@ -14,8 +14,8 @@ description: 管理 autopilot 项目模式的任务 DAG。当用户运行 /autop
 ├── design.md                    # 整体架构设计
 ├── dag.yaml                     # 任务 DAG
 └── tasks/
-    ├── 001-xxx.md               # 任务简报
-    ├── 001-xxx.handoff.md       # 任务完成后的交接文档
+    ├── <id>.md                  # 任务简报（文件名 = dag.yaml id）
+    ├── <id>.handoff.md          # 任务完成后的交接文档
     └── ...
 ```
 
@@ -39,7 +39,7 @@ tasks:
 
 ```markdown
 ---
-id: "NNN-name"
+id: "<文件名 stem，如 T4 → tasks/T4.md>"
 depends_on: ["XXX", "YYY"]
 ---
 
@@ -106,6 +106,6 @@ stop-hook 检测到全部任务 `status: done` 后，创建 `mode: "project-qa"`
 |------|------|
 | `/autopilot status` | 无活跃 autopilot 时自动显示项目 DAG 概览 |
 | `/autopilot next` | 自动选择第一个就绪任务并启动 brief 模式 autopilot |
-| `/autopilot NNN-name` | 自动匹配 tasks/ 下的任务文件，brief 模式启动标准 autopilot |
+| `/autopilot <id>` | 自动匹配 tasks/ 下的任务文件（`<id>.md`），brief 模式启动标准 autopilot |
 | `/autopilot --project <goal>` | 强制项目模式（跳过复杂度检测） |
 | `/autopilot --single <goal>` | 强制单任务模式 |
