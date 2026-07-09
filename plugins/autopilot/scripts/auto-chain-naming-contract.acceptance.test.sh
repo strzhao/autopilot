@@ -57,8 +57,6 @@ if ! declare -F get_first_ready_task >/dev/null 2>&1; then
     exit 99
 fi
 
-SOURCE_LIB_SH_OK=1  # source 成功标记（返回报告中说明）
-
 # ── 测试夹具 ──────────────────────────────────────────────────
 TMP_PROJECT=""
 cleanup() {
