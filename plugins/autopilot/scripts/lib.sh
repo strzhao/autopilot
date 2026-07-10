@@ -835,6 +835,32 @@ get_first_ready_task() {
     }' "$dag_file"
 }
 
+# 从 dag.yaml 读指定 task id 的 brief 字段值（显式文件指针，相对 PROJECT_ROOT 或绝对路径）。
+# 无 brief 字段返回空（调用方回退 tasks/<id>.md）。纯函数无副作用。
+#
+# 用下一个 `- id:` 作 task 边界收集 brief，避免字段顺序（id,name,brief）导致提前 print
+# 丢 brief（v3.54.1 迁移脚本 read IFS bug 教训）。
+get_task_brief() {
+    local dag_file="$1" task_id="$2"
+    [[ ! -f "$dag_file" ]] && return
+    # 注意：awk 的 exit 会触发 END 块，须用 done 哨卫防止重复 print。
+    awk -v tid="$task_id" '
+        /^[[:space:]]*-[[:space:]]*id:/ {
+            if (matched && brief != "") { print brief; done = 1; exit }
+            matched = 0; brief = ""
+            in_task = 1
+            sub(/^[[:space:]]*-?[[:space:]]*id:[[:space:]]*/, ""); gsub(/^["'"'"']/, ""); gsub(/["'"'"']$/, "")
+            if ($0 == tid) matched = 1
+            next
+        }
+        matched && in_task && /^[[:space:]]*brief:/ {
+            sub(/^[[:space:]]*brief:[[:space:]]*/, ""); gsub(/^["'"'"']/, ""); gsub(/["'"'"']$/, ""); brief = $0
+            next
+        }
+        END { if (!done && matched && brief != "") print brief }
+    ' "$dag_file"
+}
+
 # ── Brief 模式状态文件创建 ────────────────────────────────────
 
 # 为项目 DAG 中的任务创建 brief 模式状态文件。
@@ -860,7 +886,19 @@ create_brief_state_file() {
     local dep handoff
     for dep in $deps; do
         dep="${dep//\"/}"
-        handoff="$brief_dir/${dep}.handoff.md"
+        # dep brief 字段优先（显式文件指针），回退 ${dep}.handoff.md（v3.54.0 兼容）
+        local _dep_brief
+        _dep_brief=$(get_task_brief "$PROJECT_ROOT/.autopilot/project/dag.yaml" "$dep" 2>/dev/null || true)
+        if [[ -n "$_dep_brief" ]]; then
+            local _dep_brief_abs
+            case "$_dep_brief" in
+                /*) _dep_brief_abs="$_dep_brief" ;;
+                *)  _dep_brief_abs="$PROJECT_ROOT/$_dep_brief" ;;
+            esac
+            handoff="${_dep_brief_abs%.md}.handoff.md"
+        else
+            handoff="$brief_dir/${dep}.handoff.md"
+        fi
         if [[ -f "$handoff" ]]; then
             handoff_content="${handoff_content}
 --- handoff: ${dep} ---

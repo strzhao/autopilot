@@ -469,7 +469,16 @@ if [[ "$PHASE" == "done" ]]; then
     if [[ "$MODE" == "project" ]] && [[ -z "$BRIEF_FILE" ]] && [[ -f "$DAG_FILE" ]]; then
         FIRST_READY=$(get_first_ready_task "$DAG_FILE")
         if [[ -n "$FIRST_READY" ]] && [[ "$FIRST_READY" != "ALL_DONE" ]]; then
-            TASK_FILE="$PROJECT_ROOT/.autopilot/project/tasks/${FIRST_READY}.md"
+            # brief 字段优先（显式文件指针，文件命名自由），回退 tasks/<id>.md（v3.54.0 兼容）
+            _brief_ptr=$(get_task_brief "$DAG_FILE" "$FIRST_READY" 2>/dev/null || true)
+            if [[ -n "$_brief_ptr" ]]; then
+                case "$_brief_ptr" in
+                    /*) TASK_FILE="$_brief_ptr" ;;
+                    *)  TASK_FILE="$PROJECT_ROOT/$_brief_ptr" ;;
+                esac
+            else
+                TASK_FILE="$PROJECT_ROOT/.autopilot/project/tasks/${FIRST_READY}.md"
+            fi
             if [[ -f "$TASK_FILE" ]]; then
                 new_slug=$(generate_task_slug "$FIRST_READY")
                 setup_requirement_dir "$new_slug"
@@ -500,7 +509,16 @@ if [[ "$PHASE" == "done" ]]; then
 
     # Case 1: AI 信号了下一个任务 → 自动链接
     elif [[ -n "$NEXT_TASK" ]] && [[ -f "$DAG_FILE" ]]; then
-        TASK_FILE="$PROJECT_ROOT/.autopilot/project/tasks/${NEXT_TASK}.md"
+        # brief 字段优先（显式文件指针，文件命名自由），回退 tasks/<id>.md（v3.54.0 兼容）
+        _brief_ptr=$(get_task_brief "$DAG_FILE" "$NEXT_TASK" 2>/dev/null || true)
+        if [[ -n "$_brief_ptr" ]]; then
+            case "$_brief_ptr" in
+                /*) TASK_FILE="$_brief_ptr" ;;
+                *)  TASK_FILE="$PROJECT_ROOT/$_brief_ptr" ;;
+            esac
+        else
+            TASK_FILE="$PROJECT_ROOT/.autopilot/project/tasks/${NEXT_TASK}.md"
+        fi
         if [[ -f "$TASK_FILE" ]]; then
             # 为新任务创建新的 requirements 文件夹
             new_slug=$(generate_task_slug "$NEXT_TASK")
