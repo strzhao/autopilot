@@ -53,6 +53,22 @@ parse_tasks() {
   ' "$DAG_FILE"
 }
 
+# 更新 dag.yaml 的 brief 字段：old_stem.md → new_stem.md（改名后同步，治 v3.55.0 改名不更新 brief 的 bug）。
+# 字面替换（index+substr，避免正则元字符），保留路径前缀格式。临时文件 + mv 跨平台。
+update_dag_brief() {
+  local dag_file="$1" old_stem="$2" new_stem="$3"
+  [[ "$old_stem" == "$new_stem" ]] && return 0
+  [[ ! -f "$dag_file" ]] && return 0
+  awk -v old="$old_stem" -v new="$new_stem" '
+    /^[[:space:]]*brief:/ {
+      s=$0; out=""; needle=old ".md"
+      while ((i=index(s,needle))>0) { out=out substr(s,1,i-1) new ".md"; s=substr(s,i+length(needle)) }
+      $0=out s
+    }
+    { print }
+  ' "$dag_file" > "$dag_file.tmp" && mv "$dag_file.tmp" "$dag_file"
+}
+
 brief_count=0; handoff_count=0
 TASKS=$(parse_tasks)
 [ -z "$TASKS" ] && { echo "提示: 未能从 dag.yaml 解析出 task（id + brief/name），跳过" >&2; exit 0; }
@@ -74,6 +90,8 @@ while IFS=$'\t' read -r id brief name; do
     continue
   fi
   rename_one "$src" "$TASKS_DIR/$id.md" && brief_count=$((brief_count + 1))
+  # 同步更新 dag brief 指向新文件名（治改名不更新 brief，否则新版 stop-hook 用过期 brief 会 miss）
+  update_dag_brief "$DAG_FILE" "$(basename "$src" .md)" "$id"
   # handoff（同 stem）
   hsrc="${src%.md}.handoff.md"
   [ -f "$hsrc" ] && rename_one "$hsrc" "$TASKS_DIR/$id.handoff.md" && handoff_count=$((handoff_count + 1))
