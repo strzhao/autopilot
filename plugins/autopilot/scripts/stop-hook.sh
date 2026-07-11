@@ -483,7 +483,7 @@ if [[ "$PHASE" == "done" ]]; then
                 new_slug=$(generate_task_slug "$FIRST_READY")
                 setup_requirement_dir "$new_slug"
                 TASK_FILE_ABS=$(cd "$(dirname "$TASK_FILE")" && pwd)/$(basename "$TASK_FILE")
-                create_brief_state_file "$TASK_FILE_ABS" "$HOOK_SESSION" "30" "3" "true"
+                create_brief_state_file "$TASK_FILE_ABS" "$HOOK_SESSION" "30" "3"
                 bash "$SCRIPT_DIR/notify.sh" auto-chain 2>/dev/null || true
                 echo "🔗 project-design → ${FIRST_READY}" >&2
                 PHASE=$(get_enum_field "phase" || true)
@@ -524,7 +524,7 @@ if [[ "$PHASE" == "done" ]]; then
             new_slug=$(generate_task_slug "$NEXT_TASK")
             setup_requirement_dir "$new_slug"
             TASK_FILE_ABS=$(cd "$(dirname "$TASK_FILE")" && pwd)/$(basename "$TASK_FILE")
-            create_brief_state_file "$TASK_FILE_ABS" "$HOOK_SESSION" "30" "3" "true"
+            create_brief_state_file "$TASK_FILE_ABS" "$HOOK_SESSION" "30" "3"
             bash "$SCRIPT_DIR/notify.sh" auto-chain 2>/dev/null || true
             echo "🔗 auto-chain: ${NEXT_TASK}" >&2
             # 重新读取新状态文件的字段

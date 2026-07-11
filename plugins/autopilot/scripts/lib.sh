@@ -864,14 +864,15 @@ get_task_brief() {
 # ── Brief 模式状态文件创建 ────────────────────────────────────
 
 # 为项目 DAG 中的任务创建 brief 模式状态文件。
-# 参数: task_file session_id max_iterations max_retries auto_approve
+# 参数: task_file session_id max_iterations max_retries auto_approve(默认 true)
+# 注意: auto_approve 默认 true——brief 函数唯一用途是项目子任务，全部调用方需 true。
 # 注意: 调用前必须先通过 setup_requirement_dir 设置 STATE_FILE 和 TASK_DIR
 create_brief_state_file() {
     local brief_file="$1"
     local session_id="${2:-}"
     local max_iterations="${3:-30}"
     local max_retries="${4:-3}"
-    local auto_approve="${5:-false}"
+    local auto_approve="${5:-true}"
     local html_review="${6:-false}"
 
     local brief_content

@@ -474,7 +474,7 @@ HTML_REVIEW=$([[ "${AUTOPILOT_HTML_REVIEW:-}" == "1" ]] && echo "true" || echo "
 
 # Brief 模式：从任务简报文件启动
 if [[ -n "$BRIEF_FILE" ]]; then
-    create_brief_state_file "$BRIEF_FILE" "$SESSION_ID" "$MAX_ITERATIONS" "$MAX_RETRIES" "false" "$HTML_REVIEW"
+    create_brief_state_file "$BRIEF_FILE" "$SESSION_ID" "$MAX_ITERATIONS" "$MAX_RETRIES"
 
 else
     # 正常模式状态文件
