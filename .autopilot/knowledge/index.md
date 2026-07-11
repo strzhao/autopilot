@@ -11,7 +11,8 @@
 - [bash-shell-pitfalls](domains/bash-shell-pitfalls.md) — bash 陷阱 / exit-code / trap-err / set-u / macOS（4 entry）
 - [2026-07-08] skill md 减行硬约束下新守卫全部下沉 bash，skill md 删散文净减行（v3.52.0 §5.7 谓词守卫） | tags: autopilot, skill, shrink-only, enforce-bash, stop-hook, predicate-guard, mock-cheating, trust-chain, v3.52.0 | → domains/skill-authoring.md
 
-## Decisions（37）
+## Decisions（38）
+- [2026-07-11] project auto-mode 三卡点完整自洽（v3.56 修 html_review+approve，补 v3.54/v3.55 的 next）——默认值 latent bug 检测信号：全部调用方都传同一非默认值=默认值本身错（solve don't punt，常态编码进默认非甩给调用方）；create_brief_state_file 默认 auto_approve false→true | tags: autopilot, project-mode, auto-mode, auto-approve, default-value, latent-bug, solve-dont-punt, html-review, review-accept, create-brief-state-file, section-5.5, dogfood, claude-code-buddy, claude-p-verification, v3.56.0 | → decisions.md
 - [2026-07-10] auto-chain 文件名=id 隐含契约——AI 步骤 5b 偏离致三处 id 查找全失效（修命名非加查找，脚本零改动）；state frontmatter 实证判 brief 模式 vs 标准初始化；v3.54.1 迁移脚本补 dag brief 字段覆盖 NNN-<id> 模式（claude-code-buddy） | tags: autopilot, auto-chain, project-mode, naming-contract, id-vs-filename, implicit-contract, ai-deviation, brief-mode, standard-init, auto-approve, script-zero-change, migration-script, dogfood, little-bee, claude-code-buddy, claude-p-verification, v3.54.0, v3.54.1, v3.55.0 | → decisions.md
 - [2026-07-09] 红队铁律 escape hatch——复用既有 lock 函数解确定性守卫冲突，dogfood 实证 retry_count=0 治耗尽 | tags: autopilot, red-team, iron-law, escape-hatch, deterministic-guard, sha-lock, lock-acceptance-tests, reuse-over-new, progressive-disclosure, ai-first, dogfood, claude-p, v3.53.0, skill-shrinkage | → decisions.md
 - [2026-07-08] QA 谓词覆盖率机制——复用独立 agent 加维度非新增环节；客观闭集子集非伪精度 | tags: autopilot, qa, predicate-coverage, plan-reviewer, qa-reviewer, knowledge-loop, closed-set, requirements-traceability, oracle-adequacy, mutation-testing, ai-first, dogfood, v3.51.0 | → decisions.md
