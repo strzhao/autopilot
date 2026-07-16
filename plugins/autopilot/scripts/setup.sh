@@ -77,6 +77,28 @@ if [[ -f "$PROJECT_ROOT/.autopilot/decisions.md" ]] && [[ ! -d "$PROJECT_ROOT/.a
     echo "✅ 迁移完成"
 fi
 
+# ── 无条件清理：顶层 .autopilot/requirements/ 平铺泄漏 ──
+# v3.35 前旧路径 / 独立 brainstorm 裸调用可能误落顶层。上面的条件迁移只在「整体旧布局」
+# 触发，混合状态（已建 knowledge/）会短路，导致顶层僵尸永不清。此处无条件每次运行搬走，
+# 确保产物只在 runtime/requirements/（顶层已被 .gitignore 拦截，目录名即答案）。
+if [[ -d "$PROJECT_ROOT/.autopilot/requirements" ]]; then
+    mkdir -p "$PROJECT_ROOT/.autopilot/runtime/requirements"
+    for d in "$PROJECT_ROOT/.autopilot/requirements"/*/; do
+        [[ -d "$d" ]] || continue
+        slug=$(basename "$d")
+        target="$PROJECT_ROOT/.autopilot/runtime/requirements/$slug"
+        if [[ -d "$target" ]]; then
+            # runtime 已有同名 slug：合并顶层文件进去（不覆盖已有），再删顶层副本
+            cp -Rn "$d"/. "$target"/ 2>/dev/null; rm -rf "$d"
+        else
+            mv "$d" "$target"
+        fi
+    done
+    rmdir "$PROJECT_ROOT/.autopilot/requirements" 2>/dev/null
+    git -C "$PROJECT_ROOT" rm -r --cached --ignore-unmatch .autopilot/requirements 2>/dev/null || true
+    echo "📦 清理顶层 .autopilot/requirements/ → runtime/requirements/（平铺泄漏）"
+fi
+
 # ── 参数安全处理 ──────────────────────────────────────────────
 # SKILL.md 用 '$ARGUMENTS' 单引号传参（防止 zsh glob/brace 展开），
 # 导致所有参数合并为单个字符串。这里重新按空格拆分恢复原始行为。

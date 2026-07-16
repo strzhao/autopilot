@@ -6,6 +6,9 @@ __pycache__/
 
 # autopilot: knowledge/ 入库共享，runtime/ 不入库
 .autopilot/runtime/
+# autopilot 顶层平铺 requirements/ 是 v3.35 前旧路径（独立 brainstorm 裸调用曾误落此）；
+# 强制 ignore 顶层，产物必须走 runtime/requirements/（目录名即答案，setup.sh 每次自动搬走）
+.autopilot/requirements/
 
 # Claude Code worktree（本地临时工作树，不入库）
 .claude/worktrees/
