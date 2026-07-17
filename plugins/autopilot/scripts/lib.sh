@@ -743,6 +743,211 @@ validate_predicate_artifacts() {
     return 0
 }
 
+# compute_file_hash <file>
+#
+# 跨平台文件 MD5（C6）。Linux md5sum 输出 "<hash>  <file>"，macOS md5 -q 直接出 hash。
+# 文件不存在或哈希失败 → 返回空串（调用方自行判存在性）。
+compute_file_hash() {
+    local f="${1:-}"
+    [ -f "$f" ] || return 0
+    if command -v md5sum >/dev/null 2>&1; then
+        md5sum "$f" 2>/dev/null | awk '{print $1}'
+    else
+        md5 -q "$f" 2>/dev/null
+    fi
+}
+
+# validate_predicate_channels <state_file>
+#
+# 校验 ## 验收场景 谓词的 [channel] 合法性。合法集 = {det-machine, real-process, visual-residue}
+# （SSOT: scenario-generator-prompt.md:42）。治 AI 自创 [human-obs] 等标签豁免 GUI 谓词。
+#
+# 退出码语义（与 validate_predicate_driver 同构的双信号）：
+#   0 = 合规（全 channel ∈ 合法集）
+#   2 = 违规（任一 channel 非法，如 human-obs）
+#   1 = no-op（## 验收场景 无谓词）
+# 违规时 stdout 含 "PRED-CHANNEL-ILLEGAL: <id> <channel>"。
+validate_predicate_channels() {
+    local state_file="${1:-}"
+    [ -f "$state_file" ] || return 1
+    local rc=0 out
+    out=$(awk '
+        BEGIN { in_scn = 0; bad = 0; saw_pred = 0 }
+        /^## 验收场景[[:space:]]*$/ { in_scn = 1; next }
+        in_scn && /^## / { in_scn = 0 }
+        in_scn && /^[[:space:]]*-[[:space:]]/ {
+            saw_pred = 1
+            line = $0
+            # channel = 首个粗体内 [channel]（与 id 共处 ** <id> [channel] **）
+            chan = ""
+            if (match(line, /\*\*[^*]+\*\*/)) {
+                bold = substr(line, RSTART, RLENGTH)
+                if (match(bold, /\[([a-z][a-z0-9-]*)\]/)) {
+                    chan = substr(bold, RSTART+1, RLENGTH-2)
+                }
+            }
+            if (chan != "" \
+                && chan != "det-machine" \
+                && chan != "real-process" \
+                && chan != "visual-residue") {
+                id = bold
+                sub(/^\*\*/, "", id); sub(/\*\*.*$/, "", id)
+                sub(/[[:space:]]*\[.*$/, "", id)
+                gsub(/[[:space:]]/, "", id)
+                print "PRED-CHANNEL-ILLEGAL: " id " " chan
+                bad = 1
+            }
+        }
+        END {
+            if (bad) exit 2
+            else if (!saw_pred) exit 1
+            else exit 0
+        }
+    ' "$state_file") || rc=$?
+    [ -n "$out" ] && printf '%s\n' "$out"
+    case "$rc" in
+        2) return 2 ;;
+        1) return 1 ;;
+        *) return 0 ;;
+    esac
+}
+
+# validate_predicate_coverage <state_file>
+#
+# 校验 ## 验收场景 [visual-residue] 谓词须有 artifact 字段（C5 收紧口径）。
+# det-machine/real-process 谓词由 validate_predicate_driver 兜底，不强制 artifact（兼容 ACC-GUARD-30）。
+# 治 AI 把 GUI 谓词从非法 channel 改标合法 visual-residue 继续逃避 artifact 产出。
+#
+# 退出码语义：
+#   0 = 合规（visual-residue 谓词全有 artifact）
+#   2 = 违规（任一 visual-residue 谓词缺 artifact）
+#   1 = no-op（无 visual-residue 谓词，或 ## 验收场景 无谓词）
+# 违规时 stdout 含 "PRED-COVERAGE-GAP: <id> 无 artifact"。
+validate_predicate_coverage() {
+    local state_file="${1:-}"
+    [ -f "$state_file" ] || return 1
+    local rc=0 out
+    out=$(awk '
+        BEGIN { in_scn = 0; bad = 0; saw_pred = 0; saw_visual = 0 }
+        /^## 验收场景[[:space:]]*$/ { in_scn = 1; next }
+        in_scn && /^## / { in_scn = 0 }
+        in_scn && /^[[:space:]]*-[[:space:]]/ {
+            saw_pred = 1
+            line = $0
+            chan = ""
+            if (match(line, /\*\*[^*]+\*\*/)) {
+                bold = substr(line, RSTART, RLENGTH)
+                if (match(bold, /\[([a-z][a-z0-9-]*)\]/)) {
+                    chan = substr(bold, RSTART+1, RLENGTH-2)
+                }
+            }
+            if (chan == "visual-residue") {
+                saw_visual = 1
+                has_art = (line ~ /artifact:[[:space:]]*[^[:space:]]/)
+                if (!has_art) {
+                    id = bold
+                    sub(/^\*\*/, "", id); sub(/\*\*.*$/, "", id)
+                    sub(/[[:space:]]*\[.*$/, "", id)
+                    gsub(/[[:space:]]/, "", id)
+                    print "PRED-COVERAGE-GAP: " id " 无 artifact"
+                    bad = 1
+                }
+            }
+        }
+        END {
+            if (bad) exit 2
+            else if (!saw_visual) exit 1
+            else exit 0
+        }
+    ' "$state_file") || rc=$?
+    [ -n "$out" ] && printf '%s\n' "$out"
+    case "$rc" in
+        2) return 2 ;;
+        1) return 1 ;;
+        *) return 0 ;;
+    esac
+}
+
+# _get_md5 <row>
+# 内部 helper：从 "<id>\t<path>\t<md5>" 行取 md5（最后一个 tab 之后字段）。避免 IFS 重读副作用。
+_get_md5() {
+    local row="$1"
+    printf '%s' "${row##*$'\t'}"
+}
+
+# validate_predicate_artifact_uniqueness <state_file>
+#
+# 校验 ## 验收场景 artifact 路径不同但 MD5 相同 → 违规（C6）。路径相同 = 显式共用命令输出 → 允许。
+# 治 AI 用一张截图复制 7 份（MD5 全同）冒充 7 个独立 visual-residue artifact。
+# 跨平台 MD5 经 compute_file_hash（md5sum/md5 -q 双探测）。
+#
+# 退出码语义：
+#   0 = 合规（artifact 路径全唯一、或路径不同但内容不同、或显式共用同路径）
+#   2 = 违规（≥2 谓词 artifact 路径不同但 MD5 相同）
+#   1 = no-op（无谓词、或谓词全无 artifact、或 artifact 文件全不存在）
+# 违规时 stdout 含 "PRED-ARTIFACT-DUP: <id1> <id2> <md5>"（首个冲突对）。
+validate_predicate_artifact_uniqueness() {
+    local state_file="${1:-}"
+    [ -f "$state_file" ] || return 1
+    local tmp
+    tmp=$(mktemp -t pred-art.XXXXXX) || return 1
+    # 阶段1：awk 抽 (id<TAB>artifact_path)，仅记非空路径
+    awk '
+        BEGIN { in_scn = 0 }
+        /^## 验收场景[[:space:]]*$/ { in_scn = 1; next }
+        in_scn && /^## / { in_scn = 0 }
+        in_scn && /^[[:space:]]*-[[:space:]]/ {
+            line = $0
+            id = ""; artifact = ""
+            if (match(line, /\*\*[^*]+\*\*/)) {
+                id = substr(line, RSTART+2, RLENGTH-4)
+                sub(/[[:space:]]*\[.*$/, "", id)
+                gsub(/[[:space:]]/, "", id)
+            }
+            if (match(line, /artifact:[[:space:]]*/)) {
+                rest = substr(line, RSTART + RLENGTH)
+                if (match(rest, /｜/)) {
+                    artifact = substr(rest, 1, RSTART - 1)
+                } else {
+                    artifact = rest
+                }
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", artifact)
+            }
+            if (id != "" && artifact != "") {
+                print id "\t" artifact
+            }
+        }
+    ' "$state_file" > "$tmp"
+
+    # 阶段2：算每个 artifact 的 MD5（compute_file_hash 跨平台）
+    local id path md5 prev_path prev_md5 prev_id
+    local -a rows=()
+    while IFS=$'\t' read -r id path; do
+        [ -f "$path" ] || continue   # 缺失由 validate_predicate_artifacts 兜底，此函数只查重复
+        md5=$(compute_file_hash "$path")
+        [ -z "$md5" ] && continue
+        rows+=("${id}"$'\t'"${path}"$'\t'"${md5}")
+    done < "$tmp"
+    rm -f "$tmp"
+
+    # 无有效 artifact 行 → no-op
+    [ "${#rows[@]}" -eq 0 ] && return 1
+
+    # 阶段3：按 MD5 分组找首个「路径不同但 MD5 相同」对
+    local i j ri_id ri_path ri_md5 rj_id rj_path
+    for ((i=0; i<${#rows[@]}; i++)); do
+        IFS=$'\t' read -r ri_id ri_path ri_md5 <<< "${rows[$i]}"
+        for ((j=i+1; j<${#rows[@]}; j++)); do
+            IFS=$'\t' read -r rj_id rj_path _ <<< "${rows[$j]}"
+            if [[ "$ri_md5" == "$(_get_md5 "${rows[$j]}")" ]] && [[ "$ri_path" != "$rj_path" ]]; then
+                echo "PRED-ARTIFACT-DUP: ${ri_id} ${rj_id} ${ri_md5}"
+                return 2
+            fi
+        done
+    done
+    return 0
+}
+
 # ── Task Slug 生成 ──────────────────────────────────────────────
 
 # 生成需求管理文件夹的 slug。格式: YYYYMMDD-<目标前30字符清洗>

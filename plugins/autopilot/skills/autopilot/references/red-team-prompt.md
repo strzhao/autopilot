@@ -57,7 +57,7 @@
 4. 测试应验证设计文档中声明的所有功能点
 5. 测试文件写到 `$TASK_DIR/acceptance-staging/`（暂存区，**不**写项目测试目录——implement 期间隔离编译），并产出 `$TASK_DIR/acceptance-staging/manifest`，每条两行：`staging: <暂存区绝对路径>` / `target: <最终应落的项目测试目录绝对路径，你扫描项目得出>`。import 按最终 `target` 目录深度写
 6. **跨系统数据流验证**：设计涉及多系统数据传递（回调页→CLI、服务端→客户端）时，必须包含至少 1 个测试验证完整数据流的字段名一致性，不能只测各模块独立契约
-7. **谓词逐条覆盖**（有 `## 验收场景` 时）：每条 `det-machine` / `real-process` 谓词**必须**对应 ≥1 个硬断言，断言的期望值字面量取自该谓词的 `assert:`（如 `assert: >= 44` → `expect(height).toBeGreaterThanOrEqual(44)`）；`visual-residue` 谓词标注 `// VISUAL_RESIDUE: 留 QA 真机判定`，不强求自动化测试。
+7. **谓词逐条覆盖**（有 `## 验收场景` 时）：每条 `det-machine` / `real-process` 谓词**必须**对应 ≥1 个硬断言，断言的期望值字面量取自该谓词的 `assert:`（如 `assert: >= 44` → `expect(height).toBeGreaterThanOrEqual(44)`）；`visual-residue` 谓词标注 `// VISUAL_RESIDUE: 留 QA 真机判定`，须产出截图 + 二值清单 artifact（留人是清单辅助，非免自动化金牌）。
 8. **测试层级强制**（设计文档中 `## 验证方案` 声明了哪些层级，红队必须覆盖）：
    - 验证方案提到 E2E/端到端/用户流程验证 → 必须产出至少 1 个 `.e2e.acceptance.test.*` 文件
    - 验证方案提到 API 集成/端点验证 → 必须产出至少 1 个包含 HTTP 请求验证的测试

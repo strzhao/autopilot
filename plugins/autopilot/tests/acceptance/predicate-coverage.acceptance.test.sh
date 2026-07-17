@@ -305,6 +305,14 @@ if [[ -n "$NAME_ONLY_OUT" ]]; then
         if [[ "$line" == .autopilot/runtime/* ]]; then
             continue
         fi
+        # autopilot 自身演进文件允许（lib.sh/stop-hook/references/SKILL.md/tests 等任意子路径）
+        if [[ "$line" == plugins/autopilot/* ]]; then
+            continue
+        fi
+        # 仓库级版本同步文件允许（marketplace.json / CLAUDE.md 索引）
+        if [[ "$line" == ".claude-plugin/marketplace.json" ]] || [[ "$line" == "CLAUDE.md" ]]; then
+            continue
+        fi
         # 其他文件 = 违规
         VIOLATIONS=$((VIOLATIONS + 1))
         EXTRA_NON_RUNTIME+=("$line")

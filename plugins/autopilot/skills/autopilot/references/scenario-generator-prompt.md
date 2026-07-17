@@ -44,6 +44,7 @@
      - `driver:` 驱动类型与目标，格式 `<type>:<target>`。type 枚举：`curl`（HTTP/API）/ `playwright`（浏览器/AX）/ `node-script`（纯 Node 逻辑，禁网络/外部依赖）/ `fs-grep`（文件内容匹配）/ `freshness`（产物新鲜度）。**反向约束**：`node-script` 不得用于 `curl|fetch|playwright|overmind|pylon|mysql` 类观测（须改用对应真实驱动类型），stop-hook §5.7 机械校验。
      - `artifact:` 真实驱动输出的确定性路径，格式 `/tmp/autopilot-artifacts/<pred-id>.out`。QA 求值时编排器写入，stop-hook §5.7 校验存在性（文件存在且非空），不依赖 ## QA 报告。
    - **GUI 断言优先走可达性树**，禁用 golden-image 像素快照当回归门（基线易漂移、re-record 即失值）。
+   - **GUI 反向约束**：spinner 可见性 / 文本非空 / 图标存在性等"可编码判定"**必须**走 det-machine AX 断言（`isHidden` / `stringValue` / `image != nil`），**禁止**降级为 visual-residue 截图人眼；仅 AX 表达不了的纯视觉（动效流畅度 / 美感对比）才用 visual-residue 二值清单 + artifact。stop-hook §5.7 据谓词 channel/artifact 字段机械校验。
    - 信息隔离下你只需给 EARS + channel + assert + 观测目标**类别**；精确 selector/AX 路径由 QA 在真机绑定。纯渲染场景仍可填 "N/A"。谓词同样要能 kill No-op mutation，详情参 `references/test-mutation-survival.md`。
    - **新鲜度谓词**：目标描述含"重建/重启/部署/rebuild/restart/deploy"等语义时，额外产出 1 条 `det-machine` 新鲜度谓词，格式：`When {构建触发}, {产物} shall 比 {源码目录} 中所有源文件更新 ｜ observe: freshness_check 输出 ｜ assert: stdout == "FRESH" && exit == 0`。产物路径由 QA 阶段求值时绑定（信息隔离下只声明期望），`channel: det-machine`。
    - **格式规约**：谓词用 bullet-list + fullwidth `｜` 分隔各字段，禁 halfwidth `|`（避 jq 管道符 hazard）。每条谓词一行：`- **<id> [channel]** <描述> ｜ observe: <观测> ｜ assert: <DbC> ｜ driver: <type>:<target> ｜ artifact: <path>`。stop-hook §5.7 据此格式机械解析 driver/artifact 字段。
@@ -60,7 +61,7 @@
 - 验证层级：{层级}
 - 验收谓词（EARS-OST + 观测绑定，纯渲染场景填 "N/A"）：
   - P1 [det-machine]: When {触发}, {系统} shall {响应} ｜ observe: {观测目标} ｜ assert: {DbC 谓词} ｜ driver: {type}:{target} ｜ artifact: /tmp/autopilot-artifacts/{id}.out
-  - P2 [visual-residue]: While {状态}, {系统} shall {响应} ｜ observe: 截图 ｜ assert: {二值清单项} ｜ driver: playwright:{target}
+  - P2 [visual-residue]: While {状态}, {系统} shall {响应} ｜ observe: 截图 ｜ assert: {二值清单项} ｜ driver: playwright:{target} ｜ artifact: /tmp/autopilot-artifacts/{id}.out
   - P3 [real-process]: If {异常}, then {系统} shall {响应} ｜ observe: {exit/响应} ｜ assert: {DbC 谓词} ｜ driver: curl:{url} ｜ negate: {可选}
 
 （按重要性排序，Happy Path 优先）
