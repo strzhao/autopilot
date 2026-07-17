@@ -116,4 +116,11 @@
 **How to apply**: ① 写独立可调用 skill，交接协议必须覆盖"无上下文调用"场景（无 state.md / 无 active 指针），每个外部依赖给明确 fallback 路径，禁"按既有规约印象猜"。② 新增 `.autopilot/` 子目录时同步：CLAUDE.md 表格加行 + .gitignore 决策 + setup.sh 迁移（若 runtime 类）。③ 迁移逻辑优先无条件（每次运行检查），条件迁移只用于一次性历史布局且条件要命中所有混合状态。
 **Evidence**: v3.56.1，dogfood claude-code-buddy 29 条污染已清理（迁移至 runtime + git rm --cached + .gitignore 堵顶层，commit 78b8471）；3 处源码改动（brainstorm SKILL.md +1 fallback / .gitignore +3 / setup.sh +22 无条件迁移块）；verify-change claude -p 双维度验证（行为效果：独立调用落 runtime / 破坏性：v3.35 既有迁移块完整保留双块互斥）。关联 [[2026-05-24] 单 commit 多区域同步 BLOCKER]、[[2026-07-04] claude -p 客观验证]。
 
+### [2026-07-17] 谓词描述禁用 artifact:/driver:/observe:/assert: 字面量——干扰 awk 字段提取（dogfood §5.7 自踩）
+<!-- tags: autopilot, predicate, awk, field-extraction, literal-collision, bash-pitfall, stop-hook, §5.7, dogfood, false-negative, v3.57.0 -->
+**Scenario**: v3.57.0 dogfood，stop-hook §5.7 报 `PRED-ARTIFACT-MISSING: cov-guard... 字段 shall validate_predicate_coverage...`——artifact 路径被解析成一截谓词描述文本。根因：谓词描述含反引号字面量 `` `artifact:` 字段 ``，lib.sh `validate_predicate_artifacts` 的 awk `match(line, /artifact:[[:space:]]*/)` 命中**描述里的首个 `artifact:`**（非真正的 `｜ artifact: /tmp/...`），提取描述片段当 artifact 路径 → 文件不存在 → PRED-ARTIFACT-MISSING 误报。
+**Lesson**: awk 按 `字段名:` 子串 match 提取字段时，**谓词描述里出现同名字面量（`artifact:`/`driver:`/`observe:`/`assert:` 带冒号）会让首个 match 落到描述而非真字段**。这是 lib.sh v3.52.0 既有 awk 范式的解析脆弱点（非 v3.57.0 引入），但谓词描述用了字段名字面量就触发。
+**How to apply**: 写 `## 验收场景` 谓词描述时禁用 `artifact:`/`driver:`/`observe:`/`assert:` 字面量（带冒号）；要提及时用「artifact 字段」（无冒号）或自然语言。红队 mock state 谓词同理（invoke 走同一 awk）。根治需 awk 提取改为「只匹配 `｜ ` 分隔符后的字段」（v3.57.0 未做，记作已知边界）。
+**Evidence**: v3.57.0 dogfood，cov-guard 谓词描述 `` `artifact:` 字段 `` → §5.7 PRED-ARTIFACT-MISSING 误报路径乱；改描述为「artifact 字段」（去冒号）后 §5.7 五守卫对 state.md 全过（rc0/rc1）。关联 [[bash-shell-pitfalls]]。
+
 > 历史归档（< 2026-05-17）按主题迁移至 domains/，详见 index.md
