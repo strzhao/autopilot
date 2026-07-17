@@ -920,7 +920,7 @@ validate_predicate_artifact_uniqueness() {
     ' "$state_file" > "$tmp"
 
     # 阶段2：算每个 artifact 的 MD5（compute_file_hash 跨平台）
-    local id path md5 prev_path prev_md5 prev_id
+    local id path md5
     local -a rows=()
     while IFS=$'\t' read -r id path; do
         [ -f "$path" ] || continue   # 缺失由 validate_predicate_artifacts 兜底，此函数只查重复
