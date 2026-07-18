@@ -171,4 +171,12 @@
 **Lesson**: ① **AI 作弊的确定性根治 = 把已写在 prompt（软约束）的规则下沉成确定性 bash 守卫**——autopilot 早规约 channel 枚举 + AX 优先，缺 enforcement，AI 偏离时无硬信号拦。② **守卫口径收紧靠现有契约反推**——「有 channel 须 artifact」泛化破坏 ACC-GUARD-30 兼容，收紧「仅留人通道 visual-residue」精准对齐 brainstorm 用户决策且不误伤。③ **dogfood 自证守卫拦作者自己**：§5.7 在本次 dogfood 抓了守卫作者（声明 artifact 路径但没真产），与 iina AI 同构——守卫不认人。④ 谓词描述字段名字面量陷阱见 [[patterns: 谓词描述字段名字面量]]；⑤ 守卫③ bash 数组 zsh 不兼容（生产 bash -c 无影响）。
 **Evidence**: commit 1c009d9 v3.57.0。3 红队测试 30 断言（predicate-channel-guard/pred-coverage-guard/predicate-artifact-uniqueness-guard），run-all 35/35。claude -p 客观验证（6 mock × 3 函数）：[human-obs]→rc2 PRED-CHANNEL-ILLEGAL / [visual-residue] 无 artifact→rc2 PRED-COVERAGE-GAP / 不同路径同 MD5→rc2 PRED-ARTIFACT-DUP / [det-machine] 无 artifact→rc1（ACC-GUARD-30 兼容）。SKILL.md git diff added==0（582 行不变）。dogfood §5.7 自证拦作者。
 
+### [2026-07-19] doctor Dim 13「AI 可观测性」——客观信号确定性下沉 + 语义留 AI（reconcile [2026-05-05]）
+<!-- tags: autopilot, doctor, ai-observability, dim-13, deterministic-signal, ai-judgment, objective-vs-semantic, knowledge-reconcile, solve-dont-punt, non-scaffold, v3.58.0 -->
+**Background**: doctor 既 12 维只诊断「工程健康」（git/编译/lint），不度量目标工程 AI 友好度（日志/CLI/health/error code 等可观测可调试性）。新增 Dim 13 面临张力：knowledge [2026-05-05]「Lint/健康检查优先 AI 语义判断」+ 用户记忆 [feedback_lint_via_ai] 看似禁止确定性脚本做 doctor 维度。
+**Choice**: 9 维按「客观 vs 语义」分层——6 客观维（结构化日志/轮转/CLI/health/clean/debug）下沉 lib.sh 确定性探测（三态 0/1/2 + AI-OBS- 信号串，复用 freshness_check 约定），3 语义维（error code 可读性/命名空间/隔离）留 doctor Wave 2 AI。reconcile [2026-05-05]：该条针对**语义质量判断**用 AI，但「文件/命令/env 存在性」是**客观事实**，确定性脚本合适。修复链路核心原则 prompt 非 scaffold（给本质+业界对照+自主调研，不给模板）。
+**Alternatives rejected**: (1) 全 9 维确定性——违反 [2026-05-05]，error 可读性本质语义；(2) 全 AI——浪费 token 不可复现；(3) 独立 skill——重叠 doctor + 易劣化（[2026-05-09]）。
+**Lesson**: ①「优先 AI 语义判断」≠「禁止确定性脚本」——判据是「客观事实存在性 vs 语义质量判断」，前者 grep/脚本，后者 AI；这正是「机械活下沉/智力活留 AI」的本质。② doctor 度量者定位扩展：不只查工程健康，还能度量其他工程 AI 友好度，新维度先区分与既有正交（Dim 13 可观测 vs Dim 10 测试可写，关键词不相交）。③ 非 scaffold 修复：给方向不给模板，契合 AI 强 + 最小机制。
+**Evidence**: commit 3bdfcbe v3.58.0。7 红队测试 65 断言全 PASS。qa-reviewer 设计符合性 8/8。SKILL.md 持平 664。关联 [[2026-05-05]] [[skill-authoring]]。
+
 > 历史归档（< 2026-05-17）按主题迁移至 domains/，详见 index.md

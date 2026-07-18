@@ -123,4 +123,18 @@
 **How to apply**: 写 `## 验收场景` 谓词描述时禁用 `artifact:`/`driver:`/`observe:`/`assert:` 字面量（带冒号）；要提及时用「artifact 字段」（无冒号）或自然语言。红队 mock state 谓词同理（invoke 走同一 awk）。根治需 awk 提取改为「只匹配 `｜ ` 分隔符后的字段」（v3.57.0 未做，记作已知边界）。
 **Evidence**: v3.57.0 dogfood，cov-guard 谓词描述 `` `artifact:` 字段 `` → §5.7 PRED-ARTIFACT-MISSING 误报路径乱；改描述为「artifact 字段」（去冒号）后 §5.7 五守卫对 state.md 全过（rc0/rc1）。关联 [[bash-shell-pitfalls]]。
 
+### [2026-07-19] 红队测试 FAIL 三分类——断言机制错/与契约矛盾/实现 bug（auto-fix 先分类再改）
+<!-- tags: autopilot, red-team, acceptance-test, auto-fix, false-positive, assertion-mechanism, regex-pitfall, set-comparison, debug-classification, v3.58.0 -->
+**Scenario**: v3.58.0 dogfood Dim 13，Wave 1 红队 7 测试 6 FAIL。逐项核实仅 4 个真实实现 bug（Dim 13 标题重复/struct_log writer 漏/health PARTIAL 漏 npm scripts/自门控 rc 错），另 8 个是测试本身问题：①断言机制错（`\bnode\b` 把 bash 变量 `node=true` 当命令调用；集合 expected==actual 判不等因尾部换行；权重 awk 多抓说明文字 0.XX）②与契约矛盾（测试正则 `^[A-Z_]+:` 不含连字符 vs 契约信号 `AI-OBS-STRUCT-LOG-MISSING:` 含连字符）③解析错（CACHE-CLEAN 含连字符 DIM 拆成 DIM=CACHE STATE=CLEAN）。
+**Lesson**: 红队测试 FAIL ≠ 实现错。auto-fix 逐项前先分类：实现 bug（改实现）/ 断言机制错（改正则或比较逻辑）/ 与契约矛盾（改谓词或测试对齐契约）/ 解析错（改提取逻辑）。盲目「以红队为准」会把正确实现改错（如为过 `^[A-Z_]+:` 去信号连字符破坏可读性）。红队铁律例外三情形（断言与契约矛盾/引用未声明私有 seam/断言机制错）正是给测试 bug 的放行口。
+**How to apply**: Tier 0 FAIL 先跑独立核实（直接调函数看 rc/stdout、grep 实现事实、算实际值）判断实现是否真偏离。常见测试 bug：变量名当命令（正则加 `[^=]` 或命令位置锚定 `(^|[[:space:];|])node[[:space:]]+`）/ 集合尾部空白（转空格分隔 `tr '\n' ' '` 比较）/ DIM 含连字符拆错（用闭集正向匹配提取 `AI-OBS-($DIM_CLOSURE)-` 而非反向排除）/ 注释字面量误抓（只 grep echo 或注释用占位 `<DIM>` 非 `XXX`）/ 权重多抓（只匹配 `^| Dim N` 表格行每行一个值）。
+**Evidence**: v3.58.0 7 红队测试初版 6 FAIL → 分类 4 实现 bug + 8 测试 bug → 分修后 65 断言全 PASS。constraint-guard P4 node=true / dim-numbering P1 集合 / contract-closure P3-a 权重多抓 / control P1-b PREFIX 连字符均测试 bug。关联 [[qa-testing]] [[2026-05-16]] [[bash-shell-pitfalls]]。
+
+### [2026-07-19] 业务维度数 vs 实现函数数——契约/验收措辞澄清避免 count 矛盾（plan-reviewer B1）
+<!-- tags: autopilot, contract, plan-reviewer, acceptance-test, naming, business-vs-implementation, count-mismatch, literal-trap, v3.58.0 -->
+**Scenario**: Dim 13 设计「9 维 AI 友好度」，但 3 语义维无 bash 函数（Wave 2 AI 判断），bash 实现层 8 函数。验收场景多处「9 探测函数」vs 契约 C4 命名 8 函数——plan-reviewer B1 抓 count 自相矛盾（约束守卫.P4 assert「8 函数」vs 场景描述「9 探测函数」）。
+**Lesson**: 业务概念数（「N 维能力」）≠ 实现层数（「M 函数」）。部分维度由非函数机制承载（AI 判断/配置/约定）时 N > M。契约和验收必须显式澄清两者关系，否则下游（红队 grep count / contract-checker / plan-reviewer）抓 count 矛盾。
+**How to apply**: 设计 + 契约遇「N 维/X 类」业务概念且实现 M ≠ N 时，加澄清块（「N = A 客观 bash + B 语义 AI 无函数；bash 层 M 函数」）。验收 count 断言精确到实现层 vs 业务层，红队 grep count 用实现层真实数（8 函数），避免用业务层 9 致永远 FAIL 或硬凑。
+**Evidence**: v3.58.0 plan-reviewer 初审 B1「契约 8 函数 vs 验收场景 9 处「9 探测函数」矛盾」；契约 C4 加「9 维 vs 8 函数澄清块」+ 约束守卫.P4/P5/编号对齐.P3 assert 改 8 函数 + P4 改 6 客观。重审 PASS。关联 [[2026-05-14]]（契约单一字面量）[[qa-testing]]。
+
 > 历史归档（< 2026-05-17）按主题迁移至 domains/，详见 index.md
