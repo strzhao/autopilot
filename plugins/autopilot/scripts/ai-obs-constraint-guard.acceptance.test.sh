@@ -230,9 +230,7 @@ if [[ -f "$LIB_SH" ]]; then
             continue
         fi
 
-        # 三态判定：函数体必含 return 0/1/2（至少一种）
-        HAS_R0=$(echo "$FN_BODY" | grep -cE 'return[[:space:]]+0' || true)
-        # 函数应支持三态组合中至少一种 rc=1（自门控）和 rc=2（warn）
+        # 三态判定：函数体必含 return 1/2 至少一种（自门控/warn）；rc=0 由 P5-b DIM 信号间接覆盖
         # Mutation-Survival：不能只断 rc=0，必须出现 rc=1 或 rc=2 至少一种
         HAS_R1=$(echo "$FN_BODY" | grep -cE 'return[[:space:]]+1' || true)
         HAS_R2=$(echo "$FN_BODY" | grep -cE 'return[[:space:]]+2' || true)

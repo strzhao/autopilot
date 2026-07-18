@@ -109,7 +109,7 @@ if [[ "$DEFINE_OK" -eq 1 ]]; then
     fi
 
     # Mutation-Survival：聚合入口 detect_ai_observability health_json.status == "warn"
-    AGG_OUT=$( detect_ai_observability 2>/dev/null ); AGG_RC=$?
+    AGG_OUT=$( detect_ai_observability 2>/dev/null )
     # 提取 health_json.status 值（粗 JSON 解析，无 jq 依赖）
     HJ_STATUS=$(echo "$AGG_OUT" | grep -oE '"health_json"[[:space:]]*:[[:space:]]*\{[^}]*\}' \
         | grep -oE '"status"[[:space:]]*:[[:space:]]*"[a-z]+"' \
