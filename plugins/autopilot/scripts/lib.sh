@@ -1247,3 +1247,351 @@ $handoff_summary
 - [$(now_iso)] 全项目 QA 启动
 EOF
 }
+
+# ── Dim 13: AI 可观测性/调试友好度探测（doctor Wave 1 客观层） ────────────
+#
+# 契约（state.md C1）：
+#   detect_tech_stack <dir>         → rc=0 + stdout JSON {node,swift,go,python,rust,java,primary}
+#   detect_ai_observability <dir>   → rc=0 + stdout JSON {struct_log,log_rotation,cli_diagnostic,
+#                                     health_json,cache_clean,debug_switch} 各 {status,value}
+#                                     status ∈ {pass,warn,na}
+#   6 个私有 _ai_*_detect <dir>     → rc ∈ {0=pass, 1=na 自门控, 2=warn 缺失}
+#                                     + stdout `AI-OBS-<DIM>-<STATE>:` 信号
+#                                     <DIM>   ∈ {STRUCT-LOG, LOG-ROTATION, CLI-DIAGNOSTIC,
+#                                                HEALTH-JSON, CACHE-CLEAN, DEBUG-SWITCH}
+#                                     <STATE> ∈ {PASS, NA, MISSING, PARTIAL}
+#
+# 不变量：
+#   - 纯 bash：禁 node/python/python3/npx/cargo/go run（约束守卫.P4）
+#   - solve-don't-punt：无标志文件 → 各维 na（rc=1），不抛错、不崩溃
+#   - 跨平台：复用既有 find/ls/grep 模式，无 stat -f/-c
+#   - 性能：所有 grep/find 限定 maxdepth + 排除产物目录（.git/node_modules/.build/.next/dist/build）
+
+# _ai_grep_src <pattern> <dir>
+#   统一源码 grep（性能：exclude-dir 排除产物目录，比 find -not -path 快 ~1000x）。
+#   返回首个命中文件路径（head -1），无命中则空。退出码恒为 0（调用方判空串）。
+_ai_grep_src() {
+    local pat="$1" dir="$2"
+    grep -rEl \
+        --include='*.swift' --include='*.ts' --include='*.tsx' --include='*.js' \
+        --include='*.jsx' --include='*.go' --include='*.py' --include='*.rs' --include='*.java' \
+        --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.build \
+        --exclude-dir=.next --exclude-dir=dist --exclude-dir=build --exclude-dir=target \
+        --exclude-dir=.venv --exclude-dir=__pycache__ --exclude-dir=.pytest_cache \
+        --exclude-dir=.cache --exclude-dir=out --exclude-dir=homebrew \
+        --exclude-dir=.swiftpm --exclude-dir=DerivedData --exclude-dir=coverage \
+        -E "$pat" "$dir" 2>/dev/null \
+        | grep -vE 'node_modules|/\.git/|/\.build/|/\.next/|/dist/|/build/|\.test\.|__tests__|/tests/|/BuddyCoreTests/|/__mocks__/' \
+        | head -1
+}
+
+# detect_tech_stack <dir> → rc=0 + stdout JSON {node,swift,go,python,rust,java,primary}
+#
+# 通用技术栈识别（package.json/Info.plist/go.mod/pyproject.toml/Cargo.toml/pom.xml/build.gradle）。
+# 函数化 doctor Step 0 现有内联规则表（净减 SKILL.md 行）。
+# primary 取首个命中（优先级：swift→node→go→rust→python→java，全无则 unknown）——
+#   Swift 桌面 app 优先于 node 前端（monorepo 如 claude-code-buddy primary=swift）。
+# 错误契约：目录不存在/无任何标志 → 全 false + primary="unknown"（rc=0，solve-don't-punt）。
+detect_tech_stack() {
+    local dir="${1:-.}"
+    local node=false swift=false go=false python=false rust=false java=false
+    [ -d "$dir" ] || dir="."
+    # 直接根目录标志文件（快速路径）
+    [ -f "$dir/package.json" ] && node=true
+    [ -f "$dir/Package.swift" ] && swift=true
+    [ -f "$dir/go.mod" ] && go=true
+    [ -f "$dir/Cargo.toml" ] && rust=true
+    [ -f "$dir/pyproject.toml" ] || [ -f "$dir/setup.py" ] || [ -f "$dir/requirements.txt" ] && python=true
+    [ -f "$dir/pom.xml" ] || [ -f "$dir/build.gradle" ] || [ -f "$dir/build.gradle.kts" ] && java=true
+    # 子目录兜底（monorepo apps/<x>/Package.swift、apps/<x>/package.json）
+    if [ "$swift" = "false" ] && [ -n "$(find "$dir" -maxdepth 3 \( -name Package.swift -o -name Info.plist \) -print -quit 2>/dev/null)" ]; then
+        swift=true
+    fi
+    if [ "$node" = "false" ] && [ -n "$(find "$dir" -maxdepth 3 -name package.json -print -quit 2>/dev/null)" ]; then
+        # 排除 node_modules 误判
+        local nf
+        nf=$(find "$dir" -maxdepth 3 -name package.json -not -path '*/node_modules/*' -print -quit 2>/dev/null)
+        [ -n "$nf" ] && node=true
+    fi
+    if [ "$go" = "false" ] && [ -n "$(find "$dir" -maxdepth 3 -name go.mod -print -quit 2>/dev/null)" ]; then
+        go=true
+    fi
+    if [ "$rust" = "false" ] && [ -n "$(find "$dir" -maxdepth 3 -name Cargo.toml -print -quit 2>/dev/null)" ]; then
+        rust=true
+    fi
+    if [ "$python" = "false" ] && [ -n "$(find "$dir" -maxdepth 2 -name pyproject.toml -print -quit 2>/dev/null)" ]; then
+        python=true
+    fi
+    if [ "$java" = "false" ] && [ -n "$(find "$dir" -maxdepth 3 -name pom.xml -print -quit 2>/dev/null)" ]; then
+        java=true
+    fi
+    # primary 优先级（Swift 桌面 > node 前端：buddy monorepo primary 应为 swift）
+    local primary="unknown"
+    if [ "$swift" = "true" ]; then primary="swift"
+    elif [ "$node" = "true" ]; then primary="node"
+    elif [ "$go" = "true" ]; then primary="go"
+    elif [ "$rust" = "true" ]; then primary="rust"
+    elif [ "$python" = "true" ]; then primary="python"
+    elif [ "$java" = "true" ]; then primary="java"
+    fi
+    printf '{"node":%s,"swift":%s,"go":%s,"python":%s,"rust":%s,"java":%s,"primary":"%s"}\n' \
+        "$node" "$swift" "$go" "$python" "$rust" "$java" "$primary"
+    return 0
+}
+
+# _ai_struct_log_detect <dir> → rc ∈ {0,1,2} + stdout `AI-OBS-STRUCT-LOG-<STATE>:`
+#
+# 结构化日志维度（客观）：JSONL/JSON 日志文件 + env 级别变量。
+#   PASS    (rc0)：JSONL/JSON 日志文件存在 ∧ env 级别变量（LOG_LEVEL/BUDDY_LOG_LEVEL/...）存在
+#   PARTIAL (rc2)：仅一项存在
+#   MISSING (rc2)：两项全无
+#   NA      (rc1)：目录不存在
+# _ai_has_source <dir> → 0=有源码/标志（.swift/.ts/.js/.go/.py/.rs/.java 或 package.json）/ 1=无（纯脚本）
+# 子探测器自门控：无源码 → 各维 na（rc=1），对齐契约 C1 solve-don't-punt。
+_ai_has_source() {
+    local dir="${1:-.}"
+    [ -d "$dir" ] || return 1
+    if [ -n "$(find "$dir" -maxdepth 4 -type f \
+        \( -name '*.swift' -o -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.jsx' \
+           -o -name '*.go' -o -name '*.py' -o -name '*.rs' -o -name '*.java' \) \
+        -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/.build/*' \
+        -not -path '*/.next/*' -not -path '*/dist/*' -not -path '*/build/*' \
+        -print -quit 2>/dev/null)" ]; then
+        return 0
+    fi
+    [ -f "$dir/package.json" ] && return 0
+    return 1
+}
+
+_ai_struct_log_detect() {
+    local dir="${1:-.}"
+    [ -d "$dir" ] || { echo "AI-OBS-STRUCT-LOG-NA: no dir"; return 1; }
+    _ai_has_source "$dir" || { echo "AI-OBS-STRUCT-LOG-NA: no source code"; return 1; }
+    # JSONL/JSON 日志文件（项目源码，maxdepth=4 + 排除产物目录）
+    local jsonl_hit=""
+    jsonl_hit=$(find "$dir" -maxdepth 4 -type f \
+        \( -name "*.jsonl" -o -name "app.log" -o -name "access.log" \) \
+        -not -path '*/.git/*' -not -path '*/node_modules/*' -not -path '*/.build/*' \
+        -not -path '*/.next/*' -not -path '*/dist/*' -not -path '*/build/*' \
+        -print -quit 2>/dev/null)
+    # 业界约定：~/.<ns>/logs/<ns>-*.jsonl（buddy/sentry/pino 等）
+    # 目录 basename 可能含 "-cli"/"-code" 后缀（claude-code-buddy → buddy）；多候选尝试
+    local ns="" home_logs=""
+    local bn
+    bn=$(basename "$dir" 2>/dev/null)
+    # 候选命名空间：全名 / 去前缀（x-foo → foo）/ 去后缀（foo-cli → foo / foo-bar → bar）
+    for ns in "$bn" "${bn#*-}" "${bn%-*}" "${bn%%-*}"; do
+        [ -z "$ns" ] && continue
+        [ -d "$HOME/.${ns}/logs" ] || continue
+        home_logs=$(find "$HOME/.${ns}/logs" -maxdepth 1 -name "*.jsonl" -print -quit 2>/dev/null)
+        [ -n "$home_logs" ] && break
+    done
+    # env 级别变量（源码引用 LOG_LEVEL/<NS>_LOG_LEVEL）
+    local env_hit=""
+    env_hit=$(_ai_grep_src 'LOG_LEVEL|BUDDY_LOG_LEVEL|NS_LOG_LEVEL|LOGGING_LEVEL|LogLevel\.' "$dir")
+    # 源码结构化日志 writer 实现（buddy LogConfig / pino / winston / structlog / FileHandler 等）
+    # 项目实现了结构化日志写入（即便运行时产物落在 ~/.<ns>/ 不在项目目录）+ env 级别控制 → PASS
+    local writer_hit=""
+    writer_hit=$(_ai_grep_src 'LogConfig|Logger\.write|FileLog|JSONL|jsonl|os_log|pino|winston|structlog|logging\.getLogger|RotatingFile|FileHandler' "$dir")
+    local have_log=false have_env=false
+    { [ -n "$jsonl_hit" ] || [ -n "$home_logs" ] || [ -n "$writer_hit" ]; } && have_log=true
+    [ -n "$env_hit" ] && have_env=true
+    if [ "$have_log" = "true" ] && [ "$have_env" = "true" ]; then
+        echo "AI-OBS-STRUCT-LOG-PASS: source=${jsonl_hit:-${home_logs:-none}} writer=$writer_hit env=$env_hit"
+        return 0
+    fi
+    if [ "$have_log" = "true" ] || [ "$have_env" = "true" ]; then
+        echo "AI-OBS-STRUCT-LOG-PARTIAL: log=$have_log env=$have_env"
+        return 2
+    fi
+    echo "AI-OBS-STRUCT-LOG-MISSING: no jsonl no env-level"
+    return 2
+}
+
+# _ai_log_rotation_detect <dir> → rc + stdout `AI-OBS-LOG-ROTATION-<STATE>:`
+#
+# 日志轮转维度（客观）：配置/代码含大小或数量上限。
+_ai_log_rotation_detect() {
+    local dir="${1:-.}"
+    [ -d "$dir" ] || { echo "AI-OBS-LOG-ROTATION-NA: no dir"; return 1; }
+    _ai_has_source "$dir" || { echo "AI-OBS-LOG-ROTATION-NA: no source code"; return 1; }
+    local hit_size="" hit_count=""
+    hit_size=$(_ai_grep_src 'rotateSize|rotateSizeBytes|maxFileSize|maxSizeBytes|maxBytes|logSizeLimit|MaxFileSize' "$dir")
+    hit_count=$(_ai_grep_src 'retainMaxArchives|maxArchives|retainTotalSize|maxFiles|retainCount|filesToKeep' "$dir")
+    if [ -n "$hit_size" ] && [ -n "$hit_count" ]; then
+        echo "AI-OBS-LOG-ROTATION-PASS: size=$hit_size count=$hit_count"
+        return 0
+    fi
+    if [ -n "$hit_size" ] || [ -n "$hit_count" ]; then
+        echo "AI-OBS-LOG-ROTATION-PARTIAL: size=${hit_size:-none} count=${hit_count:-none}"
+        return 2
+    fi
+    echo "AI-OBS-LOG-ROTATION-MISSING: no size/count cap"
+    return 2
+}
+
+# _ai_cli_diagnostic_detect <dir> → rc + stdout `AI-OBS-CLI-DIAGNOSTIC-<STATE>:`
+#
+# CLI 诊断命令维度（客观）：bin/scripts/package.json scripts 含 health/log/diagnose/doctor/status/info。
+_ai_cli_diagnostic_detect() {
+    local dir="${1:-.}"
+    [ -d "$dir" ] || { echo "AI-OBS-CLI-DIAGNOSTIC-NA: no dir"; return 1; }
+    _ai_has_source "$dir" || { echo "AI-OBS-CLI-DIAGNOSTIC-NA: no source code"; return 1; }
+    # package.json scripts（根 + monorepo apps/packages）
+    local npm_hit=""
+    if [ -f "$dir/package.json" ]; then
+        npm_hit=$(grep -oE '"(health|log|logs|diagnose|doctor|status|info|report)"[[:space:]]*:' "$dir/package.json" 2>/dev/null | head -3 | tr '\n' ',')
+    fi
+    if [ -z "$npm_hit" ]; then
+        local sub f
+        sub=$(find "$dir" -maxdepth 3 -name package.json -not -path '*/node_modules/*' -print 2>/dev/null)
+        for f in $sub; do
+            npm_hit=$(grep -oE '"(health|log|logs|diagnose|doctor|status|info|report)"[[:space:]]*:' "$f" 2>/dev/null | head -3 | tr '\n' ',')
+            [ -n "$npm_hit" ] && break
+        done
+    fi
+    # 源码 CLI 子命令分发模式（case "health"|cmdHealth|healthCmd）
+    local cli_hit=""
+    cli_hit=$(_ai_grep_src 'cmdHealth|healthCmd|case[[:space:]]*"health"|func[[:space:]]+health|Command\.(health|log|status)' "$dir")
+    if [ -n "$npm_hit" ] || [ -n "$cli_hit" ]; then
+        echo "AI-OBS-CLI-DIAGNOSTIC-PASS: npm=$npm_hit cli=$cli_hit"
+        return 0
+    fi
+    echo "AI-OBS-CLI-DIAGNOSTIC-MISSING: no health/log/diagnose/doctor/status/info subcommand"
+    return 2
+}
+
+# _ai_health_json_detect <dir> → rc + stdout `AI-OBS-HEALTH-JSON-<STATE>:`
+#
+# health JSON 维度（客观）：health 命令或 /health 路由存在 + 输出 jq 可解析。
+_ai_health_json_detect() {
+    local dir="${1:-.}"
+    [ -d "$dir" ] || { echo "AI-OBS-HEALTH-JSON-NA: no dir"; return 1; }
+    _ai_has_source "$dir" || { echo "AI-OBS-HEALTH-JSON-NA: no source code"; return 1; }
+    # health 入口：CLI health 子命令 / /health 或 /api/health 路由 / healthCmd 函数
+    local entry_hit=""
+    entry_hit=$(_ai_grep_src 'cmdHealth|healthCmd|case[[:space:]]*"health"|func[[:space:]]+health|/api/health' "$dir")
+    # npm scripts.health（package.json health script 也算 health 命令入口）
+    local npm_health=""
+    [ -f "$dir/package.json" ] && npm_health=$(grep -E '"health"[[:space:]]*:' "$dir/package.json" 2>/dev/null)
+    [ -n "$npm_health" ] && entry_hit="${entry_hit:+$entry_hit }npm:$npm_health"
+    # 路由文件：app/api/health/route.{ts,js}
+    local route_hit=""
+    route_hit=$(find "$dir" -maxdepth 5 -path '*api/health*' -name 'route.*' -not -path '*/node_modules/*' -print -quit 2>/dev/null)
+    if [ -z "$entry_hit" ] && [ -z "$route_hit" ]; then
+        echo "AI-OBS-HEALTH-JSON-MISSING: no health entry"
+        return 2
+    fi
+    # jq 可解析输出：源码含 status/healthy JSON 字段或 --json flag
+    local json_hit=""
+    json_hit=$(_ai_grep_src '"status"[[:space:]]*:|--json|JSON\.stringify|jsonOutput|jsonEncode' "$dir")
+    if [ -n "$json_hit" ]; then
+        echo "AI-OBS-HEALTH-JSON-PASS: entry=${entry_hit:-$route_hit} json=$json_hit"
+        return 0
+    fi
+    echo "AI-OBS-HEALTH-JSON-PARTIAL: entry=${entry_hit:-$route_hit} no-json-output"
+    return 2
+}
+
+# _ai_cache_clean_detect <dir> → rc + stdout `AI-OBS-CACHE-CLEAN-<STATE>:`
+#
+# 缓存清理维度（客观）：scripts 含 clean/purge/prune/cache 子命令或对应 npm/Makefile script。
+_ai_cache_clean_detect() {
+    local dir="${1:-.}"
+    [ -d "$dir" ] || { echo "AI-OBS-CACHE-CLEAN-NA: no dir"; return 1; }
+    _ai_has_source "$dir" || { echo "AI-OBS-CACHE-CLEAN-NA: no source code"; return 1; }
+    local npm_hit=""
+    if [ -f "$dir/package.json" ]; then
+        npm_hit=$(grep -oE '"(clean|purge|prune|clean:[a-z:]*|cache:clean|clean:cache|clear-cache)"[[:space:]]*:' "$dir/package.json" 2>/dev/null | head -3 | tr '\n' ',')
+    fi
+    if [ -z "$npm_hit" ]; then
+        local sub f
+        sub=$(find "$dir" -maxdepth 3 -name package.json -not -path '*/node_modules/*' -print 2>/dev/null)
+        for f in $sub; do
+            npm_hit=$(grep -oE '"(clean|purge|prune|clean:[a-z:]*|cache:clean|clear-cache)"[[:space:]]*:' "$f" 2>/dev/null | head -3 | tr '\n' ',')
+            [ -n "$npm_hit" ] && break
+        done
+    fi
+    # Makefile clean target
+    local mk_hit=""
+    if [ -f "$dir/Makefile" ] || [ -f "$dir/apps/desktop/Makefile" ]; then
+        mk_hit=$(grep -hE '^[a-z_-]*clean[a-z_-]*:' "$dir/Makefile" "$dir/apps/desktop/Makefile" 2>/dev/null | head -1)
+    fi
+    # scripts/ 目录
+    local sh_hit=""
+    sh_hit=$(find "$dir/scripts" -maxdepth 2 -type f \( -name "clean*" -o -name "purge*" -o -name "prune*" \) -print -quit 2>/dev/null)
+    if [ -n "$npm_hit" ] || [ -n "$mk_hit" ] || [ -n "$sh_hit" ]; then
+        echo "AI-OBS-CACHE-CLEAN-PASS: npm=$npm_hit mk=$mk_hit sh=$sh_hit"
+        return 0
+    fi
+    echo "AI-OBS-CACHE-CLEAN-MISSING: no clean/purge/prune/cache script"
+    return 2
+}
+
+# _ai_debug_switch_detect <dir> → rc + stdout `AI-OBS-DEBUG-SWITCH-<STATE>:`
+#
+# debug 开关维度（客观）：LOG_LEVEL/DEBUG/<NS>_LOG_LEVEL env 或 #if DEBUG 配置存在。
+_ai_debug_switch_detect() {
+    local dir="${1:-.}"
+    [ -d "$dir" ] || { echo "AI-OBS-DEBUG-SWITCH-NA: no dir"; return 1; }
+    _ai_has_source "$dir" || { echo "AI-OBS-DEBUG-SWITCH-NA: no source code"; return 1; }
+    local env_hit=""
+    env_hit=$(_ai_grep_src 'BUDDY_LOG_LEVEL|LOG_LEVEL|LOGGING_LEVEL|env\.(DEBUG|LOG_LEVEL)' "$dir")
+    local flag_hit=""
+    flag_hit=$(_ai_grep_src '#if[[:space:]]+DEBUG|#if[[:space:]]+!DEBUG|process\.env\.NODE_ENV|isProduction|isDebug' "$dir")
+    if [ -n "$env_hit" ] || [ -n "$flag_hit" ]; then
+        echo "AI-OBS-DEBUG-SWITCH-PASS: env=$env_hit flag=$flag_hit"
+        return 0
+    fi
+    echo "AI-OBS-DEBUG-SWITCH-MISSING: no LOG_LEVEL/DEBUG/#if DEBUG switch"
+    return 2
+}
+
+# detect_ai_observability <dir> → rc=0 + stdout JSON
+#   {struct_log,log_rotation,cli_diagnostic,health_json,cache_clean,debug_switch}
+#   每项 {status, value}，status ∈ {pass, warn, na}
+#
+# 统一入口（doctor Wave 1 单次调用），按技术栈调度 6 客观子探测器。
+# 聚合规则：子探测器 rc=0 → pass / rc=1 → na / rc=2 → warn；value 取 stdout 信号（去 PREFIX）。
+# 自门控（solve-don't-punt）：纯脚本项目（无任何源码文件）→ 6 维全 na，不抛错（边界情形.P1）。
+detect_ai_observability() {
+    local dir="${1:-.}"
+    [ -d "$dir" ] || dir="."
+    local dims=("struct_log" "log_rotation" "cli_diagnostic" "health_json" "cache_clean" "debug_switch")
+    local fns=("_ai_struct_log_detect" "_ai_log_rotation_detect" "_ai_cli_diagnostic_detect" \
+               "_ai_health_json_detect" "_ai_cache_clean_detect" "_ai_debug_switch_detect")
+    # 自门控：纯脚本项目（无源码 + 无 package.json）→ 6 维全 na（复用 _ai_has_source，DRY）
+    if ! _ai_has_source "$dir"; then
+        printf '{"struct_log":{"status":"na","value":"no source code"},"log_rotation":{"status":"na","value":"no source code"},"cli_diagnostic":{"status":"na","value":"no source code"},"health_json":{"status":"na","value":"no source code"},"cache_clean":{"status":"na","value":"no source code"},"debug_switch":{"status":"na","value":"no source code"}}\n'
+        return 0
+    fi
+    local pairs=""
+    local i
+    for i in 0 1 2 3 4 5; do
+        local out=""
+        local rc=0
+        local st=""
+        local value=""
+        out=$("${fns[$i]}" "$dir" 2>/dev/null) || rc=$?
+        case "$rc" in
+            0) st="pass" ;;
+            1) st="na" ;;
+            *) st="warn" ;;
+        esac
+        # value = 去掉 PREFIX（"AI-OBS-<DIM>-<STATE>:"）的部分；若无分隔则整行
+        value="${out#*:}"
+        value="${value#"${value%%[![:space:]]*}"}"  # 去前导空格
+        [ -z "$value" ] && value="$out"
+        # JSON 安全：转义双引号/反斜杠
+        value=${value//\\/\\\\}
+        value=${value//\"/\\\"}
+        local pair="\"${dims[$i]}\":{\"status\":\"$st\",\"value\":\"$value\"}"
+        if [ -z "$pairs" ]; then
+            pairs="$pair"
+        else
+            pairs="$pairs,$pair"
+        fi
+    done
+    printf '{%s}\n' "$pairs"
+    return 0
+}
