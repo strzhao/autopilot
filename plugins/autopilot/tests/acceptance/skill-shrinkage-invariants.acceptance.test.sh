@@ -130,7 +130,6 @@ fi
 # 每个文件独立判定 deleted > added
 check_file_numstat() {
     local rel="$1"
-    local label="$2"
     local line
     line=$(echo "$NUMSTAT_CONTENT" | grep -E "[[:space:]]${rel}$" | head -1)
     if [[ -z "$line" ]]; then
