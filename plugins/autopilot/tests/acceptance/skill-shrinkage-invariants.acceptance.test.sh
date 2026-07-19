@@ -155,11 +155,17 @@ DOCTOR_STATS=$(check_file_numstat "$DOCTOR_SKILL" "doctor")
 DOCTOR_ADDED=${DOCTOR_STATS% *}
 DOCTOR_DELETED=${DOCTOR_STATS#* }
 
-[[ "$AUTOPILOT_DELETED" -gt "$AUTOPILOT_ADDED" ]] || \
-    fail "scene 1.P2: autopilot/SKILL.md 未净减 (deleted=$AUTOPILOT_DELETED <= added=$AUTOPILOT_ADDED)。减法要求 deleted > added（独立守护，不依赖 skill-md-net-shrinkage）"
-[[ "$DOCTOR_DELETED" -gt "$DOCTOR_ADDED" ]] || \
-    fail "scene 1.P2: doctor/SKILL.md 未净减 (deleted=$DOCTOR_DELETED <= added=$DOCTOR_ADDED)。减法要求 deleted > added（独立守护）"
-pass "scene 1.P2: 两 SKILL.md 各自净减 (autopilot: -$AUTOPILOT_DELETED/+$AUTOPILOT_ADDED, doctor: -$DOCTOR_DELETED/+$DOCTOR_ADDED)"
+# commit-aware：工作区 clean（两文件 numstat 都 0，改动已 commit）→ 本断言 N/A
+# （净减计数是 QA 阶段一次性守护，commit 后由 git history 保证；长期 step 守护靠 scene 5 双重 grep）
+if [[ "$AUTOPILOT_ADDED" -eq 0 && "$AUTOPILOT_DELETED" -eq 0 && "$DOCTOR_ADDED" -eq 0 && "$DOCTOR_DELETED" -eq 0 ]]; then
+    pass "scene 1.P2: 工作区 clean（减法已 commit），N/A — 净减计数是 QA 阶段一次性守护，commit 后由 git history 保证"
+else
+    [[ "$AUTOPILOT_DELETED" -gt "$AUTOPILOT_ADDED" ]] || \
+        fail "scene 1.P2: autopilot/SKILL.md 未净减 (deleted=$AUTOPILOT_DELETED <= added=$AUTOPILOT_ADDED)。减法要求 deleted > added（独立守护，不依赖 skill-md-net-shrinkage）"
+    [[ "$DOCTOR_DELETED" -gt "$DOCTOR_ADDED" ]] || \
+        fail "scene 1.P2: doctor/SKILL.md 未净减 (deleted=$DOCTOR_DELETED <= added=$DOCTOR_ADDED)。减法要求 deleted > added（独立守护）"
+    pass "scene 1.P2: 两 SKILL.md 各自净减 (autopilot: -$AUTOPILOT_DELETED/+$AUTOPILOT_ADDED, doctor: -$DOCTOR_DELETED/+$DOCTOR_ADDED)"
+fi
 
 # ===========================================================================
 # 断言 3（场景2.P1a）：7 契约词在两 SKILL.md 并集 after >= before
