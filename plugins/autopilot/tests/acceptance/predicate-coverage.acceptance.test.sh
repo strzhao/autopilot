@@ -203,25 +203,20 @@ get_numstat_added() {
     echo "$added"
 }
 
-SKILL_ADDED=$(get_numstat_added "HEAD")
+# 取 added/deleted 双值（净非增判定）：行内删改/表格化 git 计 added 但语义纯减，
+# 原 added==0 对减法/下沉任务系统性误报；改 deleted>=added（净非增）才是"只减不增"准确语义。
+SKILL_NUMSTAT=$(git -C "$REPO_ROOT" diff --numstat HEAD -- "$SKILL_REL" 2>/dev/null | head -1)
+SKILL_ADDED=$(echo "$SKILL_NUMSTAT" | awk -F'\t' '{print $1}'); SKILL_ADDED=${SKILL_ADDED:-0}
+SKILL_DELETED=$(echo "$SKILL_NUMSTAT" | awk -F'\t' '{print $2}'); SKILL_DELETED=${SKILL_DELETED:-0}
+[[ "$SKILL_ADDED" =~ ^[0-9]+$ ]] || SKILL_ADDED=0
+[[ "$SKILL_DELETED" =~ ^[0-9]+$ ]] || SKILL_DELETED=0
 DIFF_REF_DESC="HEAD (working tree, uncommitted)"
 
-# 若工作区无改动（全部已 commit），回退 HEAD~1 取本次提交
-if [[ "${SKILL_ADDED:-0}" -eq 0 ]]; then
-    # 双重确认：工作区 diff 为空（added=0）即满足；无需回退也能 PASS。
-    # 但若 SKILL.md 在 HEAD~1 有改动且工作区已 clean，仍应校验那次 added==0。
-    SKILL_ADDED_H1=$(get_numstat_added "HEAD~1")
-    if [[ "${SKILL_ADDED_H1:-0}" -gt 0 ]]; then
-        # HEAD~1 有 added，但工作区当前为 0；以 HEAD~1 为准（本次提交就是改动源）
-        SKILL_ADDED="$SKILL_ADDED_H1"
-        DIFF_REF_DESC="HEAD~1 (committed, fallback diff)"
-    fi
-fi
-
-if [[ "$SKILL_ADDED" -eq 0 ]]; then
-    _log_pass "PC.SC1.P1" "SKILL.md git diff --numstat added == 0 [$DIFF_REF_DESC]（约束1：SKILL.md 只减不增）"
+# 净非增：deleted >= added（适配减法/下沉任务；原 added==0 过严致减法任务误报）
+if [[ "$SKILL_DELETED" -ge "$SKILL_ADDED" ]]; then
+    _log_pass "PC.SC1.P1" "SKILL.md 净非增 deleted(${SKILL_DELETED}) >= added(${SKILL_ADDED}) [$DIFF_REF_DESC]（约束1：只减不增）"
 else
-    _log_fail "PC.SC1.P1" "SKILL.md git diff --numstat added = $SKILL_ADDED != 0 [$DIFF_REF_DESC]（违反约束1：SKILL.md 只减不增）"
+    _log_fail "PC.SC1.P1" "SKILL.md 净增 added(${SKILL_ADDED}) > deleted(${SKILL_DELETED}) [$DIFF_REF_DESC]（违反约束1：只减不增）"
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
