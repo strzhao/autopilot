@@ -4,11 +4,12 @@
 
 ## Domains 导航（历史归档，按主题）
 - [stop-hook-state-machine](domains/stop-hook-state-machine.md) — stop-hook 兜底 / 状态机 / flag-asymmetry / pending-subagent（7 entry）
-- [skill-authoring](domains/skill-authoring.md) — SKILL.md 改动纪律 / 命名 / best-practice / 版本同步（16 entry）
+- [skill-authoring](domains/skill-authoring.md) — SKILL.md 改动纪律 / 命名 / best-practice / 版本同步（17 entry）
 - [qa-testing](domains/qa-testing.md) — QA 判定 / red-team / mutation / contract / 量化门禁（15 entry）
 - [worktree-git](domains/worktree-git.md) — worktree 检测 / symlink / git porcelain / 文件管理（7 entry）
 - [knowledge-token-arch](domains/knowledge-token-arch.md) — progressive disclosure / token / sub-agent / 架构 / doctor（11 entry）
 - [bash-shell-pitfalls](domains/bash-shell-pitfalls.md) — bash 陷阱 / exit-code / trap-err / set-u / macOS（4 entry）
+- [2026-07-19] 减法/重构任务复刻 [2026-05-25]——claude-p 独立验证关键 step + 既有断言语义化适配减法（净非增/after>=1/net 章节）+ 补 scene 5 双重 grep 守护（v3.58.1） | tags: autopilot, skill, shrink, refactor, claude-p, independent-verification, double-grep, assertion-adaptation, predicate-coverage, scene-5, borderline-rollback, dogfood, v3.58.1 | → domains/skill-authoring.md
 - [2026-07-08] skill md 减行硬约束下新守卫全部下沉 bash，skill md 删散文净减行（v3.52.0 §5.7 谓词守卫） | tags: autopilot, skill, shrink-only, enforce-bash, stop-hook, predicate-guard, mock-cheating, trust-chain, v3.52.0 | → domains/skill-authoring.md
 
 ## Decisions（40）
