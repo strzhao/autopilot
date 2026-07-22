@@ -395,6 +395,9 @@ ls -d types/ src/types/ 2>/dev/null
 #### Dim 13 续：Wave 2 AI 判断（语义维）
 **N/A**：`detect_ai_observability` 6 客观维全 na → 满分不计入（对齐 Dim 11/12）。**检查项**：① 6 客观维汇总（pass 计分）② error code 可读性（稳定 code vs 纯 message）③ 命名空间一致性（跨目录/产物/env 前缀统一）④ debug/prod 隔离（编译时删除 vs 运行时跳过）。**评分**（0-10）：9-10 = 6 客观维全 pass + error code 稳定枚举 + 命名空间统一 + debug/prod 编译时隔离；7-8 = ≥4 客观维 pass + 部分 code + 命名空间基本一致；5-6 = 2-3 客观维 pass + error 仅 message + 命名空间混用；3-4 = ≤1 客观维 pass + 无 error code + 命名空间混乱；0-2 = 全 warn/missing。**修复建议引用**：非 PASS 维度引用 [references/ai-observability-principles.md](references/ai-observability-principles.md) 对应 `DIM-13-XX` 片段（非 scaffold）。
 
+### Dim 14: 命脉链路 readiness 覆盖（权重 7%）— Wave 2 AI 判断（纯语义维）
+**命脉穿透审计**（liveness≠readiness，对齐 07-21 little-bee 媒体 404 教训）：识别本项目「缺了即产品报废」的核心链路（命脉——用户感知的核心价值路径，非基础设施），假设它以最可能的方式回归（配置固化 / 外部依赖断裂 / 路径错位 / 关键 env 丢失），追问现有每一层验证（单测 / API / E2E / 部署健康 / build 断言）能否在它造成线上影响前抓到——只有至少一层在**与生产同构的环境**里真正覆盖该命脉，才算 readiness 达标。给 AI 认知方向，**不是穷举清单**（不同项目命脉不同，AI 应自主识别本项目特有命脉与盲区，对齐 skill best practice「High freedom 开放田野」）。**判分四档**：`na` = 项目无命脉链路（纯 CLI/库/脚本/无用户感知核心价值路径），满分不计入（对齐 Dim 11/12/13）；`pass` = 至少一层验证在 prod 同构环境覆盖命脉（prod 镜像 E2E / readiness 探活端点 / build 产物断言）；`warn` = 有命脉探活但只在 dev 侧（E2E 全跑 dev server）/ health 探首页不探命脉 / 无 build 产物断言；`fail` = 命脉链路无任何验证覆盖。**审计输出**：命脉链路清单 + 代表性回归假设 + 逐层覆盖判定（哪层为何抓不到）+ 四档结论。**非 PASS（warn/fail）触发 doctor 评分降级**——即使其他维度全绿，命脉无 prod 同构覆盖也不评 A 级。**修复建议引用**：非 PASS 引用 [references/critical-path-readiness-principles.md](references/critical-path-readiness-principles.md) 的 `CP-XX` 认知锚点驱动 AI 给修复方向（非 scaffold，给方向不给模板）。
+
 ---
 
 ## Step 3: 计算总分与生成报告
@@ -409,23 +412,24 @@ ls -d types/ src/types/ 2>/dev/null
 
 例如：全部 10 分 → (10×0.20 + 10×0.15 + ... + 10×0.05) × 10 = 10 × 10 = 100
 
-权重表（Dim 13=0.05 加入，其余 12 维等比微调 sum=1.00）：
+权重表（新增命脉 readiness 维，其余 13 维等比微调 sum=1.00，14 维）：
 
 | 维度 | 权重 |
 |------|------|
-| Dim 1: 测试基础设施 | 0.14 |
-| Dim 2: 类型安全 | 0.11 |
-| Dim 3: 代码质量与健壮性 | 0.10 |
-| Dim 4: 构建系统 | 0.10 |
-| Dim 5: CI/CD Pipeline | 0.07 |
+| Dim 1: 测试基础设施 | 0.12 |
+| Dim 2: 类型安全 | 0.10 |
+| Dim 3: 代码质量与健壮性 | 0.09 |
+| Dim 4: 构建系统 | 0.09 |
+| Dim 5: CI/CD Pipeline | 0.06 |
 | Dim 6: 项目结构 | 0.07 |
 | Dim 7: 文档质量 | 0.06 |
 | Dim 8: Git 工作流 | 0.07 |
 | Dim 9: 依赖与安全基线 | 0.06 |
-| Dim 10: AI 就绪度 | 0.07 |
+| Dim 10: AI 就绪度 | 0.06 |
 | Dim 11: 性能保障 | 0.06 |
 | Dim 12: 知识库健康度 | 0.04 |
 | Dim 13: AI 可观测性/调试友好度 | 0.05 |
+| Dim 14: 命脉链路 readiness 覆盖 | 0.07 |
 
 ### 等级映射
 
@@ -475,6 +479,7 @@ ls -d types/ src/types/ 2>/dev/null
 | 11 | 性能保障 | X/10 | ✅/⚠️/❌ | P1/P2/P3 覆盖状态 |
 | 12 | 知识库健康度 | X/10 | ✅/⚠️/❌ | 过拟合/重复/大小/索引状态（无知识库时 N/A） |
 | 13 | AI 可观测性/调试友好度 | X/10 | ✅/⚠️/❌ | 6 客观维（结构化日志/轮转/CLI/health/clean/debug）+ 3 语义维（error code/命名空间/隔离）摘要 |
+| 14 | 命脉链路 readiness 覆盖 | X/10 | ✅/⚠️/❌ | 命脉穿透审计摘要（命脉清单 + 回归假设 + 逐层覆盖判定；无命脉链路时 N/A；warn/fail 触发降级） |
 
 > 状态图标：✅ ≥ 7 | ⚠️ 4-6 | ❌ ≤ 3
 
@@ -502,6 +507,7 @@ ls -d types/ src/types/ 2>/dev/null
 | 性能预算断言（CI 质量门） | ✅/⚠️/❌ | Dim 11 + Dim 5 | 需要 CI 中集成性能检查步骤 |
 | 知识工程提取（merge 阶段） | ✅/⚠️/❌ | Dim 12 | 知识库混乱时 design 阶段加载历史决策的信号被噪声淹没 |
 | Tier 1.5: 真实场景日志可读性 | ✅/⚠️/❌ | Dim 13 | 结构化日志 + error code 支撑 AI 排查生产问题；无时降级为人工日志解读 |
+| 命脉链路 readiness 覆盖 | ✅/⚠️/❌ | Dim 14 | 命脉穿透审计（命脉→回归假设→逐层覆盖）；红队 prod 同构验证是 pass 途径之一，dev-only 验证仅 warn，无覆盖 fail |
 
 > ✅ 完全可用 | ⚠️ 降级运行 | ❌ 不可用
 
@@ -543,6 +549,7 @@ ls -d types/ src/types/ 2>/dev/null
 | 性能保障 (P1/P2/P3) | P1/P2/P3 安装 + 配置 + 示例的完整 --fix 步骤详见 [references/performance-testing.md](references/performance-testing.md) §P1/P2/P3 修复 |
 | 知识库健康度 | 输出建议清单到 doctor-report.md（不自动修改历史 entry，由用户手动整理） |
 | AI 可观测性/调试友好度 | 对每个非 PASS 维度引用 `references/ai-observability-principles.md` 对应 `DIM-13-XX` 核心原则段，驱动 AI 自主调研后给修复方案（非 scaffold）；用户确认后实施 |
+| 命脉链路 readiness 覆盖 | 对 warn/fail（命脉无 prod 同构覆盖）引用 `references/critical-path-readiness-principles.md` 对应 `CP-XX` 认知锚点段（命脉识别 / dev↔prod 异构 / liveness≠readiness / build 期固化），驱动 AI 自主给修复方向（非 scaffold，给方向不给模板）；用户确认后实施 |
 
 #### L2 修复详情：API Route 测试
 
