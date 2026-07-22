@@ -25,3 +25,9 @@
 **Lesson**: bash `set -u` 下，双引号内 `$VAR` 后紧跟**非 ASCII / 多字节字符**（全角括号、中文、Unicode 符号）时，词法分析器可能把多字节字符的字节并入变量名 → 误报 unbound。**修复**：用 `${VAR}` 花括号明确界定变量名边界（`pass "...${PATH_HAS_TMP}（场景..."`）。判据：`set -u` + 双引号 + `$VAR` + 紧邻多字节字符 = 必须用 `${VAR}`。同类：含 `$VAR` 插值的 pass/fail 消息避免 `$VAR` 直接接全角字符；中文字符串内 `$((...))` 算术展开也有类似词法问题。`$VAR `（后接半角空格/ASCII）无此问题——半角空格是变量名截止符。
 **Evidence**: acceptance-staging-contract.acceptance.test.sh:231 `$PATH_HAS_TMP（` 报 unbound（bash -n 通过，纯运行时 set -u 暴露），改 `${PATH_HAS_TMP}` 后全 PASS。同文件 `$PATH_HAS_RUNTIME ` / `$STAGING_IN_BLUE `（半角空格分隔）均无问题，证明确是全角字符边界问题。
 
+### [2026-07-23] awk 正则单词边界 `\b` 在 BSD/macOS 不支持 → 反向断言永真无判别力
+<!-- tags: bash, awk, bsd, macos, word-boundary, regex, tautological, mutation-survival, red-team, acceptance-test -->
+**Scenario**: 红队验收测试用 awk 做反向断言（检测「命脉未覆盖 + pass/na 放行词共现 == 0」防假绿），正则用 `\b` 单词边界（如 `/[[:space:]"(]pass\b/`）。macOS BSD awk（version 20200816）不把 `\b` 识别为单词边界 → 该模式永不匹配任何行 → 反向断言 co_occurrence 永远 == 0 → 永真 PASS。注入「未覆盖 pass」假绿词的 mutation 无法被此断言拦截（M6 mutation 实证：注入后仍 co==0 PASS）。tautological/mutation-survival 反模式——断言对任何 mutation 都通过，零判别力。
+**Lesson**: awk 正则禁用 `\b` / `\<` / `\>`（GNU awk 扩展，BSD/macOS awk 不支持，跨平台失效）。需要「单词边界」语义时用 `[^a-zA-Z]`（非字母字符）或 `([^a-zA-Z]|$)`（非字母或行尾）替代——POSIX 兼容、跨平台一致。判据：跨平台 bash 脚本的 awk 正则只用 POSIX 字符类，不用 GNU 扩展。注意：grep 的 `\b` 在 BSD grep 支持（与 awk 行为不同），同一脚本里 awk 用 `\b` 失效但 grep 用 `\b` 工作会掩盖 bug（debug 输出匹配但断言不匹配）。
+**Evidence**: critical-path-readiness.acceptance.test.sh:458-461 场景7.P3.NEGATE；`printf "未覆盖 pass" | awk '/未覆盖/ && /[[:space:]"(]pass\b/'` → 不匹配（c=0，失效）；改 `([^a-zA-Z]|$)` → c=1 恢复判别力。qa-reviewer M6 mutation 实证 + 用户 AskUserQuestion 确认红队铁律例外（「断言机制错」）+ 重锁修复（核对锚点：2026-07-23 v3.59.0 acceptance.test.sh:458）。
+

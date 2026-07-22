@@ -8,11 +8,12 @@
 - [qa-testing](domains/qa-testing.md) — QA 判定 / red-team / mutation / contract / 量化门禁（15 entry）
 - [worktree-git](domains/worktree-git.md) — worktree 检测 / symlink / git porcelain / 文件管理（7 entry）
 - [knowledge-token-arch](domains/knowledge-token-arch.md) — progressive disclosure / token / sub-agent / 架构 / doctor（11 entry）
-- [bash-shell-pitfalls](domains/bash-shell-pitfalls.md) — bash 陷阱 / exit-code / trap-err / set-u / macOS（4 entry）
+- [bash-shell-pitfalls](domains/bash-shell-pitfalls.md) — bash 陷阱 / exit-code / trap-err / set-u / macOS / awk-单词边界（5 entry）
 - [2026-07-19] 减法/重构任务复刻 [2026-05-25]——claude-p 独立验证关键 step + 既有断言语义化适配减法（净非增/after>=1/net 章节）+ 补 scene 5 双重 grep 守护（v3.58.1） | tags: autopilot, skill, shrink, refactor, claude-p, independent-verification, double-grep, assertion-adaptation, predicate-coverage, scene-5, borderline-rollback, dogfood, v3.58.1 | → domains/skill-authoring.md
 - [2026-07-08] skill md 减行硬约束下新守卫全部下沉 bash，skill md 删散文净减行（v3.52.0 §5.7 谓词守卫） | tags: autopilot, skill, shrink-only, enforce-bash, stop-hook, predicate-guard, mock-cheating, trust-chain, v3.52.0 | → domains/skill-authoring.md
 
-## Decisions（40）
+## Decisions（41）
+- [2026-07-23] doctor Dim 14「命脉链路 readiness 覆盖」——纯 AI 语义维治假绿（命脉穿透审计 High freedom，对齐 Dim 13 语义留 AI；判分识别命脉→假设回归→逐层追问验证层能否上线前抓到） | tags: autopilot, doctor, dim-14, readiness, critical-path, ai-semantic, high-freedom, liveness-readiness, false-green, v3.59.0 | → decisions.md
 - [2026-07-19] doctor Dim 13「AI 可观测性」——客观信号确定性下沉 + 语义留 AI（reconcile [2026-05-05]；判据=客观事实存在性 vs 语义质量判断；非 scaffold 修复给方向不给模板） | tags: autopilot, doctor, ai-observability, dim-13, deterministic-signal, objective-vs-semantic, knowledge-reconcile, solve-dont-punt, non-scaffold, v3.58.0 | → decisions.md
 - [2026-07-17] v3.57.0 谓词三守卫（channel/coverage/uniqueness）治 iina AI human-obs + 复制 artifact 双重失效（守卫口径收紧兼容 ACC-GUARD-30 / dogfood 自证拦作者 / SKILL 零改动执法全下沉 bash） | tags: autopilot, qa, predicate-guard, channel, artifact-uniqueness, md5, human-obs, visual-residue, deterministic-signal, stop-hook, §5.7, dogfood, iina, acc-guard-30-compat, skill-shrinkage, v3.57.0 | → decisions.md
 - [2026-07-11] project auto-mode 三卡点完整自洽（v3.56 修 html_review+approve，补 v3.54/v3.55 的 next）——默认值 latent bug 检测信号：全部调用方都传同一非默认值=默认值本身错（solve don't punt，常态编码进默认非甩给调用方）；create_brief_state_file 默认 auto_approve false→true | tags: autopilot, project-mode, auto-mode, auto-approve, default-value, latent-bug, solve-dont-punt, html-review, review-accept, create-brief-state-file, section-5.5, dogfood, claude-code-buddy, claude-p-verification, v3.56.0 | → decisions.md
@@ -57,7 +58,8 @@
 - [2026-03-26] doctor Dim 1 测试金字塔分层评估优于文件计数 | tags: autopilot, doctor, testing, test-pyramid, scoring | → domains/knowledge-token-arch.md
 - [2026-03-21] 知识工程采用三层 Progressive Disclosure 而非单层扩展 | tags: knowledge, architecture, progressive-disclosure | → domains/knowledge-token-arch.md
 
-## Patterns（55）
+## Patterns（56）
+- [2026-07-23] awk 正则单词边界 `\b` 在 BSD/macOS 不支持 → 反向断言永真无判别力（tautological/mutation-survival，改 `[^a-zA-Z]` POSIX 兼容） | tags: bash, awk, bsd, macos, word-boundary, regex, tautological, mutation-survival, red-team | → domains/bash-shell-pitfalls.md
 - [2026-07-19] 红队测试 FAIL 三分类——断言机制错/与契约矛盾/实现 bug（auto-fix 先分类再改；盲目以红队为准会把正确实现改错） | tags: autopilot, red-team, acceptance-test, auto-fix, false-positive, assertion-mechanism, regex-pitfall, set-comparison, debug-classification, v3.58.0 | → patterns.md
 - [2026-07-19] 业务维度数 vs 实现函数数——契约/验收措辞澄清避免 count 矛盾（N 维能力 ≠ M 函数；部分维度由非函数机制承载） | tags: autopilot, contract, plan-reviewer, acceptance-test, naming, business-vs-implementation, count-mismatch, v3.58.0 | → patterns.md
 - [2026-07-17] 谓词描述禁用 artifact:/driver:/observe:/assert: 字面量——awk match 首个命中落描述致 PRED-ARTIFACT-MISSING 误报（dogfood §5.7 自踩） | tags: autopilot, predicate, awk, field-extraction, literal-collision, bash-pitfall, stop-hook, §5.7, dogfood, false-negative, v3.57.0 | → patterns.md

@@ -179,4 +179,12 @@
 **Lesson**: ①「优先 AI 语义判断」≠「禁止确定性脚本」——判据是「客观事实存在性 vs 语义质量判断」，前者 grep/脚本，后者 AI；这正是「机械活下沉/智力活留 AI」的本质。② doctor 度量者定位扩展：不只查工程健康，还能度量其他工程 AI 友好度，新维度先区分与既有正交（Dim 13 可观测 vs Dim 10 测试可写，关键词不相交）。③ 非 scaffold 修复：给方向不给模板，契合 AI 强 + 最小机制。
 **Evidence**: commit 3bdfcbe v3.58.0。7 红队测试 65 断言全 PASS。qa-reviewer 设计符合性 8/8。SKILL.md 持平 664。关联 [[2026-05-05]] [[skill-authoring]]。
 
+### [2026-07-23] doctor Dim 14「命脉链路 readiness 覆盖」——纯 AI 语义维治假绿（命脉穿透审计 High freedom）
+<!-- tags: autopilot, doctor, dim-14, readiness, critical-path, ai-semantic, high-freedom, liveness-readiness, false-green, v3.59.0 -->
+**Background**: little-bee 生产命脉级回归（全站媒体 404）穿透单测/API/E2E/部署健康/doctor 全部验证层，doctor 此前给高分假绿。诊断：doctor 既有维度全评「工程健康度」(liveness)，无一维审计「命脉链路是否被验证体系真正覆盖」(readiness)——命脉级回归落在 liveness 维度的空洞里。
+**Choice**: 新增 Dim 14「命脉链路 readiness 覆盖」，判分用「命脉穿透审计」——AI 识别命脉→假设回归→逐层追问验证层（单测/API/E2E/部署健康/build 断言）能否上线前抓到→至少一层 prod 同构覆盖才 pass。纯 AI 语义（零 bash 探测，对齐 Dim 13「语义留 AI」哲学：命脉识别/回归假设/覆盖有效性本质全语义，端点存在≠有效覆盖，无客观存在性可下沉）。配 reference 沉淀 CP-01/02/03 代表性盲区样例（明示非穷举，AI 自主发现项目特有盲区）。强度=半硬评分（不接 stop-hook，止于评分降级）。
+**Alternatives rejected**: (1) 客观 bash 信号清单——命脉项目特异，硬编码信号难通用；(2) liveness vs readiness 单点——覆盖窄，dev-prod 异构/build 固化不覆盖；(3) 多要素分别打分——复杂违反最小机制，要素重叠；(4) 硬质量门 stop-hook——范式变更拖慢每次。
+**Lesson**: ① doctor 维度扩展先区分 liveness vs readiness——既有维度评工程健康，命脉 readiness 是正交新轴（治「高分假绿」结构性盲区）。② 纯 AI 语义维符合 Dim 13 哲学：判据是「判断对象本质有无客观存在性可下沉」，命脉穿透审计全语义，故零 bash（非偏离而是恰好全语义）。③ High freedom 写法（认知框架非检查清单）对齐 skill best practice 开放田野——AI 据 reference 授权「不限于此」自主扩展，但可能自创 CP 编号（如 CP-04），是设计授权内的自由发挥（reference 未明示可否自创编号，观察点）。
+**Evidence**: commit bf50346 v3.59.0。权重 14 维 awk sum=1.000000（6 维匀权：Dim1/2/3/4/5/10 各降，Dim14=0.07）；红队 17 断言全 PASS；claude -p 在 little-bee 真实工程验证 Dim 14 识别媒体命脉 + 逐层判定 + 判 pass（因 next.config build 期 fail-fast 断言）+ 引用 CP-02/CP-04 锚点（CP-04 为 AI 自主扩展，reference 实际仅 CP-01/02/03）（核对锚点：2026-07-23 v3.59.0 SKILL.md :398/:432 + references/critical-path-readiness-principles.md :18/:30/:42）。关联 [[2026-07-19]] [[2026-05-05]]。
+
 > 历史归档（< 2026-05-17）按主题迁移至 domains/，详见 index.md
