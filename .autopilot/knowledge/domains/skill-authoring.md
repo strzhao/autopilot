@@ -153,3 +153,12 @@ heading_hits=$(echo "$SECTION" | grep -cE "^#### [0-9.]+ <Step Title>" || true)
 **Borderline 回退判据**（概述层 vs 执行层）：删的文本若"执行层"在别处完整保留（信息隔离执行铁律在 red-team-prompt.md `## ⚠️ 铁律`、`/autopilot cancel` 在 SKILL 命令索引、stop-hook 行为自实现），概述层删无影响 = 低风险不回退（恢复冗余概述违 best practice #1）；若删的是"执行指令"本身（auto-fix 含义 bullet / Tier 3.5 时序 / 防合理化 H5）= 必须 B 回退 + scene 5 守护。
 **Evidence**: autopilot -72 / doctor -94 行（commit e8a8ff2 v3.58.1）；claude-p 两轮独立确认关键 step 可读 + 三路径可路由（doctor 13 Dim+权重+等级 / standard 5 phase / fast mode 触发判据）；scene 5 双重 grep 守护；run-all 36/36。诚实边界：autopilot 510 超 best practice #3 软目标 500（回退代价，软阈值 520）；未做破坏性反向验证（怕忘恢复，scene 5 逻辑人工审查 + claude-p 兜底）。
 **Lesson**: 减法/重构任务的"符合预期"不能只靠 run-all 绿（[[2026-05-25]] 事故时 acceptance 也绿）——必须 claude-p 独立 session 从 AI 视角验证关键 step 可读（补静态 grep 盲区）+ 既有断言语义化适配任务类型（加法任务的 added==0/词频锁/零新增 不适用减法）+ 补双重 grep 长效守护。三件套缺一，减法删 step 潜伏风险仍在。关联 [[2026-05-25]]（双重 grep 总则，本次补 scene 5 应用）、[[2026-07-04]]（claude-p 验证 autopilot 改动，本次扩展到 skill 减法关键 step quote）、[[2026-05-31]]（自门控反模式，predicate-coverage added==0 无自门控对减法误报）。
+
+### [2026-08-08] commit 与知识沉淀顺序前置：普通模式一次 commit
+<!-- tags: autopilot, skill, merge, knowledge-engineering, commit-order, worktree, dogfood -->
+**Background**: merge 阶段若 commit 在前、知识沉淀在后，知识库改动会在代码 commit 之后才产生，必须第二次提交。
+**Choice**: 知识提取前置到 commit Agent 之前，由 commit Agent 的 `git add -A` 一并提交代码与知识库；worktree 模式通过 symlink 锚点定位主仓库，在 commit Agent 之后兜底提交残留。
+**Alternatives rejected**: 保留原顺序（继续两次 commit，git history 噪声大）；把 worktree 路由塞进 commit-agent prompt（增加隔离 Agent 的复杂度）。
+**Trade-offs**: 普通模式获得一次 commit 的原子性；worktree 模式仍两次提交（拓扑固有，代码与知识库在不同 ref）。
+**Evidence**: little-bee dogfood 显示 feat+docs 成对交替；本次改动 5 文件从 999 行净减到 968 行；新增 merge-knowledge-order.acceptance.test.sh 7 条谓词锁契约。
+**Lesson**: 当 skill 流程存在"同一仓库内两次提交"的隐式开销时，优先考虑把产生文件的步骤前置到提交 Agent 之前，用 Agent 的 `git add -A` 统一提交。worktree 等拓扑分叉用简短兜底脚本处理，不分散提交职责。关联 [[2026-04-03]]（merge Agent 化）、[[2026-05-10]]（一处真相）。

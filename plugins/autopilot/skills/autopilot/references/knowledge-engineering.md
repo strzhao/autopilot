@@ -172,7 +172,7 @@ Before entering Plan Mode, scan `.autopilot/` if it exists. 分两阶段执行�
 
 ## Extraction Rules (Merge Phase)
 
-After autopilot-commit completes, review the full autopilot run to extract knowledge worth preserving.
+Before commit Agent, review the full autopilot run to extract knowledge worth preserving. Write files only — commit Agent will include them via `git add -A` (normal repo) or the routing below (worktree).
 
 ### Record a Decision When
 - 设计文档包含 option A vs option B 的权衡分析
@@ -200,64 +200,30 @@ After autopilot-commit completes, review the full autopilot run to extract knowl
    e. **时效锚点标注**：若条目 Evidence 含代码事实引用（`file:line` / 字段名 / 函数名 / Tier 编号），在该条目的 **Evidence 字段内**（禁止追加在 Lesson/Choice 行或条目标题——违反 Principle-Evidence 分离）追加 `（核对锚点：YYYY-MM-DD 源码版本）`，为 Consumption 阶段的时效核对留可机读时间锚
    f. 更新 `index.md`（不存在则创建）
    g. 全局文件 >100 行时建议用户迁移领域条目到 `domains/`
-   h. 确定知识库 git 提交上下文（见下方 Worktree-Aware Extraction）
 3. 无值得记录的内容 → 直接跳过（无需任何记录）
 
 **Time limit**: 2 分钟内完成。宁可少写高质量条目，不要穷举。
 
-## Worktree-Aware Extraction
+## Commit Routing
 
-When running in a git worktree (v3.18+ 选择性 symlink 模式)，`.autopilot/` 是真实目录，里面的共享知识项（`decisions.md`、`patterns.md`、`index.md`、`domains/`、`project/`、`requirements/` 等）以 symlink 指向主仓库 `.autopilot/<item>`。检测知识应该提交到哪个仓库时，**遍历 SHARED 项找第一个 symlink 作为锚点**——不要固定单一文件，因为新工程未必创建过 `decisions.md`。
+知识文件写入后**不立即 `git commit`**。提交职责由 commit Agent / worktree 路由承担：
 
-#### Step 1: 选择性 symlink 模式（happy path，v3.18+）
-
-遍历 SHARED 项找锚点：
+- **普通模式**：commit Agent 的 `git add -A` 自动包含 `.autopilot/knowledge/` 改动，与代码一次 commit。
+- **worktree 模式**：`.autopilot/knowledge/` 是 symlink 指向主仓库，worktree 的 commit Agent 不会包含它。commit Agent 之后，编排器在主仓库执行兜底提交：
 
 ```bash
-ANCHOR=""
-for item in decisions.md patterns.md index.md domains project requirements; do
-  if [ -L ".autopilot/$item" ]; then
-    ANCHOR=".autopilot/$item"
-    break
+# 定位主仓库（knowledge/ 任一文件是 symlink 时取 realpath）
+K_ITEM=".autopilot/knowledge/decisions.md"
+if [ -L "$K_ITEM" ]; then
+  MAIN_REPO=$(cd "$(dirname "$(realpath "$K_ITEM")")/.." && git rev-parse --show-toplevel)
+  if [ -n "$(git -C "$MAIN_REPO" status --porcelain .autopilot/)" ]; then
+    git -C "$MAIN_REPO" add .autopilot/
+    git -C "$MAIN_REPO" commit -m "docs(knowledge): <brief summary>"
   fi
-done
-
-if [ -n "$ANCHOR" ]; then
-  MAIN_REPO=$(cd "$(dirname "$(realpath "$ANCHOR")")/.." && git rev-parse --show-toplevel)
-  git -C "$MAIN_REPO" add .autopilot/
-  git -C "$MAIN_REPO" commit -m "docs(knowledge): extract {brief summary}"
 fi
 ```
 
-#### Step 1b: 旧版全量 symlink（v3.17 及更早）
-`test -L .autopilot` → `.autopilot` 整体是 symlink
-
-- 解析路径用 `.autopilot` 自身：
-  ```bash
-  KNOWLEDGE_REAL=$(realpath .autopilot)
-  MAIN_REPO=$(cd "$KNOWLEDGE_REAL" && git rev-parse --show-toplevel)
-  git -C "$MAIN_REPO" add .autopilot/ && git -C "$MAIN_REPO" commit -m "docs(knowledge): ..."
-  ```
-- 建议下次 SessionStart 让 `worktree-bootstrap` 自动升级到选择性 symlink（已配置自动升级路径）。
-
-#### Step 2: 在 worktree 中但 SHARED 项全部不是 symlink（fallback + self-heal）
-
-`test -f .git` 为真（worktree）且 Step 1 的循环未找到锚点 → 共享项缺失或被分支覆盖。
-
-1. 解析主仓库根：`COMMON_DIR=$(git rev-parse --git-common-dir); MAIN_REPO=$(cd "$COMMON_DIR/.." && pwd)`
-2. 复制知识到主仓库并提交：
-   ```bash
-   mkdir -p "$MAIN_REPO/.autopilot/"
-   for item in decisions.md patterns.md index.md domains project requirements; do
-     [ -e ".autopilot/$item" ] && cp -r ".autopilot/$item" "$MAIN_REPO/.autopilot/"
-   done
-   git -C "$MAIN_REPO" add .autopilot/
-   git -C "$MAIN_REPO" commit -m "docs(knowledge): ..."
-   ```
-3. 自愈：下次 SessionStart 让 `worktree-bootstrap` 重建选择性 symlink
-
-#### Step 3: Normal repo (no worktree)
-`test -d .git` → 正常 git 仓库，使用标准操作：`git add .autopilot/ && git commit -m "docs(knowledge): ..."`
+普通模式下 `$K_ITEM` 不是 symlink，上述脚本不执行；主仓库=当前仓库，commit Agent 已提交 → `git status --porcelain` 为空 → 跳过。
 
 ## Domain Partition Guide
 

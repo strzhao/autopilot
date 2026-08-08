@@ -30,7 +30,7 @@
 - [ ] retry_count++ → 设 phase: qa（selective）或 gate: review-accept
 
 ## Phase: merge
-- [ ] 启动 commit-agent（预收集 git diff + 设计目标）
-- [ ] Handoff（brief 模式时写 .handoff.md + 更新 dag.yaml）
 - [ ] 知识提取与沉淀
+- [ ] Handoff（brief 模式时写 .handoff.md + 更新 dag.yaml）
+- [ ] 启动 commit-agent（预收集 git diff + 设计目标）
 - [ ] 设 phase: done，结束响应

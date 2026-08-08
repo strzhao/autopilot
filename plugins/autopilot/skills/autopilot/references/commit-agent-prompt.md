@@ -48,7 +48,7 @@ fix(登录): 修复登录后页面空白 (useEffect 缺少依赖导致重渲染)
 ### 2. 执行提交
 
 ```bash
-git add -A  # 或选择性 add
+git add -A  # 包含知识库改动（.autopilot/knowledge/ 已由编排器写入）
 git commit -m "生成的 commit message"
 ```
 

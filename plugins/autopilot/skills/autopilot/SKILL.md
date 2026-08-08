@@ -17,7 +17,7 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 2. **写入状态文件**：每个阶段的产出必须写入状态文件对应区域
 3. **范围控制**：严格按照设计文档和实现计划执行，不擅自扩大范围；**包括禁止修改 `.autopilot/` 下当前 task 之外的元数据（其他 task 的 brief / state.md）**
 4. **失败不隐藏**：任何失败都如实记录，不伪造通过
-5. **成功 / 假设都需要证据**：任何阶段声称"完成"必须附可验证的证据（命令输出、测试结果、截图等），"我检查了"不算；对外部系统行为的假设（API 响应结构、数据格式、字段名）必须通过运行时验证确认，先验证再实现。
+5. **成功需要证据** / 假设需要证据：任何阶段声称"完成"必须附可验证的证据（命令输出、测试结果、截图等），"我检查了"不算；对外部系统行为的假设（API 响应结构、数据格式、字段名）必须通过运行时验证确认，先验证再实现。
 
 ## 启动流程
 
@@ -454,15 +454,15 @@ qa-reviewer 完成后：收集 Section A（设计符合性）+ Section B（代�
 
 ### 工作流程
 
-#### 1. 调用 commit Agent（上下文隔离提交）
+#### 1. 知识提取与沉淀
 
-使用 Agent 工具启动 commit-agent（model: "sonnet"），**不要使用 `Skill: "autopilot-commit"`**（会继承完整父上下文，导致 3-5M token 开销）。
+进入 merge 阶段后，立即回顾本次全流程产出，提取值得持久化的知识（时间限制 2 分钟，宁可少写高质量条目不要穷举）。写入 `.autopilot/knowledge/` 后设 `knowledge_extracted: true/skipped`，**不单独 commit**——普通模式下由步骤 3 commit Agent 的 `git add -A` 一并提交。
 
-**预收集 Agent 输入**（编排器启动 Agent 前通过 Bash 获取）：`git diff --stat`（变更概况）+ `git diff`（完整 diff）+ 设计文档目标一句话（`## 设计文档`）+ commit type 判断依据（feat/fix/refactor 等）+ 项目根目录路径。
+1. 读取 `references/knowledge-engineering.md` 获取完整提取规则和格式模板。**写入前**按 Integration over Append 流程搜索 index.md 找候选条目（决定合并/新建/跳过）；**写入后**按 Anti-Overfitting Principles 5 问自检 Lesson/Choice 字段
+2. 分析状态文件设计文档/QA 报告/变更日志/auto-fix 修复历程，仅记录有真实学习价值的条目（设计权衡、调试教训、项目特有约定）；无值得记录 → 跳过
+3. 有条目时：自动生成 tags（模块名/技术栈/问题类型）→ 写入目标文件（通用 `decisions.md`/`patterns.md`、领域 `domains/{domain}.md`，`<!-- tags: ... -->` 格式）→ 同步更新 `index.md` 索引行 → 全局文件 >100 行建议迁移领域条目到 `domains/`。
 
-**启动 Agent**：prompt 参考 `references/commit-agent-prompt.md` 模板填入上述输入，Agent 执行分析变更 → 生成 commit message（中文） → git add → git commit → 版本号升级 → CLAUDE.md 更新。编排器收到结果后验证 `git log --oneline -1` 确认提交成功。
-
-#### 1.5. 写入 Handoff（brief 模式）
+#### 2. 写入 Handoff（brief 模式）
 
 如果 frontmatter `brief_file` 非空（任务来自项目 DAG）：
 
@@ -470,23 +470,25 @@ qa-reviewer 完成后：收集 Section A（设计符合性）+ Section B（代�
 2. 写入 handoff 文件（≤500 字），包含：实现摘要、文件变更列表、下游须知、偏差说明
 3. 更新 `.autopilot/project/dag.yaml` 中对应任务的 `status` 从 `pending`/`in_progress` 改为 `done`
 
-#### 2. Auto-Chain 评估（brief 模式专用）
+#### 3. 调用 commit Agent（上下文隔离提交）
+
+使用 Agent 工具启动 commit-agent（model: "sonnet"），**不要使用 `Skill: "autopilot-commit"`**（会继承完整父上下文，导致 3-5M token 开销）。
+
+**预收集 Agent 输入**（编排器启动 Agent 前通过 Bash 获取）：`git diff --stat`（变更概况）+ `git diff`（完整 diff）+ 设计文档目标一句话（`## 设计文档`）+ commit type 判断依据（feat/fix/refactor 等）+ 项目根目录路径。
+
+**启动 Agent**：prompt 参考 `references/commit-agent-prompt.md` 模板填入上述输入，Agent 执行分析变更 → 生成 commit message（中文） → `git add -A` → `git commit` → 版本号升级 → CLAUDE.md 更新。编排器收到结果后验证 `git log --oneline -1` 确认提交成功。
+
+> `git add -A` 会自动包含步骤 1 写入的知识库文件和步骤 2 写入的 handoff/dag.yaml（普通模式一次 commit）。
+
+#### 4. Auto-Chain 评估（brief 模式专用）
 
 `brief_file` 非空时评估信心：QA 全 ✅ + retry_count=0 + handoff 偏差说明为空 → 用 `bash plugins/autopilot/scripts/lib.sh` 中的 `get_first_ready_task .autopilot/project/dag.yaml` 选下一个任务 → Edit frontmatter `next_task: "<task-id>"`；任一不满足或无就绪任务 → 保持 `""`。stop-hook 检测到 `next_task` 非空会自动 auto-chain。详见 `references/auto-chain-guide.md`。
 
-#### 3. 知识提取与沉淀
-
-commit Agent 完成后，回顾本次全流程产出，提取值得持久化的知识（时间限制 2 分钟，宁可少写高质量条目不要穷举）。
-
-1. 读取 `references/knowledge-engineering.md` 获取完整提取规则和格式模板。**写入前**按 Integration over Append 流程搜索 index.md 找候选条目（决定合并/新建/跳过）；**写入后**按 Anti-Overfitting Principles 5 问自检 Lesson/Choice 字段
-2. 分析状态文件设计文档/QA 报告/变更日志/auto-fix 修复历程，仅记录有真实学习价值的条目（设计权衡、调试教训、项目特有约定）；无值得记录 → 跳过
-3. 有条目时：自动生成 tags（模块名/技术栈/问题类型）→ 写入目标文件（通用 `decisions.md`/`patterns.md`、领域 `domains/{domain}.md`，`<!-- tags: ... -->` 格式）→ 同步更新 `index.md` 索引行 → 全局文件 >100 行建议迁移领域条目到 `domains/`。worktree 安全路由详见 [references/knowledge-engineering.md](references/knowledge-engineering.md) 的"Worktree-Aware Extraction"章节
-
-#### 4. 最终总结
+#### 5. 最终总结
 
 输出结构化完成报告（6 个区块）。报告模板和格式要求参见 `references/completion-report-template.md`。
 
-#### 5. 清理
+#### 6. 清理
 - 更新 frontmatter：`phase: "done"`，**同时确认 `gate: ""` 清空**（若 QA 阶段曾设 `gate: "review-accept"` 且本次走过 auto-chain 或 setup.sh approve 自动推进，gate 应已被清；若 AI 自行从 review-accept 推进到 merge 则必须显式清以保持 state 一致）
 - Stop hook 检测到 done 后会自动清理状态文件并发送完成通知
 - 如果已设置 `next_task`，stop-hook 会自动创建下一个任务的状态文件并继续循环
@@ -507,4 +509,4 @@ commit Agent 完成后，回顾本次全流程产出，提取值得持久化的�
 - `## 设计文档`：design 阶段写入，后续不修改（除非 revise 回到 design）
 
 ### 知识文件（.autopilot/knowledge/）
-知识文件独立于状态文件。merge 阶段写入 `.autopilot/knowledge/` 目录（含 `index.md` 索引、`decisions.md`/`patterns.md` 全局、`domains/*.md` 领域分区），单独 git commit，格式参见 `references/knowledge-engineering.md`。
+知识文件独立于状态文件。merge 阶段写入 `.autopilot/knowledge/` 目录（含 `index.md` 索引、`decisions.md`/`patterns.md` 全局、`domains/*.md` 领域分区），随 commit Agent 一并提交（普通模式）或按 `references/knowledge-engineering.md` 提交到主仓库（worktree 模式），格式参见 `references/knowledge-engineering.md`。
