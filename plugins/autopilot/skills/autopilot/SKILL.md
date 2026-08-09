@@ -54,11 +54,9 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 ### Standard Design 模式（默认，含 brainstorm）
 
-委托 brainstorm skill 完成需求探索：
+先查复用：扫描 `.autopilot/runtime/requirements/*/brainstorm.md`，Read 候选「## 探索的目的与约束」段判定与当前目标相关性——相关则搬入 `$TASK_DIR/brainstorm.md` 跳过 Q&A 直接接力；无相关产物再委托 `Skill: "autopilot-brainstorm"`。
 
-    Skill: "autopilot-brainstorm"
-
-brainstorm 完成后在 $TASK_DIR/brainstorm.md 输出共识总结，主 SKILL 接力：读取 brainstorm.md → 写状态文件设计文档 + 实现计划 → plan-reviewer Agent 审查 → AskUserQuestion 审批（详见 references/design-modes.md §3）。兼容性：`plan_mode: "deep"` 同样走此分支（字段已弃用）。
+接力：读 brainstorm.md → 写设计文档+实现计划 → plan-reviewer Agent 审查 → AskUserQuestion 审批（详见 references/design-modes.md §3）。
 
 ### Fast Mode 快速路径（仅 fast_mode=true 时）
 

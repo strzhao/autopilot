@@ -12,7 +12,8 @@
 - [2026-07-19] 减法/重构任务复刻 [2026-05-25]——claude-p 独立验证关键 step + 既有断言语义化适配减法（净非增/after>=1/net 章节）+ 补 scene 5 双重 grep 守护（v3.58.1） | tags: autopilot, skill, shrink, refactor, claude-p, independent-verification, double-grep, assertion-adaptation, predicate-coverage, scene-5, borderline-rollback, dogfood, v3.58.1 | → domains/skill-authoring.md
 - [2026-07-08] skill md 减行硬约束下新守卫全部下沉 bash，skill md 删散文净减行（v3.52.0 §5.7 谓词守卫） | tags: autopilot, skill, shrink-only, enforce-bash, stop-hook, predicate-guard, mock-cheating, trust-chain, v3.52.0 | → domains/skill-authoring.md
 
-## Decisions（41）
+## Decisions（42）
+- [2026-08-09] 独立 brainstorm 产物主流程发现机制——编排器语义扫描复用（智力活留 AI 不塞 bash，对齐 [2026-07-08]；治三断点 slug 双轨/active.ptr/无条件重跑） | tags: autopilot, brainstorm, independent-skill, reuse, semantic-scan, high-freedom, mechanical-vs-intellectual, skill-shrinkage, claude-p, v3.61.0 | → decisions.md
 - [2026-07-23] doctor Dim 14「命脉链路 readiness 覆盖」——纯 AI 语义维治假绿（命脉穿透审计 High freedom，对齐 Dim 13 语义留 AI；判分识别命脉→假设回归→逐层追问验证层能否上线前抓到） | tags: autopilot, doctor, dim-14, readiness, critical-path, ai-semantic, high-freedom, liveness-readiness, false-green, v3.59.0 | → decisions.md
 - [2026-07-19] doctor Dim 13「AI 可观测性」——客观信号确定性下沉 + 语义留 AI（reconcile [2026-05-05]；判据=客观事实存在性 vs 语义质量判断；非 scaffold 修复给方向不给模板） | tags: autopilot, doctor, ai-observability, dim-13, deterministic-signal, objective-vs-semantic, knowledge-reconcile, solve-dont-punt, non-scaffold, v3.58.0 | → decisions.md
 - [2026-07-17] v3.57.0 谓词三守卫（channel/coverage/uniqueness）治 iina AI human-obs + 复制 artifact 双重失效（守卫口径收紧兼容 ACC-GUARD-30 / dogfood 自证拦作者 / SKILL 零改动执法全下沉 bash） | tags: autopilot, qa, predicate-guard, channel, artifact-uniqueness, md5, human-obs, visual-residue, deterministic-signal, stop-hook, §5.7, dogfood, iina, acc-guard-30-compat, skill-shrinkage, v3.57.0 | → decisions.md
