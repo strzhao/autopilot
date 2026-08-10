@@ -42,12 +42,23 @@ case "$SCENE" in
         ;;
 esac
 
+# 智能声音：过渡衔接场景静默（不打断用户），完成/审批/错误场景发声
+SOUND=""
+case "$SCENE" in
+    auto-chain|project-qa) SOUND="" ;;   # 纯过渡，不打断
+    *) SOUND="Glass" ;;                  # complete/project-complete/error/project-design-complete/review-accept/默认 → 响
+esac
+
 # macOS 通知
 if command -v osascript &>/dev/null; then
-    osascript -e "display notification \"$MSG\" with title \"$TITLE\"" 2>/dev/null || true
+    if [ -n "$SOUND" ]; then
+        osascript -e "display notification \"$MSG\" with title \"$TITLE\" sound name \"$SOUND\"" 2>/dev/null || true
+    else
+        osascript -e "display notification \"$MSG\" with title \"$TITLE\"" 2>/dev/null || true
+    fi
 # Linux 通知
 elif command -v notify-send &>/dev/null; then
     notify-send "$TITLE" "$MSG" 2>/dev/null || true
 fi
 
-# 声音通知已移除，统一由 task-notifier 插件处理
+# 智能声音：auto-chain/project-qa 过渡静默，其余（完成/审批/错误）发声
