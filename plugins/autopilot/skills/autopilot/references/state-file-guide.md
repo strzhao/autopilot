@@ -16,10 +16,10 @@
 - `fast_mode`: 三态字段。`""`（默认/未定）/`"true"`（fast）/`"false"`（standard）。setup.sh 的 `--fast` / `--standard` flag 时直接写入；为空时 AI 在 design 步骤 1 探针后按自适应规则写回（bug 修复/小改动/单一概念跨文件 search-replace→true，架构权衡/新抽象/探索未知模块→false，不确定→true），写入后整个生命周期不再修改
 
 - `html_review`: 布尔值（默认 false）。设为 `true` 时，design 阶段步骤 4 启用 HTML 浏览器评审路径（自动打开浏览器渲染设计文档 + 反馈输入 + 通过/修改/放弃按钮）。setup.sh 创建任务时若环境变量 `AUTOPILOT_HTML_REVIEW=1` 则自动写入 `true`，否则写 `false`；用户可手动编辑该字段覆盖（编辑生效需在下一次步骤 4 判定时读到）。
+- `auto_approve`: 全程自动驾驶开关。来源：(1) stop-hook auto-chain（项目子任务）；(2) AI design 步骤 4 据低风险判断设 `true`（跳过审批 + QA gate）；(3) revise 回 design 重置 `false`。`true` 时 §5.5 自动跳过 review-accept gate 直接 merge。
 
 **stop-hook 管理（AI 只读）**：
-- `iteration`: 当前迭代次数，stop-hook 自动递增
-- `auto_approve`: auto-chain 时为 true，失败回退为 false
+- `iteration`: 当前迭代次数，stop-hook 自动递增（stop-hook 段仅此一项；auto_approve 已移至 AI 可写字段）
 
 **setup.sh 创建（AI 不修改）**：
 - `max_iterations`: 最大迭代次数（默认 30）

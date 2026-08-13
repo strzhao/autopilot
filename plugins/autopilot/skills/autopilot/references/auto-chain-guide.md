@@ -42,7 +42,7 @@
 
 ## Auto-Approve 传递
 
-当 stop-hook 基于 `next_task` 创建新状态文件时，会设置 `auto_approve: true`，使下一个任务也可以在高信心时跳过人工审批门。
+当 stop-hook 基于 `next_task` 创建新状态文件时，会设置 `auto_approve: true`，使下一个任务也可以在高信心时跳过人工审批门。注：standard 单任务 design 步骤 4 AI 据低风险判断也可设 `auto_approve: true`（详见 autopilot SKILL.md 步骤 4），同样跳过 design 审批 + QA gate。
 
 ## 降级
 

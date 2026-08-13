@@ -8,7 +8,7 @@
 
 | 模式 | 触发条件 | 跳过的节点 | 失败回退 |
 |------|----------|-----------|----------|
-| Auto-Approve | `auto_approve: true`（auto-chain 设置） | AskUserQuestion 审批；qa 通过后跳过 `gate: "review-accept"` 直接 merge | 设 `auto_approve: false`，回到 Standard 人工审批 |
+| Auto-Approve | `auto_approve: true`（auto-chain 设置 / design 步骤 4 AI 据低风险判断设置） | AskUserQuestion 审批；qa 通过后跳过 `gate: "review-accept"` 直接 merge | 设 `auto_approve: false`，回到 Standard 人工审批 |
 | Fast Mode | `fast_mode: true`（启动 `--fast` 或自适应判断） | brainstorm Q&A、scenario-generator、plan-reviewer Agent、design 自审、contract-checker、qa-reviewer Agent；Tier 1.5 必做 | 无（fast 信任 AI 判断，直进 implement 或 HTML 评审） |
 | Standard | 其他（默认） | 无（全节点保留） | — |
 
@@ -16,7 +16,7 @@
 
 ## §2. Auto-Approve 完整工作流
 
-`auto_approve: true` 通常由 stop-hook 的 auto-chain 机制在项目子任务推进时自动设置。design 阶段流程：
+`auto_approve: true` 来源：(1) stop-hook auto-chain（项目子任务）；(2) standard 单任务 design 步骤 4 AI 据低风险判断（brainstorm/设计已完成，直接 `phase: implement`，不走下面 1-6 步）。下面流程针对来源 (1)：
 
 1. 执行知识上下文加载（主 SKILL.md 步骤 0）
 2. 1 个 Explore agent 快速分析任务相关代码

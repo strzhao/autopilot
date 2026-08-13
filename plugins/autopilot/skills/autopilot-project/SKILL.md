@@ -88,7 +88,7 @@ depends_on: ["XXX", "YYY"]
 任务完成时（phase=done），如果 AI 在 merge 阶段评估为高信心，stop-hook 自动启动下一个就绪任务：
 - AI 通过设置 frontmatter `next_task` 字段信号高信心
 - stop-hook 读取该字段并创建新状态文件（`auto_approve: true`）
-- `auto_approve` 使下一个任务在高信心时跳过人工审批门（design 审批 + QA 审批）
+- `auto_approve` 使下一个任务在高信心时跳过人工审批门（design 审批 + QA 审批）；standard 单任务 design 步骤 4 AI 据低风险判断也可设置（详见 autopilot SKILL.md 步骤 4）
 - 所有任务完成后自动触发全项目 QA（`mode: "project-qa"`）
 
 ## 全项目 QA（mode: "project-qa"）

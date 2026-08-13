@@ -64,7 +64,7 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 ### Auto-Approve 快速路径（仅 auto_approve=true 时）
 
-跳过 AskUserQuestion 审批，plan-reviewer Agent 审查 PASS 即推进，FAIL 设 `auto_approve: false` 回退正常审批。完整 6 步见 references/design-modes.md §2。
+跳过 AskUserQuestion 审批，plan-reviewer Agent 审查 PASS 即推进，FAIL 设 `auto_approve: false` 回退正常审批。`auto_approve: true` 来源：auto-chain 子任务（stop-hook 设）或 **standard 单任务 design 步骤 4 AI 据低风险判断设置**（详见步骤 4）。完整 6 步见 references/design-modes.md §2。
 
 ### 工作流程
 
@@ -118,25 +118,16 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 **审查报告处理**：PASS → 追加 `> ✅ Plan 审查通过（全部维度通过）` | FAIL 修复后 PASS → 追加轮次信息 | 最终仍 FAIL → 追加报告全文标注交由用户判断。
 
-#### 步骤 4. 请求审批
+#### 步骤 4. 审批（AI 判断是否需要用户确认）
 
-**4a. 处理审批路径**：state.md frontmatter `html_review: true` → 走 4c，否则 → 走 4b。环境变量 `AUTOPILOT_HTML_REVIEW=1` 已在 setup.sh 创建任务时同步到该字段，无需再读 env。
+按优先级判断：
+1. 用户上下文明确「跳过/直接做」→ 设 `auto_approve: true` + `phase: "implement"`（必须同轮，跳过审批 + QA gate）
+2. `html_review: true`（env `AUTOPILOT_HTML_REVIEW=1` 或 frontmatter 设置）→ HTML 评审：前台同步调 `bash ${CLAUDE_PLUGIN_ROOT}/scripts/visual-companion/launch-plan-review.sh "$task_dir"`（timeout 600000，禁 run_in_background），解析 stdout JSON `choice`，详见 [html-review-guide.md](references/html-review-guide.md)
+3. AI 风险判断（默认跳过审批 + QA gate）：
+   - 低风险 → 设 `auto_approve: true` + `phase: "implement"`（同轮）
+   - 命任一高风险标准 → AskUserQuestion（preview 模板见 html-review-guide.md）：不可逆操作(删数据/迁移/schema) / 大半径(跨模块或>5文件) / 新抽象新架构 / 外部副作用(API契约/部署/发版) / 安全敏感(auth/权限/支付/密钥)
 
-**4b. 默认 AskUserQuestion 路径**：3 个选项，「通过」选项的 `preview` 字段必填，按此模板填充：
-
-```
-preview: |
-  目标：<一句话>
-  范围：<改动文件清单>
-  关键决策：<技术选型>
-  取舍：<利弊>
-  ─────
-  💡 启用 HTML 评审：下次运行 autopilot 前设置 AUTOPILOT_HTML_REVIEW=1，或编辑 state.md frontmatter html_review: true（当前任务设计阶段已固定，修改下轮生效）
-```
-
-「修改」选项反馈处理 / 3 选项详细文案见 [references/html-review-guide.md](references/html-review-guide.md)。
-
-**4c. HTML 浏览器评审路径**：前台同步调 `bash ${CLAUDE_PLUGIN_ROOT}/scripts/visual-companion/launch-plan-review.sh "$task_dir"`（Bash `timeout: 600000`，禁用 `run_in_background`）。解析 stdout JSON 的 `choice`（approve/revise/abort），stdout 空/超时 fallback 到 4b。
+> 高风险标准是闭合 guardrail（命任一即必须问），非开放提示，复用步骤 1 fast_mode 探针信号辅助判断。`auto_approve` 仅在步骤 4 设置；revise 回 design（用户给修改意见）须重置 `auto_approve: false`。
 
 #### 步骤 5. 审批通过后
 - 检查 frontmatter `mode` 字段：如果步骤 1 中选择了项目模式（或 `mode: "project"`），走步骤 5b
@@ -501,7 +492,7 @@ qa-reviewer 完成后：收集 Section A（设计符合性）+ Section B（代�
 
 **Read 操作精简**：每个阶段开始时 Read 一次状态文件获取全局信息，后续操作使用 Edit 精确修改。不需要在每次 Edit 前重复 Read 整个文件。
 
-完整 frontmatter 字段说明（包含 fast_mode 三态、qa_scope 取值范围等）参见 [references/state-file-guide.md](references/state-file-guide.md)。AI 可写字段：`phase` / `gate` / `retry_count` / `mode` / `qa_scope` / `next_task` / `knowledge_extracted` / `fast_mode`（仅在 design 步骤 1 探针后自适应判断时，且当前为空字符串才写）。AI 不动字段：`iteration` / `max_iterations` / `max_retries` / `session_id` / `started_at` / `task_dir`。`auto_approve` 由 stop-hook 设置。（各枚举字段合法值见 references/state-file-guide.md 闭合枚举；shell 仅认 canonical，越界会被 stop-hook 退回纠正）
+完整 frontmatter 字段说明（包含 fast_mode 三态、qa_scope 取值范围等）参见 [references/state-file-guide.md](references/state-file-guide.md)。AI 可写字段：`phase` / `gate` / `retry_count` / `mode` / `qa_scope` / `next_task` / `knowledge_extracted` / `fast_mode`（仅在 design 步骤 1 探针后自适应判断时，且当前为空字符串才写）/ `auto_approve`（仅 design 步骤 4 据风险判断设 true，或 revise 回 design 重置 false；其余由 stop-hook auto-chain 设置）。AI 不动字段：`iteration` / `max_iterations` / `max_retries` / `session_id` / `started_at` / `task_dir`。（各枚举字段合法值见 references/state-file-guide.md 闭合枚举；shell 仅认 canonical，越界会被 stop-hook 退回纠正）
 
 ### 内容区域更新
 - `## 设计文档`：design 阶段写入，后续不修改（除非 revise 回到 design）

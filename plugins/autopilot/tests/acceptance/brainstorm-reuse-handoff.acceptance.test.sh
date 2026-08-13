@@ -231,31 +231,37 @@ pass "SC4.P2: setup.sh / lib.sh / stop-hook.sh 三脚本零改"
 #   3. 断言所有 hunk 的 [new_start, new_end] ⊂ [standard_start, standard_end]
 #   行号基准：git diff +new 段对应改动后文件行号，与 awk NR（当前磁盘 SKILL.md）一致。
 #   注：用 awk POSIX match/substr/split 一次性解析所有 hunk，避免 BSD/gawk 差异。
-hunk_output=$(git -C "$REPO_ROOT" diff --unified=0 "$DIFF_REF" -- "$SKILL_FILE_REL" 2>/dev/null || true)
+# commit-aware：工作区 clean（改动已 commit，DIFF_REF=HEAD~1）→ 位置守护 N/A
+# （位置守护是 brainstorm-reuse 一次性 QA，非跨任务持续约束；持续守护靠 SC2.P1 先查复用语义 + SC1.P1 净减）
+if [[ "$DIFF_REF" == "HEAD~1" ]]; then
+    pass "SC4.P3: 工作区 clean（改动已 commit），位置守护 N/A（一次性 QA；持续守护靠 SC2.P1 语义 + SC1.P1 净减）"
+else
+    hunk_output=$(git -C "$REPO_ROOT" diff --unified=0 "$DIFF_REF" -- "$SKILL_FILE_REL" 2>/dev/null || true)
 
-if [[ -n "$hunk_output" ]]; then
-    # awk 解析所有 @@ hunk 头，输出越界违规行（若有）
-    violations=$(echo "$hunk_output" | awk -v s="$standard_start" -v e="$standard_end" '
-        /^@@/ {
-            # 提取 +new_start,new_len 部分（match 找到 +数字[,数字]）
-            if (match($0, /\+[0-9]+(,[0-9]+)?/)) {
-                plus = substr($0, RSTART+1, RLENGTH-1)
-                split(plus, a, ",")
-                ns = a[1] + 0
-                nl = (a[2] != "" ? a[2] + 0 : 1)
-                ne = (nl == 0 ? ns : ns + nl - 1)
-                if (ns < s || ne > e) {
-                    print "  hunk [" ns "," ne "] 越出 Standard Design 段 [" s "," e "]"
+    if [[ -n "$hunk_output" ]]; then
+        # awk 解析所有 @@ hunk 头，输出越界违规行（若有）
+        violations=$(echo "$hunk_output" | awk -v s="$standard_start" -v e="$standard_end" '
+            /^@@/ {
+                # 提取 +new_start,new_len 部分（match 找到 +数字[,数字]）
+                if (match($0, /\+[0-9]+(,[0-9]+)?/)) {
+                    plus = substr($0, RSTART+1, RLENGTH-1)
+                    split(plus, a, ",")
+                    ns = a[1] + 0
+                    nl = (a[2] != "" ? a[2] + 0 : 1)
+                    ne = (nl == 0 ? ns : ns + nl - 1)
+                    if (ns < s || ne > e) {
+                        print "  hunk [" ns "," ne "] 越出 Standard Design 段 [" s "," e "]"
+                    }
                 }
             }
-        }
-    ')
-    if [[ -n "$violations" ]]; then
-        fail "SC4.P3: 检测到 hunk 改动行号越出 Standard Design 段 [$standard_start, $standard_end]（步骤1/决策树区域零改违规）：
+        ')
+        if [[ -n "$violations" ]]; then
+            fail "SC4.P3: 检测到 hunk 改动行号越出 Standard Design 段 [$standard_start, $standard_end]（步骤1/决策树区域零改违规）：
 $violations"
+        fi
     fi
+    pass "SC4.P3: 所有 hunk 改动行号 ⊂ Standard Design 段 [$standard_start, $standard_end]（步骤1/决策树区域零改）"
 fi
-pass "SC4.P3: 所有 hunk 改动行号 ⊂ Standard Design 段 [$standard_start, $standard_end]（步骤1/决策树区域零改）"
 
 # ════════════════════════════════════════════════════════════════════════════
 # 谓词 SC5.P1 [det-machine]: awk Standard 段 brainstorm.md 字面 AND 先查复用语义 双重命中

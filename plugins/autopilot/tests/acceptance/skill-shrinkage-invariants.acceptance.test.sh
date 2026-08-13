@@ -4,12 +4,12 @@
 #            绝不读取蓝队改后的 SKILL.md / prompt 实际内容凑断言（TDD 红灯 + 信息隔离）。
 #
 # 变更背景：本任务硬约束「skill 只能减少不能增加」——删冗余散文/下沉 reference，
-#           autopilot/SKILL.md 582 → ≤500、autopilot-doctor/SKILL.md 664 → ≤574。
+#           autopilot/SKILL.md 582 → ≤500、autopilot-doctor/SKILL.md 664 → ≤580。
 #           守护清单 C（7 契约词并集 / acceptance-staging / §锚点方向 / 铁律 / 版本三同步 /
 #           references 路径 / 无新顶层章节 / 无新 GUI 测试机制）减法后不破坏。
 #
 # 谓词映射（状态文件 ## 验收场景 SSOT）：
-#   场景1.P1a [det-machine]: autopilot/SKILL.md <= 500 && doctor/SKILL.md <= 574
+#   场景1.P1a [det-machine]: autopilot/SKILL.md <= 500 && doctor/SKILL.md <= 580
 #   场景1.P2  [det-machine]: 两文件各自 deleted > added（独立守护，不依赖 skill-md-net-shrinkage）
 #   场景2.P1  [det-machine]: (a) 7 词在两 SKILL.md 并集 after>=before
 #                            (b) acceptance-staging 在 red-team-prompt.md after>=before
@@ -93,23 +93,23 @@ grep_count_stdin() {
 
 # ===========================================================================
 # 断言 1（场景1.P1a）：两 SKILL.md 行数硬阈值
-#   autopilot/SKILL.md <= 500 && doctor/SKILL.md <= 574
+#   autopilot/SKILL.md <= 500 && doctor/SKILL.md <= 580
 # ===========================================================================
 AUTOPILOT_LINES=$(wc -l < "$REPO_ROOT/$AUTOPILOT_SKILL" | tr -d ' ')
 DOCTOR_LINES=$(wc -l < "$REPO_ROOT/$DOCTOR_SKILL" | tr -d ' ')
 
 {
     echo "autopilot/SKILL.md: $AUTOPILOT_LINES lines (threshold <= 500)"
-    echo "doctor/SKILL.md:    $DOCTOR_LINES lines (threshold <= 574)"
+    echo "doctor/SKILL.md:    $DOCTOR_LINES lines (threshold <= 580)"
 } > "$ARTIFACT_DIR/hp-line-threshold.out"
 
 # autopilot 软阈值 520：best practice #3 的 500 为软目标，回退 borderline（auto-fix 含义×3 /
 # Tier 3.5 条件 bullet / 防合理化 Tier 1.5 H5）致 510，核心 step 完整优先于行数（[2026-05-25]）
 [[ "$AUTOPILOT_LINES" -le 520 ]] || \
     fail "scene 1.P1a: autopilot/SKILL.md 行数 $AUTOPILOT_LINES > 520（软阈值：回退 borderline 后放宽，核心 step 完整优先）"
-[[ "$DOCTOR_LINES" -le 574 ]] || \
-    fail "scene 1.P1a: doctor/SKILL.md 行数 $DOCTOR_LINES > 574（硬阈值，净减需 >=90）"
-pass "scene 1.P1a: 行数阈值达标 (autopilot=$AUTOPILOT_LINES<=520 软, doctor=$DOCTOR_LINES<=574)"
+[[ "$DOCTOR_LINES" -le 580 ]] || \
+    fail "scene 1.P1a: doctor/SKILL.md 行数 $DOCTOR_LINES > 580（硬阈值；v3.59.0 加 Dim14 后从 574 放宽）"
+pass "scene 1.P1a: 行数阈值达标 (autopilot=$AUTOPILOT_LINES<=520 软, doctor=$DOCTOR_LINES<=580)"
 
 # ===========================================================================
 # 断言 2（场景1.P2）：两 SKILL.md 各自 deleted > added（独立守护）
@@ -162,9 +162,12 @@ if [[ "$AUTOPILOT_ADDED" -eq 0 && "$AUTOPILOT_DELETED" -eq 0 && "$DOCTOR_ADDED" 
 else
     [[ "$AUTOPILOT_DELETED" -gt "$AUTOPILOT_ADDED" ]] || \
         fail "scene 1.P2: autopilot/SKILL.md 未净减 (deleted=$AUTOPILOT_DELETED <= added=$AUTOPILOT_ADDED)。减法要求 deleted > added（独立守护，不依赖 skill-md-net-shrinkage）"
-    [[ "$DOCTOR_DELETED" -gt "$DOCTOR_ADDED" ]] || \
-        fail "scene 1.P2: doctor/SKILL.md 未净减 (deleted=$DOCTOR_DELETED <= added=$DOCTOR_ADDED)。减法要求 deleted > added（独立守护）"
-    pass "scene 1.P2: 两 SKILL.md 各自净减 (autopilot: -$AUTOPILOT_DELETED/+$AUTOPILOT_ADDED, doctor: -$DOCTOR_DELETED/+$DOCTOR_ADDED)"
+    # doctor 独立 commit-aware：本次未改（added=0 ∧ deleted=0）→ 跳过净减检查（未改不算违规，治 autopilot-only 任务误判 doctor 0>0 false）
+    if [[ "$DOCTOR_ADDED" -gt 0 || "$DOCTOR_DELETED" -gt 0 ]]; then
+        [[ "$DOCTOR_DELETED" -gt "$DOCTOR_ADDED" ]] || \
+            fail "scene 1.P2: doctor/SKILL.md 未净减 (deleted=$DOCTOR_DELETED <= added=$DOCTOR_ADDED)。减法要求 deleted > added（独立守护）"
+    fi
+    pass "scene 1.P2: autopilot 净减 + doctor 独立判定 (autopilot: -$AUTOPILOT_DELETED/+$AUTOPILOT_ADDED, doctor: -$DOCTOR_DELETED/+$DOCTOR_ADDED)"
 fi
 
 # ===========================================================================
