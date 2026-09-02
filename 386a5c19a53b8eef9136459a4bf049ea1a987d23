@@ -1,0 +1,56 @@
+plugins/writer-skill/.claude-plugin/plugin.json
+  6f8175efdf272c68 3-4
+CLAUDE.md
+  6f8175efdf272c68 15
+plugins/writer-skill/README.md
+  6f8175efdf272c68 16-18,29
+.claude-plugin/marketplace.json
+  6f8175efdf272c68 41-42
+plugins/writer-skill/skills/writer-ruanyifeng-skill/SKILL.md
+  6f8175efdf272c68 1-270
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "386a5c19a53b8eef9136459a4bf049ea1a987d23",
+  "prompts": {
+    "6f8175efdf272c68": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7003069-5a5d-46d3-b6a9-a1d2f6721f7c",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 279,
+      "total_deletions": 5,
+      "accepted_lines": 279,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "plugins/writer-skill/skills/writer-ruanyifeng-skill/SKILL.md": {
+          "additions": 270,
+          "accepted_lines": 270
+        },
+        "CLAUDE.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        ".claude-plugin/marketplace.json": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 2
+        },
+        "plugins/writer-skill/README.md": {
+          "additions": 4,
+          "accepted_lines": 4
+        },
+        "plugins/writer-skill/.claude-plugin/plugin.json": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 2
+        }
+      }
+    }
+  }
+}
