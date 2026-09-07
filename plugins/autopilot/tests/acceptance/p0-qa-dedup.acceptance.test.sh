@@ -270,24 +270,28 @@ done
 pass "场景7.P2: 三处 prompt 独立自扫描指令段计数 == 0（豁免「缺项再补充扫描」单句）"
 
 # ---------------------------------------------------------------------------
-# 场景 8：版本升级 v3.63.0 四处同步（C4：plugin.json / marketplace.json /
-#         CLAUDE.md 三处 == 3.63.0；package.json 实证不存在，vacuously true）
+# 场景 8：版本四处同步（C4/C5：marketplace.json / CLAUDE.md 行 == plugin.json 动态值；
+#         package.json 实证不存在，vacuously true）
+#   [v3.64.0 适配] 原断言硬编码 "3.63.0"，版本 bump 即失效（[2026-09-07] 时序断言教训）；
+#         改为动态读 plugin.json 现值比对其余两处，断言机制修正、四处一致语义不变。
 # ---------------------------------------------------------------------------
 
-# 场景8.P1 [det-machine]：plugin.json version == "3.63.0"
-#   （no-op 时为 3.62.0 → FAIL）
-if ! grep -qF '"3.63.0"' "$PLUGIN_JSON"; then
-    fail "场景8.P1: plugin.json version 字段不含 \"3.63.0\""
+# 场景8.P1 [det-machine]：plugin.json version 字段可解析（动态基准）
+#   （no-op 时 version 缺失/空 → FAIL）
+PLUGIN_VERSION=$(grep -F '"version"' "$PLUGIN_JSON" | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
+if [[ -z "$PLUGIN_VERSION" ]]; then
+    fail "场景8.P1: plugin.json 未解析到 version 字段（断言口径失效）"
 fi
-pass "场景8.P1: plugin.json version == 3.63.0"
+pass "场景8.P1: plugin.json version == ${PLUGIN_VERSION}（动态基准）"
 
-# 场景8.P2 [det-machine]：marketplace.json autopilot 条目 version == "3.63.0"
+# 场景8.P2 [det-machine]：marketplace.json autopilot 条目 version == plugin.json 动态值
 #   ∧ marketplace.json 与 plugin.json 的 description 均不残留 contract-checker 活文案
-#   （no-op 时 marketplace autopilot 条目为 3.62.0 且 description 含 contract-checker → FAIL）
-if ! grep -qF '"3.63.0"' "$MARKETPLACE_JSON"; then
-    fail "场景8.P2: marketplace.json autopilot 条目不含 \"3.63.0\""
+#   （no-op 时 marketplace 条目版本落后 → FAIL）
+MKT_VERSION=$(grep -A3 '"name": "autopilot"' "$MARKETPLACE_JSON" | grep -oE '"version": *"[^"]+"' | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+if [[ "$MKT_VERSION" != "$PLUGIN_VERSION" ]]; then
+    fail "场景8.P2: marketplace.json autopilot 条目 version（${MKT_VERSION}）与 plugin.json（${PLUGIN_VERSION}）不一致"
 fi
-pass "场景8.P2: marketplace.json autopilot 条目 version == 3.63.0"
+pass "场景8.P2: marketplace.json autopilot 条目 version == $PLUGIN_VERSION"
 
 for jf in "$PLUGIN_JSON" "$MARKETPLACE_JSON"; do
     DESC_LINE_COUNT=$(grep -c '"description"' "$jf" || true)
@@ -301,17 +305,17 @@ for jf in "$PLUGIN_JSON" "$MARKETPLACE_JSON"; do
 done
 pass "场景8.P2: plugin.json / marketplace.json description 均无 contract-checker 活文案"
 
-# 场景8.P3 [det-machine]：CLAUDE.md 插件索引表 autopilot 行标注 v3.63.0
-#   锚点：含 [autopilot](plugins/autopilot/) 链接的表格行须含 v3.63.0
-#   （no-op 时为 v3.62.0 → FAIL）
+# 场景8.P3 [det-machine]：CLAUDE.md 插件索引表 autopilot 行标注 v<plugin.json 动态值>
+#   锚点：含 [autopilot](plugins/autopilot/) 链接的表格行须含 v$PLUGIN_VERSION
+#   （no-op 时索引行版本落后于 plugin.json → FAIL）
 AUTOPILOT_ROW=$(grep -F '[autopilot](plugins/autopilot/)' "$CLAUDE_MD" || true)
 if [[ -z "$AUTOPILOT_ROW" ]]; then
     fail "场景8.P3: CLAUDE.md 插件索引表未找到 autopilot 行（断言口径失效）"
 fi
-if ! echo "$AUTOPILOT_ROW" | grep -qF 'v3.63.0'; then
-    fail "场景8.P3: CLAUDE.md 插件索引 autopilot 行未标注 v3.63.0"
+if ! echo "$AUTOPILOT_ROW" | grep -qF "v${PLUGIN_VERSION}"; then
+    fail "场景8.P3: CLAUDE.md 插件索引 autopilot 行未标注 v${PLUGIN_VERSION}"
 fi
-pass "场景8.P3: CLAUDE.md 插件索引 autopilot 行 == v3.63.0"
+pass "场景8.P3: CLAUDE.md 插件索引 autopilot 行 == v${PLUGIN_VERSION}"
 
 # ---------------------------------------------------------------------------
 # 场景 10：smoke 路径契约校验保留（质量闸门不动）

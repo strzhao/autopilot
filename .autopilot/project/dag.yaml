@@ -13,7 +13,7 @@ tasks:
   - id: p2-qa-loop
     title: QA 回炉治理（auto-fix 批量修复纪律 / 蓝队自检证据复用）→ v3.64.0
     depends_on: [p0-qa-dedup]
-    status: pending
+    status: done
     brief: tasks/p2-qa-loop.md
   - id: p3-mechanism-hygiene
     title: 机制性能与卫生（load_state 批量化 / artifacts TTL + doctor runtime 体积）→ v3.65.0

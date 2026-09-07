@@ -26,7 +26,7 @@
 
 ## Phase: auto-fix
 - [ ] 读取 QA 报告中所有 ❌ 项
-- [ ] 按优先级逐项修复（Tier 0 > Tier 1.5 > Tier 1 > Tier 2-4）
+- [ ] 阶段一逐项分析（观察/假设/验证）→ 阶段二按优先级统一修复（Tier 0 > Tier 1.5 > Tier 1 > Tier 2-4）+ 一轮跑齐检查命令
 - [ ] retry_count++ → 设 phase: qa（selective）或 gate: review-accept
 
 ## Phase: merge

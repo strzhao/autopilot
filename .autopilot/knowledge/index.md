@@ -59,7 +59,8 @@
 - [2026-03-26] doctor Dim 1 测试金字塔分层评估优于文件计数 | tags: autopilot, doctor, testing, test-pyramid, scoring | → domains/knowledge-token-arch.md
 - [2026-03-21] 知识工程采用三层 Progressive Disclosure 而非单层扩展 | tags: knowledge, architecture, progressive-disclosure | → domains/knowledge-token-arch.md
 
-## Patterns（57）
+## Patterns（58）
+- [2026-09-07] 新机制上线的「自适用盲区」——编排器执行新 prompt 机制时自己也会漏执行（p2 dogfood 漏 context.md 实证；降级优雅化 + 自指检查 + hook 兜底三对策） | tags: autopilot, dogfood, mechanism-rollout, self-applicability, context-md, execution-drift, v3.64.0 | → patterns.md
 - [2026-09-07] 验收测试「一次性任务证明」读工作区 git diff/status = 时序耦合假阳性定时炸弹——断言分两类的判别问句 + 存量处置模式（转 standing invariant 或删） | tags: autopilot, acceptance-test, assertion-mechanism, git-diff, time-scoped-assertion, false-positive, test-lifecycle, standing-invariant, v3.63.0 | → patterns.md
 - [2026-07-23] awk 正则单词边界 `\b` 在 BSD/macOS 不支持 → 反向断言永真无判别力（tautological/mutation-survival，改 `[^a-zA-Z]` POSIX 兼容） | tags: bash, awk, bsd, macos, word-boundary, regex, tautological, mutation-survival, red-team | → domains/bash-shell-pitfalls.md
 - [2026-07-19] 红队测试 FAIL 三分类——断言机制错/与契约矛盾/实现 bug（auto-fix 先分类再改；盲目以红队为准会把正确实现改错） | tags: autopilot, red-team, acceptance-test, auto-fix, false-positive, assertion-mechanism, regex-pitfall, set-comparison, debug-classification, v3.58.0 | → patterns.md

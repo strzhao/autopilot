@@ -64,11 +64,7 @@
 
 ## 契约规约 章节
 
-设计文档应在 `## 设计文档` 之后增加 `## 契约规约` 章节，作为红蓝队 + plan-reviewer + qa-reviewer 共同的接口形状权威。
-
-详见 [references/contract-protocol.md](contract-protocol.md)
-
-N/A 整体跳过：frontmatter `contract_required` 缺失或 false 时，本章节可省略。
+设计文档应在 `## 设计文档` 之后增加此章节（红蓝队 + plan-reviewer + qa-reviewer 共同的接口形状权威），详见 [references/contract-protocol.md](contract-protocol.md)。frontmatter `contract_required` 缺失或 false 时可省略。
 
 ## 验收场景 区域（谓词 SSOT）
 
@@ -79,5 +75,9 @@ design 步骤 2 编排器把验收场景生成器的输出冻结写入 `## 验�
 - 每条谓词一行：`- **<id> [channel]** <描述> ｜ observe: <观测> ｜ assert: <DbC> ｜ driver: <type>:<target> ｜ artifact: <path>`。
 - `driver` type 枚举：`curl` / `playwright` / `node-script`（禁网络/外部依赖）/ `fs-grep` / `freshness`。`node-script` 不得用于 `curl|fetch|playwright|overmind|pylon|mysql` 类观测。
 - `artifact` 路径约定：`/tmp/autopilot-artifacts/<pred-id>.out`。QA 求值时编排器写入真实驱动输出，stop-hook §5.7 校验文件存在且非空，不依赖 ## QA 报告。PASS 谓词须将真实驱动输出写入预注册 artifact 路径，缺失即 block 回 qa（非 auto-fix，不耗 retry_count）。
+
+## 蓝队自检 区域（自检证据复用）
+
+implement 合流时编排器写入：**首行 `tree_sig: <64-hex>`**（lib.sh `tree_sig` 输出），随后每条 `- <命令> ｜ exit=<码> ｜ <一句话范围>`。QA Tier 1 满足「同语义命令 + exit=0 + tree_sig 匹配」三条件才沿用（缺一重跑，QA 报告标注「沿用蓝队自检」）；auto-fix 触及任何测试文件 → 作废本区域；区域缺失 → QA 照常执行。
 
 <!-- deprecated: ## 红队验收测试 / ## QA 报告 / ## 变更日志 区块已废弃（v3.37+），AI 在对话中产出，不持久化到 state.md -->

@@ -144,4 +144,11 @@
 **How to apply**: 红队写断言时自问「下个任务改别的文件时这条还成立吗」——答案否则是任务证明，不应进 acceptance 套件（可留 state.md QA 报告里当一次性证据）。存量处置（用户批准的模式）：能转 standing invariant 的转（SC4.P2 改内容断言「scripts/ 不含先查复用/扫描 glob」，反而更强）；不能转的删（实质不变量已由邻位断言承载时无守卫损失，如 P5 删后 P3/P4/P6/P7 仍在）。关联 [[2026-07-19]]（FAIL 三分类之断言机制错）[[qa-testing]]。另：验收测试资产生命周期治理（陈旧测试退出默认回归路径）仍是待决策专项。
 **Evidence**: 核对锚点 2026-09-07 源码 v3.63.0。stash 基线实验：干净树 brainstorm-reuse/merge-knowledge 转绿、predicate-coverage 仍红（证明其常红先于本任务）；适配后 run-all 40/40。适配全程用户 AskUserQuestion 批准（红队铁律例外：断言机制错）。
 
+### [2026-09-07] 新机制上线的「自适用盲区」——编排器执行新 prompt 机制时自己也会漏执行
+<!-- tags: autopilot, dogfood, mechanism-rollout, self-applicability, context-md, execution-drift, v3.64.0 -->
+**Scenario**: p2-qa-loop dogfood 验收「蓝队自检复用 + tree_sig」机制，qa-reviewer 发现该任务自身的 $TASK_DIR 下没有 context.md——而 context.md 正是上一个任务（p0-qa-dedup v3.63.0）刚上线的机制，SKILL.md:79 明文「所有 mode 路径先行」（brief 模式在内）。编排器（AI）在为「机制 X」工作的同时漏执行机制 X 本身。
+**Lesson**: 机制靠 SKILL 文字生效，而 AI 读 SKILL 的注意力被当前任务目标占据——新写入的机制行对自己任务的适用性最弱（self-applicability gap）。三 prompt 模板的「缺项再补充扫描」降级使后果仅是收益丢失而非硬失败，这正是 degrees-of-freedom 匹配的价值，但也意味着静默漂移无信号。
+**How to apply**: ① 新机制上线后首个 dogfood 任务，QA 阶段显式对照检查「本任务自身是否走了新机制」（自指检查清单意识）；② 机制设计时默认 AI 会漏执行自己，降级路径必须优雅（本例成立）；③ 若机制有硬收益诉求，考虑 stop-hook 确定性提醒而非纯 prompt（机械下沉哲学）。关联 [[2026-05-07]]（AI 自觉优化不可靠，结构性靠 hook 兜底）。
+**Evidence**: 核对锚点 2026-09-07 源码 v3.64.0。p2-qa-loop QA Wave 2 Section A 流程观察记录；tree_sig / 沿用三条件同任务内闭环验证成立（sig 0372a32c… 合流前后一致）。
+
 > 历史归档（< 2026-05-17）按主题迁移至 domains/，详见 index.md

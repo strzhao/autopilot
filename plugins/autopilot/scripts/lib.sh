@@ -757,6 +757,43 @@ compute_file_hash() {
     fi
 }
 
+# tree_sig → stdout 64-hex sha256（rc=0）
+#
+# 计算当前工作区「非测试代码」签名，供蓝队自检证据复用（state.md `## 蓝队自检` 区域首行）。
+# 输入 = `git diff HEAD` 变更文件 ∪ `git ls-files -o -m --exclude-standard`（untracked/modified，
+# 闭合蓝队漏 git add 的盲区），按路径去重后逐文件 sha256，再对汇总清单整体 sha256。
+# 跨平台 sha256：复用 lock_acceptance_tests 的 sha256sum（Linux）/ shasum -a 256（macOS）双探测先例。
+# 排除模式（对路径匹配）：*.test.* / *.spec.* / *.acceptance.* / __tests__/ / test/ 与 tests/
+# 目录前缀（含任意路径段）/ acceptance-staging/ / coverage/——防 `*test*` 类误伤源码用后缀锚定。
+# 错误契约（solve-don't-punt）：非 git 仓库 / 无任何变更 → 输出空串 sha256
+#   e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855（rc=0，不报错）。
+# 确定性（C7）：同一 tree 两次调用值相同；改动任一非测试文件（含 untracked）→ 值变；只改测试文件 → 值不变。
+tree_sig() {
+    git rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
+        printf 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+        return 0
+    }
+    {
+        git diff HEAD --name-only 2>/dev/null
+        git ls-files -o -m --exclude-standard 2>/dev/null
+    } | awk '!seen[$0]++' | while IFS= read -r f; do
+        [ -f "$f" ] || continue
+        case "$f" in
+            *.test.*|*.spec.*|*.acceptance.*|acceptance-staging/*|coverage/*) continue ;;
+            *__tests__*|*/test/*|test/*|*/tests/*|tests/*) continue ;;
+        esac
+        if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "$f"
+        else
+            shasum -a 256 "$f"
+        fi
+    done | if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum | awk '{print $1}'
+    else
+        shasum -a 256 | awk '{print $1}'
+    fi
+}
+
 # validate_predicate_channels <state_file>
 #
 # 校验 ## 验收场景 谓词的 [channel] 合法性。合法集 = {det-machine, real-process, visual-residue}
