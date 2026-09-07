@@ -287,8 +287,14 @@ design_doc_written() {
 detect_smoke_eligible() {
     local diff_input="${1:-}"
 
+    # v3.65.0 自足性：本函数读 load_state 批量变量（qa_scope/fast_mode）而非逐字段重扫。
+    # 被 source 后单独调用（红队函数级测试）时批量变量尚未加载 → 先 eval 一次，
+    # 保证读回的是 STATE_FILE 调用时值（与原逐字段读取语义一致，幂等零副作用）。
+    eval "$(load_state "$STATE_FILE")" || true
+
     # qa_scope 已有值（如 "selective"）时不重复评估
-    [[ -n "$(get_enum_field qa_scope)" ]] && return 0
+    local qa_scope="${qa_scope:-}"
+    [[ -n "$(normalize_enum_value "$qa_scope")" ]] && return 0
 
     local diff_lines=0 diff_files=0 has_deps=0
 
@@ -311,8 +317,8 @@ detect_smoke_eligible() {
         fi
     fi
 
-    local fast_mode
-    fast_mode=$(get_enum_field fast_mode || true)
+    local fast_mode="${fast_mode:-}"
+    fast_mode=$(normalize_enum_value "$fast_mode")
 
     # 路径 A — fast_mode=true → 无视 diff 大小直接 smoke（用户/AI 显式选 fast，相信判断）
     if [[ "$fast_mode" == "true" ]]; then
@@ -354,12 +360,15 @@ if [[ ! -f "$STATE_FILE" ]]; then
 fi
 
 # ── 2. 解析 frontmatter ──
+# v3.65.0 批量化：一次 load_state 吐全部 frontmatter 字段（键原样小写、值 %q 转义），
+# 替代逐字段全文件重扫。状态切换点见 §5 的重新 eval。
+eval "$(load_state "$STATE_FILE")" || { echo "load_state failed" >&2; }
 
-PHASE=$(get_enum_field "phase" || true)
-GATE=$(get_enum_field "gate" || true)
-ITERATION=$(get_field "iteration" || true)
-MAX_ITERATIONS=$(get_field "max_iterations" || true)
-STATE_SESSION=$(get_field "session_id" || true)
+PHASE=$(normalize_enum_value "${phase:-}")
+GATE=$(normalize_enum_value "${gate:-}")
+ITERATION="${iteration:-}"
+MAX_ITERATIONS="${max_iterations:-}"
+STATE_SESSION="${session_id:-}"
 
 # ── 3. Session 隔离（Ralph 兼容 + 首次认领） ──
 
@@ -424,7 +433,7 @@ SKIP_INCREMENT=0
 
 if [[ "$PHASE" == "done" ]]; then
     # 知识提取守卫（三态）：合法值放行 / 空值才回滚（真守卫）/ 非空乱值自动归一不回滚
-    KNOWLEDGE_EXTRACTED=$(get_enum_field "knowledge_extracted" || true)
+    KNOWLEDGE_EXTRACTED=$(normalize_enum_value "${knowledge_extracted:-}")
     if [[ "$KNOWLEDGE_EXTRACTED" != "true" ]] && [[ "$KNOWLEDGE_EXTRACTED" != "skipped" ]]; then
         if [[ -n "$KNOWLEDGE_EXTRACTED" ]]; then
             # 非空乱值（yes/done/摘要文本）：AI 已有意标记完成、只是 token 写错 →
@@ -436,8 +445,8 @@ if [[ "$PHASE" == "done" ]]; then
             echo "autopilot · 已将非法 knowledge_extracted 值「${KNOWLEDGE_EXTRACTED}」规范化为 true（知识提取视为已完成，未回滚）" >&2
         else
             # 空值：这一步根本没执行 → 维持严格的豁免/回滚逻辑（防真跳过）
-            MODE_CHECK=$(get_enum_field "mode" || true)
-            BRIEF_CHECK=$(get_field "brief_file" || true)
+            MODE_CHECK=$(normalize_enum_value "${mode:-}")
+            BRIEF_CHECK="${brief_file:-}"
             if { [[ "$MODE_CHECK" == "project" ]] && [[ -z "$BRIEF_CHECK" ]]; } || [[ "$MODE_CHECK" == "project-qa" ]]; then
                 set_field "knowledge_extracted" '"skipped"'
             else
@@ -452,7 +461,7 @@ if [[ "$PHASE" == "done" ]]; then
         fi
     fi
 
-    MODE=$(get_enum_field "mode" || true)
+    MODE=$(normalize_enum_value "${mode:-}")
 
     # Case 0: project-qa 完成 → 项目完成通知 + 清理 active 指针
     if [[ "$MODE" == "project-qa" ]]; then
@@ -461,8 +470,8 @@ if [[ "$PHASE" == "done" ]]; then
         exit 0
     fi
 
-    NEXT_TASK=$(get_field "next_task" || true)
-    BRIEF_FILE=$(get_field "brief_file" || true)
+    NEXT_TASK="${next_task:-}"
+    BRIEF_FILE="${brief_file:-}"
     DAG_FILE="$PROJECT_ROOT/.autopilot/project/dag.yaml"
 
     # Case 0.5: 项目模式设计完成（非子任务）→ 自动启动首个就绪任务
@@ -486,14 +495,16 @@ if [[ "$PHASE" == "done" ]]; then
                 create_brief_state_file "$TASK_FILE_ABS" "$HOOK_SESSION" "30" "3"
                 bash "$SCRIPT_DIR/notify.sh" auto-chain 2>/dev/null || true
                 echo "🔗 project-design → ${FIRST_READY}" >&2
-                PHASE=$(get_enum_field "phase" || true)
+                # 状态文件已切换 → 重新 load_state 批量重读（v3.65.0，对齐 v3.36.3 重读语义）
+                eval "$(load_state "$STATE_FILE")" || true
+                PHASE=$(normalize_enum_value "${phase:-}")
                 # v3.36.3 必须重读 GATE/AUTO_APPROVE：旧 state 残留 gate（如 AI 未清的
                 # review-accept）会让下方第 6 步审批门误命中而 exit 0，新 state 的
                 # block JSON 永不输出。这是 auto-chain 失效双链第 2 环。
-                GATE=$(get_enum_field "gate" || true)
-                AUTO_APPROVE=$(get_enum_field "auto_approve" || true)
-                ITERATION=$(get_field "iteration" || true)
-                MAX_ITERATIONS=$(get_field "max_iterations" || true)
+                GATE=$(normalize_enum_value "${gate:-}")
+                AUTO_APPROVE=$(normalize_enum_value "${auto_approve:-}")
+                ITERATION="${iteration:-}"
+                MAX_ITERATIONS="${max_iterations:-}"
                 SKIP_INCREMENT=1
                 # 落入下方 block JSON 构造
             else
@@ -527,13 +538,14 @@ if [[ "$PHASE" == "done" ]]; then
             create_brief_state_file "$TASK_FILE_ABS" "$HOOK_SESSION" "30" "3"
             bash "$SCRIPT_DIR/notify.sh" auto-chain 2>/dev/null || true
             echo "🔗 auto-chain: ${NEXT_TASK}" >&2
-            # 重新读取新状态文件的字段
-            PHASE=$(get_enum_field "phase" || true)
+            # 重新读取新状态文件的字段（v3.65.0：重新 eval load_state 批量重读）
+            eval "$(load_state "$STATE_FILE")" || true
+            PHASE=$(normalize_enum_value "${phase:-}")
             # v3.36.3 必须重读 GATE/AUTO_APPROVE（双链第 2 环修复）
-            GATE=$(get_enum_field "gate" || true)
-            AUTO_APPROVE=$(get_enum_field "auto_approve" || true)
-            ITERATION=$(get_field "iteration" || true)
-            MAX_ITERATIONS=$(get_field "max_iterations" || true)
+            GATE=$(normalize_enum_value "${gate:-}")
+            AUTO_APPROVE=$(normalize_enum_value "${auto_approve:-}")
+            ITERATION="${iteration:-}"
+            MAX_ITERATIONS="${max_iterations:-}"
             SKIP_INCREMENT=1
             # 落入下方 block JSON 构造
         else
@@ -552,12 +564,14 @@ if [[ "$PHASE" == "done" ]]; then
             create_project_qa_state_file "$HOOK_SESSION"
             bash "$SCRIPT_DIR/notify.sh" project-qa 2>/dev/null || true
             echo "🏁 所有任务已完成，启动全项目 QA" >&2
-            PHASE=$(get_enum_field "phase" || true)
+            # 状态文件已切换（create_project_qa_state_file）→ 重新 load_state 批量重读
+            eval "$(load_state "$STATE_FILE")" || true
+            PHASE=$(normalize_enum_value "${phase:-}")
             # v3.36.3 必须重读 GATE/AUTO_APPROVE（双链第 2 环修复）
-            GATE=$(get_enum_field "gate" || true)
-            AUTO_APPROVE=$(get_enum_field "auto_approve" || true)
-            ITERATION=$(get_field "iteration" || true)
-            MAX_ITERATIONS=$(get_field "max_iterations" || true)
+            GATE=$(normalize_enum_value "${gate:-}")
+            AUTO_APPROVE=$(normalize_enum_value "${auto_approve:-}")
+            ITERATION="${iteration:-}"
+            MAX_ITERATIONS="${max_iterations:-}"
             SKIP_INCREMENT=1
             # 落入下方 block JSON 构造
         else
@@ -580,13 +594,16 @@ fi
 # 蓝队失败兜底场景，那两类 phase 不是 qa）+ gate=review-accept + auto_approve=true（仅
 # stop-hook 的 create_brief_state_file / create_project_qa_state_file 会写 true，
 # 单任务模式默认 false，是 auto-chain 流的充分指标）。
-AUTO_APPROVE=$(get_enum_field "auto_approve" || true)
+AUTO_APPROVE=$(normalize_enum_value "${auto_approve:-}")
 if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]] && \
    [[ "${AUTO_APPROVE}" == "true" ]]; then
     set_field "gate" '""'
     set_field "phase" '"merge"'
-    GATE=""
-    PHASE="merge"
+    # 同 run 读回链（C9）：set_field 后重新 eval load_state，§5.6/§9 的
+    # tier5_status/qa_scope/fast_mode 等读回取到的是文件当前值
+    eval "$(load_state "$STATE_FILE")" || true
+    GATE="${gate:-}"
+    PHASE="${phase:-}"
     echo "🔗 auto-approve: review-accept → merge (auto-chain subtask)" >&2
 fi
 
@@ -602,10 +619,10 @@ fi
 # stop-hook 清 gate + 注入 prompt"只补 Tier 5 判定"，编排器重跑仅 Tier 5。
 # **死锁防护**：与 retry_count 解耦，不耗 max_retries。na/skip 不阻塞合并，阻塞的仅"越界/有工具却漏判"。
 if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]]; then
-    _tier5_status=$(get_enum_field tier5_status 2>/dev/null || true)
+    _tier5_status=$(normalize_enum_value "${tier5_status:-}")
     # 空值兜底：内联补判（与 §8.5.3 同款，幂等——§8.5.3 已判过则 tier5_status 非空不会进此分支）
     if [[ -z "$_tier5_status" ]]; then
-        _qa_scope_t5=$(get_enum_field qa_scope 2>/dev/null || true)
+        _qa_scope_t5=$(normalize_enum_value "${qa_scope:-}")
         if [[ "$_qa_scope_t5" == "smoke" ]]; then
             set_field "tier5_status" '"skipped"'
             append_changelog "stop-hook §5.6 兜底：qa_scope=smoke，tier5_status=skipped"
@@ -775,9 +792,9 @@ fi
 #     保留其 §9 re-injection 自动推进到 implement。
 #   - flag-asymmetry 防御：未来新增 design 模式 flag 时，此处条件与 §9 design 分支
 #     （auto_approve / fast_mode 判断）必须同步处理。
-# 缺失字段 get_field 返回空串，"" != "true" 恒真 → 缺失即按 false（fail-safe 朝放行）。
-AUTO_APPROVE=$(get_enum_field "auto_approve" || true)
-FAST_MODE=$(get_enum_field "fast_mode" || true)
+# 缺失字段 load_state 不产变量（eval 后留空），"" != "true" 恒真 → 缺失即按 false（fail-safe 朝放行）。
+AUTO_APPROVE=$(normalize_enum_value "${auto_approve:-}")
+FAST_MODE=$(normalize_enum_value "${fast_mode:-}")
 # v3.43.1 加 design_doc_written 前置：只在「设计文档已落盘」的审批点放行。brainstorm 刚完成的
 # 接力点设计文档仍空（仅占位符）→ 不命中 → fall through §9 自动唤醒接力写设计文档。
 # （一刀切放行会误停接力点，逼用户手动「继续」——v3.43.0 回归 bug，本次修复。）
@@ -798,13 +815,16 @@ fi
 
 # ── 8.5 在 phase 转入 qa/auto-fix 时压缩 QA 报告历史轮次 ──
 # 失败不阻断 stop-hook，使用 || true 兜底
-NEW_PHASE=$(get_field "phase" || true)
+NEW_PHASE="${phase:-}"
 if [[ "$NEW_PHASE" == "qa" ]] || [[ "$NEW_PHASE" == "auto-fix" ]]; then
     compress_qa_report "$STATE_FILE" || true
 fi
 # 单独的 qa 触发点（不在 auto-fix 触发，避免重复评估）
 if [[ "$NEW_PHASE" == "qa" ]]; then
     detect_smoke_eligible || true
+    # 同 run 读回链（C9）：detect_smoke_eligible 可能 set qa_scope=smoke，
+    # 重新 eval load_state 使 _tier5_guard / §9 的 tier5_status/qa_scope 读回文件当前值
+    eval "$(load_state "$STATE_FILE")" || true
 
     # ── 8.5.0.5 验收测试合流（implement→qa 转入时确定性搬运，C3） ──
     # 自门控：仅当 $TASK_DIR/acceptance-staging/manifest 存在时执行，否则完全 no-op（向后兼容旧任务）。
@@ -962,13 +982,14 @@ if [[ "$NEW_PHASE" == "qa" ]]; then
     # 自门控：无 package.json / 非 qa 阶段（本 §8.5 区已限定 qa）→ no-op。
     # 失败不阻断 stop-hook（|| true 兜底）。
     _tier5_guard() {
-        local tier5_status
-        tier5_status=$(get_enum_field tier5_status 2>/dev/null || true)
+        # local-shadow 防护：合并声明先捕获外层 load_state 变量，再归一（v3.65.0）
+        local tier5_status="${tier5_status:-}"
+        tier5_status=$(normalize_enum_value "$tier5_status")
         # 幂等前置：tier5_status 非空（编排器已设 pass/fail 或本守卫已跑）→ 不覆盖
         [[ -n "$tier5_status" ]] && return 0
 
-        local qa_scope
-        qa_scope=$(get_enum_field qa_scope 2>/dev/null || true)
+        local qa_scope="${qa_scope:-}"
+        qa_scope=$(normalize_enum_value "$qa_scope")
         # smoke 路径 → skipped + 注入 systemMessage（治 smoke 报告渲染沉默：让 AI 在报告渲染 Tier 5: skipped 栏）
         if [[ "$qa_scope" == "smoke" ]]; then
             set_field "tier5_status" '"skipped"'
@@ -1006,10 +1027,10 @@ fi
 # 所有变量必须用 ${VAR} 花括号界定。
 
 # design 阶段直接写设计文档到状态文件（auto_approve 时跳过审批）
-AUTO_APPROVE=$(get_enum_field "auto_approve" || true)
+AUTO_APPROVE=$(normalize_enum_value "${auto_approve:-}")
 # shellcheck disable=SC2034  # 兼容期保留：plan_mode 字段已弃用，分支体已删除（v3.21.0），仅保留赋值便于后续 grep 检测旧字段使用
-PLAN_MODE=$(get_field "plan_mode" || true)
-FAST_MODE=$(get_enum_field "fast_mode" || true)
+PLAN_MODE="${plan_mode:-}"
+FAST_MODE=$(normalize_enum_value "${fast_mode:-}")
 if [[ "$PHASE" == "design" ]]; then
     if [[ "$AUTO_APPROVE" == "true" ]]; then
         PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. auto_approve=true: 直接写设计文档到状态文件. ⚠️ 必须使用 Agent 工具启动 plan-reviewer sub-agent (model: sonnet) 审查设计方案, 参见 references/plan-reviewer-prompt.md. 审查通过则推进到 implement; 失败则设 auto_approve: false 回退到正常审批流程. 按照 autopilot skill 的 Phase: design 指引执行."
@@ -1022,12 +1043,12 @@ if [[ "$PHASE" == "design" ]]; then
         # 万一失效，standard design 会落到无匹配分支、PROMPT 为空 → 空 reason 的 block 唤醒
         # AI 却无指令，更易冲进 implement，与"防 design 绕过审批"目标相悖。
         # 默认含 brainstorm 探索流程（原 deep 行为）。plan_mode=="deep" 的历史 state.md 同样走此分支（兼容期）
-        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. 默认 standard 路径请走 \`Skill: autopilot-brainstorm\` 委托完成 Q&A 与方案共识，brainstorm skill 输出 brainstorm.md 后主 SKILL 接力写设计文档. ⚠️ 必须使用 Agent 工具启动 plan-reviewer sub-agent (model: sonnet) 审查设计方案, 参见 references/plan-reviewer-prompt.md. 审查通过后使用 AskUserQuestion 请求用户审批. 产出物写入 task_dir: $(get_field 'task_dir'). 按照 autopilot skill 的 Phase: design 指引执行."
+        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. 默认 standard 路径请走 \`Skill: autopilot-brainstorm\` 委托完成 Q&A 与方案共识，brainstorm skill 输出 brainstorm.md 后主 SKILL 接力写设计文档. ⚠️ 必须使用 Agent 工具启动 plan-reviewer sub-agent (model: sonnet) 审查设计方案, 参见 references/plan-reviewer-prompt.md. 审查通过后使用 AskUserQuestion 请求用户审批. 产出物写入 task_dir: ${task_dir}. 按照 autopilot skill 的 Phase: design 指引执行."
     fi
 elif [[ "$PHASE" == "implement" ]]; then
     PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: implement, 迭代: ${NEXT_ITERATION}. ⚠️ 红蓝对抗铁律: (1) 从状态文件读取设计文档, 检查是否有领域 Skill 委托; (2) 无委托时必须使用 Agent 工具在同一轮响应中同时启动蓝队和红队两个并行 sub-agent (model: sonnet), prompt 模板参见 references/blue-team-prompt.md 和 references/red-team-prompt.md; (3) 红队绝对不能读取蓝队新写的实现代码——红队只看设计文档; (4) 两个 Agent 都完成后合流: 收集产出、写入红队测试文件、更新状态文件. 详细工作流参见 references/implement-phase.md. 按照 autopilot skill 的 Phase: implement 指引执行."
 elif [[ "$PHASE" == "qa" ]]; then
-    QA_SCOPE=$(get_enum_field "qa_scope" || true)
+    QA_SCOPE=$(normalize_enum_value "${qa_scope:-}")
     if [[ "${QA_SCOPE}" == "smoke" ]]; then
         PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: qa (smoke), 迭代: ${NEXT_ITERATION}. ⚠️ smoke QA: 只执行 Wave 1 (Tier 0/1 红队验收测试 + 类型/Lint/单元/构建) + Wave 1.5 真实测试场景, 不启动 qa-reviewer Agent — 编排器自行 Read git diff 后内联做 3 项自审 (设计符合性 / OWASP 关键 / 代码质量明显问题). Tier 1.5 铁律不变: 必须执行设计文档每一个真实测试场景, 场景计数匹配 E≥N. 按照 autopilot skill 的指引执行."
     else
@@ -1038,7 +1059,7 @@ elif [[ "$PHASE" == "merge" ]]; then
 else
     PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: ${PHASE}, 迭代: ${NEXT_ITERATION}. 按照 autopilot skill 的指引执行当前阶段的工作流."
 fi
-MODE=$(get_enum_field "mode" || true)
+MODE=$(normalize_enum_value "${mode:-}")
 SYSTEM_MSG="autopilot iteration ${NEXT_ITERATION} | phase: ${PHASE}${MODE:+ | mode: $MODE}"
 # §8.5.3 na/smoke 路径的可见化文案合并进 systemMessage（单 JSON 输出，治 qa-reviewer Critical-1 double JSON + smoke 渲染沉默）
 if [[ -n "${_TIER5_MSG:-}" ]]; then

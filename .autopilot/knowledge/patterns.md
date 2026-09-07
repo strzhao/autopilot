@@ -151,4 +151,11 @@
 **How to apply**: ① 新机制上线后首个 dogfood 任务，QA 阶段显式对照检查「本任务自身是否走了新机制」（自指检查清单意识）；② 机制设计时默认 AI 会漏执行自己，降级路径必须优雅（本例成立）；③ 若机制有硬收益诉求，考虑 stop-hook 确定性提醒而非纯 prompt（机械下沉哲学）。关联 [[2026-05-07]]（AI 自觉优化不可靠，结构性靠 hook 兜底）。
 **Evidence**: 核对锚点 2026-09-07 源码 v3.64.0。p2-qa-loop QA Wave 2 Section A 流程观察记录；tree_sig / 沿用三条件同任务内闭环验证成立（sig 0372a32c… 合流前后一致）。
 
+### [2026-09-07] 平价谓词 vs 更严格新契约——边界 fixture 上必然互斥，平价比对要显式排除边界
+<!-- tags: autopilot, acceptance-test, parity-predicate, contract-migration, legacy-quirk, assertion-vs-contract, red-team-iron-law, v3.65.0 -->
+**Scenario**: p3 dogfood，Tier 0 首跑 45/46：场景 21.P1「load_state eval 回读 == get_field 逐字段平价」在「正文伪 --- 块」fixture 上 FAIL——get_field 既有 sed range 对伪 `---` 重复开门泄漏正文伪字段（历史 quirk），load_state 按 C8「只认首对 ---」正确不泄漏。平价谓词（忠实执行）与安全契约（C8 SSOT）在该边界 fixture 上互斥。plan-reviewer 两轮均未抓到（各自单独审查时都自洽）。
+**Lesson**: 行为保持重构写「新实现 == 旧实现」平价断言时，若新实现同时收紧了某个语义（安全/去 quirk），平价范围必须**显式排除被收紧的边界**，否则两份自洽文档（契约 vs 谓词）在交界处必然矛盾。识别信号：平价谓词的 fixture 集里含「旧实现已知 quirk」的输入。
+**How to apply**: 平价谓词成文时列旧实现 quirk 清单（正文伪块/重复键/尾随空格），逐项声明「按新契约语义判，不入平价集」；quirk 语义由独立谓词锁定新行为（如 4.P1 锁 FAKE_KEY=MISS）。铁律例外情形①（断言与契约矛盾）处置时先判定哪边是 SSOT——新契约优先，修断言+重锁。
+**Evidence**: 核对锚点 2026-09-07 源码 v3.65.0。get_field FAKE_KEY 泄漏由 qa-reviewer 独立同构 fixture 复现；适配后 46/46，平价仍覆盖 7 字段。关联 [[2026-07-19]]（FAIL 三分类）[[2026-05-14]]（契约单一字面量）。
+
 > 历史归档（< 2026-05-17）按主题迁移至 domains/，详见 index.md

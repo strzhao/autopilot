@@ -18,6 +18,9 @@ set -uo pipefail
 source "$(dirname "$0")/lib.sh"
 init_paths
 
+# SessionStart 产物 TTL 清理（/tmp/autopilot-artifacts >7 天文件；目录缺失/失败均不阻断启动）
+cleanup_artifacts_ttl 2>/dev/null || true
+
 # ── 早期迁移：.claude/autopilot.local.md → .autopilot/ 旧格式检测 ──
 # 旧版状态文件在 .autopilot/autopilot.local.md（无 active 指针），需要检测处理
 if [[ -f "$PROJECT_ROOT/.autopilot/autopilot.local.md" ]] && [[ ! -f "$(get_active_file)" ]]; then

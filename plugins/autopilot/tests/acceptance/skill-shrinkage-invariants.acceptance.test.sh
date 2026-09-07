@@ -7,6 +7,8 @@
 #           autopilot/SKILL.md 582 → ≤500、autopilot-doctor/SKILL.md 664 → ≤580。
 #           守护清单 C（7 契约词并集 / acceptance-staging / §锚点方向 / 铁律 / 版本三同步 /
 #           references 路径 / 无新顶层章节 / 无新 GUI 测试机制）减法后不破坏。
+# [2026-09-07 v3.65.0 适配] scene 1.P2 autopilot 分支补 commit-aware 跳过（与 doctor 分支同构）：
+#           纯 doctor/bash 任务不触 autopilot/SKILL.md 时 0>0 恒假误判，跳过即语义正确。
 #
 # 谓词映射（状态文件 ## 验收场景 SSOT）：
 #   场景1.P1a [det-machine]: autopilot/SKILL.md <= 500 && doctor/SKILL.md <= 580
@@ -160,8 +162,12 @@ DOCTOR_DELETED=${DOCTOR_STATS#* }
 if [[ "$AUTOPILOT_ADDED" -eq 0 && "$AUTOPILOT_DELETED" -eq 0 && "$DOCTOR_ADDED" -eq 0 && "$DOCTOR_DELETED" -eq 0 ]]; then
     pass "scene 1.P2: 工作区 clean（减法已 commit），N/A — 净减计数是 QA 阶段一次性守护，commit 后由 git history 保证"
 else
-    [[ "$AUTOPILOT_DELETED" -gt "$AUTOPILOT_ADDED" ]] || \
-        fail "scene 1.P2: autopilot/SKILL.md 未净减 (deleted=$AUTOPILOT_DELETED <= added=$AUTOPILOT_ADDED)。减法要求 deleted > added（独立守护，不依赖 skill-md-net-shrinkage）"
+    # autopilot 独立 commit-aware（v3.65.0 适配，与下方 doctor 同构）：本次未改（added=0 ∧ deleted=0）
+    # → 跳过净减检查。治纯 doctor/bash 任务误判 autopilot 0>0 false——净减守护只约束「本任务改了的文件」。
+    if [[ "$AUTOPILOT_ADDED" -gt 0 || "$AUTOPILOT_DELETED" -gt 0 ]]; then
+        [[ "$AUTOPILOT_DELETED" -gt "$AUTOPILOT_ADDED" ]] || \
+            fail "scene 1.P2: autopilot/SKILL.md 未净减 (deleted=$AUTOPILOT_DELETED <= added=$AUTOPILOT_ADDED)。减法要求 deleted > added（独立守护，不依赖 skill-md-net-shrinkage）"
+    fi
     # doctor 独立 commit-aware：本次未改（added=0 ∧ deleted=0）→ 跳过净减检查（未改不算违规，治 autopilot-only 任务误判 doctor 0>0 false）
     if [[ "$DOCTOR_ADDED" -gt 0 || "$DOCTOR_DELETED" -gt 0 ]]; then
         [[ "$DOCTOR_DELETED" -gt "$DOCTOR_ADDED" ]] || \

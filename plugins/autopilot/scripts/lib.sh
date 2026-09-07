@@ -174,6 +174,91 @@ get_enum_field() {
     normalize_enum_value "${raw}"
 }
 
+# load_state [file] → stdout 逐行 KEY=<printf %q 转义值>（rc=0）
+#
+# 批量 frontmatter 读取：一次遍历吐全部字段，替代 N 次 get_field/get_enum_field
+# 全文件重扫（stop-hook 每次 stop 曾 43 次调用 ≈ 3000+ 冗余子进程）。
+#
+# 输出契约（C8）：可直接 `eval "$(load_state "$STATE_FILE")"`——
+#   - 键原样输出（frontmatter 键即小写标识符）；值经 printf %q 转义，
+#     eval 后变量值 == frontmatter 原值字面：不执行注入、不 word-split。
+#   - 与 get_field 语义逐字段平价：多空格吞并 / 尾随空格 quirk（值 `"v" ` 不剥引号）/
+#     mode 锚定不误匹配 plan_mode / 重复键取第一（-m1）。
+#   - 只认首对 `---`（正文伪 --- 块零产出）；文件缺失 → 空输出 rc=0。
+#
+# 实现说明：awk 单遍提取 frontmatter 原始行，解析+转义在 bash 内完成
+# （逐字节复刻 get_field 的 sed/grep 语义比在 awk 内重实现 %q 更简且更不易漂移）。
+load_state() {
+    local f="${1:-$STATE_FILE}"
+    [ -f "$f" ] || return 0
+    local line key val seen="" in_fm=0 done_fm=0
+    while IFS= read -r line; do
+        if [[ "$line" == '---' ]]; then
+            if (( ! in_fm )) && (( ! done_fm )); then
+                in_fm=1
+            elif (( in_fm )); then
+                in_fm=0; done_fm=1   # 首对 --- 闭合，此后正文全部忽略（含伪 --- 块）
+            fi
+            continue
+        fi
+        (( in_fm )) || continue
+        [[ "$line" == *:* ]] || continue
+        key="${line%%:*}"
+        val="${line#*:}"
+        # 平价复刻 get_field 的 `sed "s/${key}: *//"`：只吞冒号后的空格（不含 tab），多空格全吞
+        val="${val#"${val%%[! ]*}"}"
+        # 平价复刻 `sed 's/^"\(.*\)"$/\1/'`：两端引号才剥（尾随空格 quirk 保持原样）
+        if [[ "${#val}" -ge 2 && "$val" == '"'*'"' ]]; then
+            val="${val:1:${#val}-2}"
+        fi
+        # 平价复刻 grep -m1：重复键取第一
+        case ",${seen}," in *",${key},"*) continue ;; esac
+        seen="${seen},${key}"
+        printf '%s=%q\n' "$key" "$val"
+    done < "$f"
+    return 0
+}
+
+# ── 产物卫生 ──────────────────────────────────────────────────────
+
+# cleanup_artifacts_ttl [dir] [days]
+#
+# 谓词 artifact 等 QA 产物的 TTL 清理（/tmp/autopilot-artifacts 238MB 无清理实证）。
+#   - 删除 <dir> 内 mtime > <days> 天的文件（默认 /tmp/autopilot-artifacts 7 天）
+#   - 清理后移除空子目录（非空目录保留——跨项目混放防误删；根目录保留）
+#   - 目录不存在 → rc=0 幂等静默；SessionStart 每次调用幂等
+# 边界：只动 <dir> 内部，目录外文件零触碰。
+cleanup_artifacts_ttl() {
+    local dir="${1:-/tmp/autopilot-artifacts}"
+    local days="${2:-7}"
+    [ -d "$dir" ] || return 0
+    find "$dir" -type f -mtime +"$days" -delete 2>/dev/null || true
+    # 空子目录自底向上 rmdir（-not -path 排除根目录自身）
+    find "$dir" -depth -type d -empty -not -path "$dir" -exec rmdir {} + 2>/dev/null || true
+    return 0
+}
+
+# detect_runtime_size [dir] → stdout 首行 = KB 整数（du -sk）；超 500MB 时追加 RUNTIME-SIZE-WARN 行
+#
+# doctor runtime/ 体积客观信号（体积检测下沉 lib.sh SSOT，语义清理建议留 AI，
+# 对齐 Dim 13/14 哲学：lib.sh 出客观信号 + 信号行，SKILL.md 留语义判断）。
+#   - 目录存在 → du -sk 的 KB 整数（首行）；>500MB（512000KB）追加 "RUNTIME-SIZE-WARN: ..." 行
+#   - 目录缺失 → 输出 "0" rc=0（solve-don't-punt，不抛错）
+#   - 目录含大量文件仍 rc=0（du 静默容错）
+detect_runtime_size() {
+    local dir="${1:-}"
+    local kb=0
+    if [ -d "$dir" ]; then
+        kb=$(du -sk "$dir" 2>/dev/null | awk '{print $1}')
+        [[ "$kb" =~ ^[0-9]+$ ]] || kb=0
+    fi
+    printf '%s\n' "$kb"
+    if [ "$kb" -ge 512000 ]; then
+        echo "RUNTIME-SIZE-WARN: ${dir} 体积 ${kb}KB（>500MB 阈值），runtime/ 产物长期未清理"
+    fi
+    return 0
+}
+
 append_changelog() {
     local ts; ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     local temp="${STATE_FILE}.tmp.$$"

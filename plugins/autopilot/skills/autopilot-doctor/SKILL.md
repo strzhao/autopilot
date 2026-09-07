@@ -249,7 +249,6 @@ ls .autopilot/ 2>/dev/null; \
 ls .autopilot/knowledge/ 2>/dev/null; \
 ls .autopilot/knowledge/index.md .autopilot/knowledge/decisions.md .autopilot/knowledge/patterns.md 2>/dev/null; \
 ls .autopilot/knowledge/domains/ 2>/dev/null; \
-# 文件大小检测
 wc -l .autopilot/knowledge/decisions.md .autopilot/knowledge/patterns.md 2>/dev/null; \
 find .autopilot/knowledge/domains/ -name "*.md" -exec wc -l {} + 2>/dev/null; \
 # 索引一致性：index.md 条目数
@@ -262,8 +261,8 @@ head -30 .autopilot/knowledge/patterns.md 2>/dev/null; \
 # 文件分类正确性（v3.35 三层防御 Layer 3）
 echo "--- gitignore 规则 ---"; \
 grep -E '\.autopilot/runtime/|local-config\.json' .gitignore 2>/dev/null || echo "MISSING: autopilot 产物 ignore 规则（.autopilot/runtime/ 和 local-config.json）"; \
-echo "--- runtime 误入库检测 ---"; \
-git ls-files .autopilot/runtime 2>/dev/null
+echo "--- runtime 误入库检测 ---"; git ls-files .autopilot/runtime 2>/dev/null; \
+echo "--- runtime 体积（v3.65+，>500MB 时 RUNTIME-SIZE-WARN 行，AI 须给清理建议）---"; source "${CLAUDE_PLUGIN_ROOT:-.}/scripts/lib.sh" 2>/dev/null && detect_runtime_size .autopilot/runtime 2>/dev/null || echo "0"
 ```
 
 ### Dim 13: AI 可观测性/调试友好度（权重 5%）— Wave 1 客观收集
@@ -477,7 +476,7 @@ ls -d types/ src/types/ 2>/dev/null
 | 9 | 依赖与安全基线 | X/10 | ✅/⚠️/❌ | 一句话概括 |
 | 10 | AI 就绪度 | X/10 | ✅/⚠️/❌ | 一句话概括 |
 | 11 | 性能保障 | X/10 | ✅/⚠️/❌ | P1/P2/P3 覆盖状态 |
-| 12 | 知识库健康度 | X/10 | ✅/⚠️/❌ | 过拟合/重复/大小/索引状态（无知识库时 N/A） |
+| 12 | 知识库健康度 | X/10 | ✅/⚠️/❌ | 过拟合/重复/大小/索引状态（无知识库时 N/A）+ runtime/ 体积 X MB（RUNTIME-SIZE-WARN 时 AI 给清理建议，对齐 Dim 13 语义留 AI） |
 | 13 | AI 可观测性/调试友好度 | X/10 | ✅/⚠️/❌ | 6 客观维（结构化日志/轮转/CLI/health/clean/debug）+ 3 语义维（error code/命名空间/隔离）摘要 |
 | 14 | 命脉链路 readiness 覆盖 | X/10 | ✅/⚠️/❌ | 命脉穿透审计摘要（命脉清单 + 回归假设 + 逐层覆盖判定；无命脉链路时 N/A；warn/fail 触发降级） |
 

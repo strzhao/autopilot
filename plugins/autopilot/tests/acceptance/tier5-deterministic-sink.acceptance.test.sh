@@ -2,6 +2,9 @@
 # R-T5DS: 验证 autopilot Tier 5 确定性下沉实现（v3.48.0+ 契约）
 # 红队测试 — 仅基于设计文档「契约规约」编写（黑盒），不读蓝队 tier5 实现函数体
 #
+# [2026-09-07 v3.65.0 适配] load_state 批量化后 stop-hook 直调 get_field/get_enum_field 清零，
+# C7.1 锚点从 (get_enum_field|get_field).*tier5_status 语义化扩展为含 normalize_enum_value 读回模式。
+#
 # 设计文档 SSOT：.autopilot/runtime/requirements/20260703-…/state.md
 #   ## 契约规约（接口签名 / 状态字段 / 守卫触发 / SSOT / 错误契约）
 #
@@ -460,9 +463,10 @@ assert_grep_ge "T5ds.C6.2" "tier5_status" "$STOP_HOOK" 1 \
 echo ""
 echo "--- C7: 幂等前置（B1）— tier5_status 空判断模式 ---"
 
-# 幂等前置：守卫 block 含 get_enum_field/get_field tier5_status + 空判断（-z / == "" / is null）
+# 幂等前置：守卫 block 含 tier5_status 读回（get_enum_field/get_field 或 v3.65.0 load_state 后
+# 的 normalize_enum_value 变量归一）+ 空判断（-z / == "" / is null）
 # grep 锚点：tier5_status 附近有空判断模式（-z / 空 / null）
-if grep -qE '(get_enum_field|get_field).*tier5_status' "$STOP_HOOK" 2>/dev/null \
+if grep -qE '(get_enum_field|get_field|normalize_enum_value).*tier5_status' "$STOP_HOOK" 2>/dev/null \
    && grep -qE '\-z.*tier5_status|tier5_status.*==.*("")|\|.*\|.*tier5_status|tier5_status.*null' "$STOP_HOOK" 2>/dev/null; then
     _log_pass "T5ds.C7.1" "C7: 守卫含 tier5_status 空判断（幂等前置，治 B1）"
 else
