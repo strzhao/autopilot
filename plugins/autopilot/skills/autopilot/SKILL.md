@@ -60,7 +60,7 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 ### Fast Mode 快速路径（仅 fast_mode=true 时）
 
-跳过 brainstorm Q&A，1 个 Explore agent 探索代码；不启动 scenario-generator / plan-reviewer Agent；设计文档写入状态文件后 `html_review: true` 仍走步骤 4c HTML 评审，否则直接 `phase: "implement"`（跳过审批，fast 信任 AI 判断）；implement 阶段跳过 contract-checker Agent。完整 diff 见 references/design-modes.md §4。
+跳过 brainstorm Q&A，1 个 Explore agent 探索代码；不启动 scenario-generator / plan-reviewer Agent；设计文档写入状态文件后 `html_review: true` 仍走步骤 4c HTML 评审，否则直接 `phase: "implement"`（跳过审批，fast 信任 AI 判断）。完整 diff 见 references/design-modes.md §4。
 
 ### Auto-Approve 快速路径（仅 auto_approve=true 时）
 
@@ -76,7 +76,7 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 #### 步骤 1. 模式检测与分流
 
-读取状态文件 frontmatter 的 `mode` 和 `brief_file` 字段。**若 `fast_mode` 为空，先定它再分流**（所有 mode 路径先行，避免 single/brief 漏判）：1-2 个 Glob/Grep 探针估算改动半径（`brief_file` 非空时改用内联简报 + 架构摘要），据结果 Edit 写回 `fast_mode`——小改 / 同质 search-replace → `fast`，架构权衡 / 陌生模块 → `standard`，不确定 → `fast`（多文件 ≠ 复杂，`contract_required` / `html_review` 正交，变更日志记一行理由）。然后按 `mode` 分流：
+读取状态文件 frontmatter 的 `mode` 和 `brief_file` 字段。**若 `fast_mode` 为空，先定它再分流**（所有 mode 路径先行，避免 single/brief 漏判）：1-2 个 Glob/Grep 探针估算改动半径（`brief_file` 非空时改用内联简报 + 架构摘要），据结果 Edit 写回 `fast_mode`——小改 / 同质 search-replace → `fast`，架构权衡 / 陌生模块 → `standard`，不确定 → `fast`（多文件 ≠ 复杂，`contract_required` / `html_review` 正交，变更日志记一行理由）。探针结论写入 `$TASK_DIR/context.md`——固定四节 `## 技术栈` / `## 测试框架` / `## 测试命令` / `## 构建命令`，节内 bullet、空节写 `N/A`，供蓝队/红队/qa-reviewer 复用。然后按 `mode` 分流：
 
 - **`mode: "single"` 或 `brief_file` 非空** → 跳过检测，继续步骤 2（标准单任务流程）。brief 模式下，目标区域已内联任务简报 + 依赖 handoff + 架构摘要，优先使用这些上下文。
 - **`mode: "project"`** → 跳过检测，直接走 [项目模式设计](#项目模式设计内容)
@@ -163,20 +163,20 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 #### 1a. 蓝/红队对抗路径（默认）
 
-从状态文件读取 `## 设计文档` 和 `## 实现计划`，然后**立即**使用 Agent 工具同时启动两个子代理（在同一轮响应中发出两个 Agent 调用）。测试框架信息由各 Agent 自行扫描项目发现。
+从状态文件读取 `## 设计文档` 和 `## 实现计划`，然后**立即**使用 Agent 工具同时启动两个子代理（在同一轮响应中发出两个 Agent 调用）。测试框架信息由编排器在 prompt 填入 `$TASK_DIR/context.md` 路径（design 步骤 1 探针产物）。
 
 ##### 蓝队 Agent（实现者）
 
 使用 Agent 工具启动蓝队（model: "sonnet"），prompt 参考 `references/blue-team-prompt.md` 模板，填入：
 - 设计文档和实现计划（从状态文件复制）
-- 项目目录路径和技术栈信息
+- 项目目录路径和 `$TASK_DIR/context.md` 路径
 
 ##### 红队 Agent（验证者）
 
 使用 Agent 工具启动红队（model: "sonnet"），prompt 参考 `references/red-team-prompt.md` 模板，填入：
 - 目标描述和设计文档（**仅**设计，不含实现计划）
 - 验收场景（从状态文件 `## 验收场景` 读取预注册谓词，N/A 则省略）
-- 测试框架信息和约定（从现有测试文件中提取）
+- `$TASK_DIR/context.md` 路径（测试框架信息；命名约定从现有测试文件提取）
 
 **⚠️ 红队铁律**：红队**绝对不能**读取蓝队新写的实现代码。红队测试代表设计意图，是验收标准的代码化表达。
 
@@ -211,17 +211,6 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 - **蓝队 Agent 失败** → 严重错误，在对话中说明，设置 `gate: "review-accept"` 等待用户介入
 - **Skill 委托失败** → 在对话中说明失败原因，自动回退到蓝/红队对抗路径重新执行
 
-### 步骤 2.5: 契约自动校验（contract-checker Agent）
-
-**触发条件**：仅当状态文件 frontmatter `contract_required: true` 且 `fast_mode` 非 `true` 时启动；否则跳过直接进入 Phase: qa（fast_mode 下红队验收测试仍可覆盖契约违反）。
-
-**Agent 调用**：使用 Agent 工具启动 contract-checker（model: "sonnet"），prompt 参考 `references/contract-checker-prompt.md` 模板，填入 `{contract_section}`（`## 契约规约` 章节完整内容）/ `{changed_files}`（`git diff --name-only HEAD`）/ `{project_root}`。
-
-**结果处理**：
-- **PASS**（`pass: true`，mismatches 为空）→ 在状态文件追加 `## 契约校验` 区域写入 `✅ PASS`，进入 Phase: qa
-- **FAIL**（`pass: false`，mismatches 含 severity=high 条目）→ `retry_count++`，将 mismatches 清单写入状态文件 `## 契约校验` 区域，设 `phase: "implement"`，打回蓝队按 mismatch 清单修复实现（**不动红队测试**）
-- **降级**：Agent 启动失败 / 超时 90s / 输出非 JSON → 说明 `[contract-checker FAILED/TIMEOUT/MALFORMED] <原因>`，跳过本步直接进入 Phase: qa（红队验收测试仍可发现部分契约问题）
-
 ---
 
 ## Phase: qa — 质量检查阶段
@@ -236,7 +225,7 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 #### 前置：选择性重跑判断
 
 检查 frontmatter `qa_scope` 字段：
-- **`qa_scope: "smoke"`**（stop-hook 自动检测 diff 体积小或 fast_mode=true 时设置）→ 只执行 Wave 1 (Tier 0/1) + Wave 1.5 验收谓词求值（优先 det-machine 谓词），qa-reviewer 缩到 Section A 关键项 + OWASP；**不得用"编排器自审"替代独立审查**（需独立审查而 Agent 不可得时按 Wave 2 降级策略处理）。Tier 1.5 铁律不变：每条预注册谓词必须对真实产物求值并附 artifact。
+- **`qa_scope: "smoke"`**（stop-hook 自动检测 diff 体积小或 fast_mode=true 时设置）→ 只执行 Wave 1 (Tier 0/1) + Wave 1.5 验收谓词求值（优先 det-machine 谓词），qa-reviewer 缩到 Section A 关键项 + Section D + OWASP；**不得用"编排器自审"替代独立审查**（需独立审查而 Agent 不可得时按 Wave 2 降级策略处理）。Tier 1.5 铁律不变：每条预注册谓词必须对真实产物求值并附 artifact。
 - **`qa_scope: "selective"`**（auto-fix 修复后设置）→ 只重跑上一轮 `### 失败 Tier 清单` 中列出的 Tier + Tier 1.5，其余 Tier 直接沿用上轮结果标记 ✅
 - **无 `qa_scope` 或值为空** → 执行全量 QA（所有 Wave/Tier）
 - 全部通过后，清除 `qa_scope` 字段（Edit 为空字符串）
@@ -247,11 +236,11 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 #### Wave 1 — 命令执行（并行）
 
-**在同一轮响应中发出多个 Bash 工具调用**，所有命令独立运行、互不依赖。**例外**：Tier 3.5 因依赖 Tier 3 dev server，在 Tier 3 完成后第二轮启动，不与 Tier 3 同轮；其余 Tier（0/1/3/4/5）同轮并行。**Tier 5: 量化指标门禁** 判定由 stop-hook §8.5.3 + lib.sh 产出 `tier5_status`，详见 references/quantitative-metrics.md。
+**在同一轮响应中发出多个 Bash 工具调用**，所有命令独立运行、互不依赖。**例外**：Tier 3.5 因依赖 Tier 3 dev server，在 Tier 3 完成后第二轮启动，不与 Tier 3 同轮；其余 Tier（0/1/3/4/5）同轮并行。**Tier 5: 量化指标门禁** 判定由 stop-hook §8.5.3 + lib.sh 产出 `tier5_status`；coverage 子项复用 Tier 1 的 coverage 产物（freshness_check FRESH 则不二次执行套件），详见 references/quantitative-metrics.md。
 
 **Tier 0: 红队验收测试**（最高判定权重 — 失败=实现偏离设计；与 Tier 1 同轮并行）：运行所有 `.acceptance.test` 文件（从状态文件 `## 红队验收测试` 读取列表）；红队未生成测试时降级为 Wave 2 AI 逐项人工验证
 
-**Tier 1: 基础验证**（四项并行，各超时 60s）：类型检查(`tsc --noEmit`) | Lint(`eslint`) | 单元测试(`jest/vitest`) | 构建(`npm run build`)
+**Tier 1: 基础验证**（四项并行，各超时 60s）：类型检查(`tsc --noEmit`) | Lint(`eslint`) | 单元测试(`jest/vitest`；检出 coverage 工具时改以 coverage 形态执行，产物供 Tier 5 复用，命令与降级口径见 references/quantitative-metrics.md §3) | 构建(`npm run build`)
 
 **Tier 3: 集成验证**（条件性）：Dev server 启动、API 端点验证、导入完整性
 
@@ -308,6 +297,7 @@ Tier 5 ❌ 数字达不到阈值 → 与 Tier 0/1 ❌ 同权重计数
 
 使用 Agent 工具启动 qa-reviewer（model: "sonnet"），prompt 参考 `references/qa-reviewer-prompt.md` 模板，填入：
 - 设计文档（从状态文件 `## 设计文档` 复制）
+- `## 契约规约` 章节（contract_required=true 时填入；缺失 → Section D 输出 N/A）+ `$TASK_DIR/context.md` 路径
 - Wave 1 + Wave 1.5 各 Tier 通过/失败状态摘要
 - Tier 1.5 中所有 ⚠️/❌ 场景的原始命令输出（完整 stdout/stderr 片段，不是摘要）
 - 项目根目录路径
@@ -318,7 +308,7 @@ Tier 5 ❌ 数字达不到阈值 → 与 Tier 0/1 ❌ 同权重计数
 - Section B: 置信度评分过滤 — 只报告置信度 ≥80 的问题
 
 ##### 合流
-qa-reviewer 完成后：收集 Section A（设计符合性）+ Section B（代码质量与安全）合并为 QA 报告的 Tier 2 部分。
+qa-reviewer 完成后：收集 Section A/B/C/D 审查结果合并为 QA 报告的 Tier 2 部分。
 
 ##### 降级策略
 - qa-reviewer Agent 失败 → 重试一次；仍失败 → `gate: "review-accept"` 等用户介入，**不以编排器自审替代**（自审无独立性，是抽卡来源）
@@ -333,7 +323,7 @@ qa-reviewer 完成后：收集 Section A（设计符合性）+ Section B（代�
 **谓词闸门**（取代旧的场景计数 / 格式检查 / ⚠️ 复盘 / 打分）：
 
 三元组来自 Tier 1.5 对 `## 验收场景` 谓词的逐条求值。每条预注册验收谓词产出 `(谓词, artifact 路径, PASS/FAIL)`：
-- 闸门 = **∀ 谓词 PASS 且 Section A/B 无 Critical**。无分数、无 "Ready to merge"。
+- 闸门 = **∀ 谓词 PASS 且 Section A/B/C/D 无 Critical**。无分数、无 "Ready to merge"。
 
 - **全绿** → 更新 frontmatter：`gate: "review-accept"`
 - **有 FAIL 或 Critical** → 更新 frontmatter：`phase: "auto-fix"`，报告末尾列出每条 FAIL 谓词（含其 artifact 与期望值）

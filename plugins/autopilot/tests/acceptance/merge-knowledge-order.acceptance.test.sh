@@ -8,7 +8,6 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../../../" && pwd)"
 SKILL_MD="$REPO_ROOT/plugins/autopilot/skills/autopilot/SKILL.md"
 KE_MD="$REPO_ROOT/plugins/autopilot/skills/autopilot/references/knowledge-engineering.md"
 MP_MD="$REPO_ROOT/plugins/autopilot/skills/autopilot/references/merge-phase.md"
-STOP_HOOK="$REPO_ROOT/plugins/autopilot/scripts/stop-hook.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -49,12 +48,9 @@ else
   pass "P4 SKILL.md 已删单独 git commit"
 fi
 
-# P5: stop-hook.sh 零改动契约
-if git -C "$REPO_ROOT" status --short "$STOP_HOOK" | grep -q .; then
-  fail "P5 stop-hook.sh 有未提交改动"
-else
-  pass "P5 stop-hook.sh 零改动"
-fi
+# P5 已删除（[2026-09-07] 断言机制错适配，用户批准）：原断言「stop-hook.sh 无未提交改动」
+# 读工作区 git 状态做历史任务的一次性自证，任何后续任务未提交改动 stop-hook.sh 即假阳性
+#（p0-qa-dedup 实证）。实质不变量由 P3/P4/P6/P7 承载。
 
 # P6: 五文件合计行数净减（基线 999）
 total=$(cat \

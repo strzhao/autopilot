@@ -29,7 +29,7 @@
 - `task_dir`: 需求管理文件夹路径
 - `session_id`: 会话 ID
 - `started_at`: 启动时间戳（ISO 8601）
-- `contract_required`: 是否启用契约规约校验（plan-reviewer 维度 7 + contract-checker Agent）。setup.sh 新建时写入 `true`，旧 state.md 无此字段视为 `false`，自动豁免。
+- `contract_required`: 是否启用契约规约校验（plan-reviewer 维度 7 + qa-reviewer Section D）。setup.sh 新建时写入 `true`，旧 state.md 无此字段视为 `false`，自动豁免。
 
 ## 项目模式设计模板
 
@@ -64,7 +64,7 @@
 
 ## 契约规约 章节
 
-设计文档应在 `## 设计文档` 之后增加 `## 契约规约` 章节，作为红蓝队 + plan-reviewer + contract-checker 共同的接口形状权威。
+设计文档应在 `## 设计文档` 之后增加 `## 契约规约` 章节，作为红蓝队 + plan-reviewer + qa-reviewer 共同的接口形状权威。
 
 详见 [references/contract-protocol.md](contract-protocol.md)
 

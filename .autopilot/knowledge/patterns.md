@@ -137,4 +137,11 @@
 **How to apply**: 设计 + 契约遇「N 维/X 类」业务概念且实现 M ≠ N 时，加澄清块（「N = A 客观 bash + B 语义 AI 无函数；bash 层 M 函数」）。验收 count 断言精确到实现层 vs 业务层，红队 grep count 用实现层真实数（8 函数），避免用业务层 9 致永远 FAIL 或硬凑。
 **Evidence**: v3.58.0 plan-reviewer 初审 B1「契约 8 函数 vs 验收场景 9 处「9 探测函数」矛盾」；契约 C4 加「9 维 vs 8 函数澄清块」+ 约束守卫.P4/P5/编号对齐.P3 assert 改 8 函数 + P4 改 6 客观。重审 PASS。关联 [[2026-05-14]]（契约单一字面量）[[qa-testing]]。
 
+### [2026-09-07] 验收测试「一次性任务证明」读工作区 git 状态 = 时序耦合假阳性定时炸弹
+<!-- tags: autopilot, acceptance-test, assertion-mechanism, git-diff, time-scoped-assertion, false-positive, test-lifecycle, standing-invariant, v3.63.0 -->
+**Scenario**: p0-qa-dedup QA 的 Tier 4 run-all 3 红：predicate-coverage SC3.P4「改动命中集 ⊆ v3.51.0 白名单」/ brainstorm-reuse SC4.P2「setup.sh 不在 git diff」/ merge-knowledge P5「stop-hook.sh 无未提交改动」——三条都读**工作区 git diff/status** 做各自历史任务（v3.51.0/v3.61.0）的「范围零改」一次性自证。任何后续任务未提交改动这些文件即假阳性；predicate-coverage 在 writer-skill commit 后已常红（干净树回退 HEAD~1 取到无关提交）。同文件 SC4.P3（hunk 行号须在历史段落内）同类，第四条。
+**Lesson**: 断言分两类——**一次性任务证明**（本次改动范围/位置/零改，只在当时 commit 的 diff 上有意义）与 **standing invariant**（文本存在性/行数上界/内容不含，任意时点可判）。前者写进永久回归套件就是定时炸弹：它的 PASS 依赖「工作区干净或恰好含本任务 diff」这个隐性环境前提。识别特征：断言数据源是 `git diff` / `git status` 工作区状态而非文件内容。
+**How to apply**: 红队写断言时自问「下个任务改别的文件时这条还成立吗」——答案否则是任务证明，不应进 acceptance 套件（可留 state.md QA 报告里当一次性证据）。存量处置（用户批准的模式）：能转 standing invariant 的转（SC4.P2 改内容断言「scripts/ 不含先查复用/扫描 glob」，反而更强）；不能转的删（实质不变量已由邻位断言承载时无守卫损失，如 P5 删后 P3/P4/P6/P7 仍在）。关联 [[2026-07-19]]（FAIL 三分类之断言机制错）[[qa-testing]]。另：验收测试资产生命周期治理（陈旧测试退出默认回归路径）仍是待决策专项。
+**Evidence**: 核对锚点 2026-09-07 源码 v3.63.0。stash 基线实验：干净树 brainstorm-reuse/merge-knowledge 转绿、predicate-coverage 仍红（证明其常红先于本任务）；适配后 run-all 40/40。适配全程用户 AskUserQuestion 批准（红队铁律例外：断言机制错）。
+
 > 历史归档（< 2026-05-17）按主题迁移至 domains/，详见 index.md

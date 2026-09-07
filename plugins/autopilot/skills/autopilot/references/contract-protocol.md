@@ -1,6 +1,6 @@
 # 契约协议（Contract Protocol）
 
-> 这是 autopilot 红蓝对抗中**契约的唯一真相源**。设计文档 `## 契约规约` 章节、plan-reviewer 维度 7、红队 prompt、蓝队 prompt、contract-checker agent 全部以此文件为准。
+> 这是 autopilot 红蓝对抗中**契约的唯一真相源**。设计文档 `## 契约规约` 章节、plan-reviewer 维度 7、红队 prompt、蓝队 prompt、qa-reviewer Section D 全部以此文件为准。
 
 ## 1. 五条核心规则
 
@@ -18,7 +18,7 @@
 
 两者合一抵抗 LLM 推理跑偏。
 
-> 作用域：本文件管**接口契约**（内部 invariant，如 `loop ≤ 10`、`== 0600`，由单测/contract-checker 校验）。**验收谓词的观测绑定**（QA 阶段驱动真实产物的 `observe/assert/channel`）属 SC/OST 验收层，见 `references/scenario-generator-prompt.md`，不在此扩展。
+> 作用域：本文件管**接口契约**（内部 invariant，如 `loop ≤ 10`、`== 0600`，由单测/qa-reviewer Section D 校验）。**验收谓词的观测绑定**（QA 阶段驱动真实产物的 `observe/assert/channel`）属 SC/OST 验收层，见 `references/scenario-generator-prompt.md`，不在此扩展。
 
 ## 3. 任务类型必填字段表
 
@@ -104,7 +104,7 @@ N/A — CSS only
 ### 红队遇到模糊契约
 - 在测试文件**顶部**添加注释 `// CONTRACT_AMBIGUOUS: <具体歧义点>`
 - 注入点用**设计文档 `## 契约规约` 已声明的接口名**（不得推测设计文档未声明的私有成员；不要用 `EXPECTED_FIELD_NAME_FROM_CONTRACT` 之类**无法 lint 的占位符变量**）
-- 无处可注（设计文档确未声明该接口）→ 标记并在报告末尾列出，**编排器 contract-checker 识别后走既有蓝队 contract-change-request 通路（见下节）回 design 补声明**，红队不自行推测
+- 无处可注（设计文档确未声明该接口）→ 标记并在报告末尾列出，**qa-reviewer Section D 识别后走既有蓝队 contract-change-request 通路（见下节）回 design 补声明**，红队不自行推测
 - 在产出报告「验收标准摘要」末尾列出所有 CONTRACT_AMBIGUOUS 标记
 
 ### 蓝队遇到模糊契约
@@ -113,6 +113,6 @@ N/A — CSS only
   - 在对话中说明 `[契约变更请求] <原契约>` → `<建议契约> 因 <原因>`
   - 编排器收到后回到 design 阶段，更新 `## 契约规约` 章节，重新走红蓝对抗
 
-### contract-checker 遇到模糊契约
-- 视为 mismatch.severity = 'medium'，记录但不阻断（PASS）
+### qa-reviewer Section D 遇到模糊契约
+- 视为 severity=medium，记录但不计入 Critical
 - 让红队验收测试自然暴露问题

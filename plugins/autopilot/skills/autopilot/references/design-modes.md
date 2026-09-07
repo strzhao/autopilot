@@ -9,7 +9,7 @@
 | 模式 | 触发条件 | 跳过的节点 | 失败回退 |
 |------|----------|-----------|----------|
 | Auto-Approve | `auto_approve: true`（auto-chain 设置 / design 步骤 4 AI 据低风险判断设置） | AskUserQuestion 审批；qa 通过后跳过 `gate: "review-accept"` 直接 merge | 设 `auto_approve: false`，回到 Standard 人工审批 |
-| Fast Mode | `fast_mode: true`（启动 `--fast` 或自适应判断） | brainstorm Q&A、scenario-generator、plan-reviewer Agent、design 自审、contract-checker、qa-reviewer Agent；Tier 1.5 必做 | 无（fast 信任 AI 判断，直进 implement 或 HTML 评审） |
+| Fast Mode | `fast_mode: true`（启动 `--fast` 或自适应判断） | brainstorm Q&A、scenario-generator、plan-reviewer Agent、design 自审、qa-reviewer Agent；Tier 1.5 必做 | 无（fast 信任 AI 判断，直进 implement 或 HTML 评审） |
 | Standard | 其他（默认） | 无（全节点保留） | — |
 
 注意：红蓝对抗 / 红队验收测试 / qa Wave 1+1.5 是核心，三模式都保留不动。
@@ -61,7 +61,7 @@ qa 阶段差异：
 | 阶段 | Fast Mode 行为 |
 |------|---------------|
 | design | 知识加载 → **1 个**（按需，复杂时自行增加）Explore agent → 设计文档写入状态文件 → `html_review: true` 走步骤 4c HTML 评审，否则**直接 `phase: "implement"`**（跳过 AskUserQuestion 审批，fast 信任 AI 判断） |
-| implement | blue-team / red-team 双 Agent 保留不变，**跳过 contract-checker Agent**（步骤 2.5 在 fast_mode=true 时直接进入 qa） |
+| implement | blue-team / red-team 双 Agent 保留不变 |
 | qa | `qa_scope=smoke`（详见主 SKILL.md 「Phase: qa 前置：选择性重跑判断」），不启动 qa-reviewer Agent，编排器自行 Read git diff 后 inline 做 3 项自审（设计符合性 / OWASP 关键 / 代码质量明显问题）。Tier 1.5 必做铁律不变 |
 | merge | commit-agent 保留不变 |
 

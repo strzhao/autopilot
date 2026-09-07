@@ -9,15 +9,18 @@
 #           「契约元素覆盖」(维度10)，给 qa-reviewer「附」加第三条「谓词充分性反查」+ 缺口表。
 #           SKILL.md 零增行（约束1 added==0）。references/ 净增（核心改动落点）。
 #
-# 覆盖的 det-machine 谓词（grep/wc/git diff 确定性可判）：
-#   SC1.P1  git diff --numstat SKILL.md added(第1列) == 0            ← C1 assert
-#   SC1.P2  wc -l < SKILL.md <= 585                                  ← C1 assert
+# 覆盖的 det-machine 谓词（grep/wc 确定性可判）：
+#   SC1.P2  wc -l < SKILL.md <= 585                                  ← C1 assert（行数长效不变量）
 #   SC2.P3  充分性/盲区维度无机械 [0-9]+% 阈值（grep 反证线索）       ← C2 assert（注：grep 仅线索，最终语义确认留 QA）
-#   SC3.P4  git diff --name-only HEAD 命中集 ⊆ {plan-reviewer,qa-reviewer,SKILL.md}  ← C3 assert
 #   SC5.P7  grep -cE 'oracle adequacy|predicate coverage|充分性' 两文件 >= 1          ← C5 assert
 #   SC7.P9  grep -c '契约元素覆盖' plan-reviewer-prompt.md == 1                       ← C7 / 改动清单2 验证命令
 #   维度9   grep -c 'knowledge 盲区对照' plan-reviewer-prompt.md == 1                 ← 改动清单1 验证命令
 #   第三条  grep -c '谓词充分性反查' qa-reviewer-prompt.md == 1                       ← 改动清单3 验证命令
+#
+# 已删除（[2026-09-07] 断言机制错适配，用户批准）：SC1.P1 / SC3.P4 读工作区 git diff 做
+#   v3.51.0 单次任务的范围自证，属「一次性证明混入长效回归」——任何后续 commit/未提交改动
+#   都触发假阳性（writer-skill 提交后已常红）。行数/范围长效不变量由 SC1.P2 +
+#   skill-md-net-shrinkage / skill-shrinkage-invariants 承载，无守卫损失。
 #
 # deferred: real-process 谓词（grep 测不了，留 QA Wave 1.5 dry-run / claude -p dogfood）：
 #   SC4.P5  buddy keywords bug 场景 → plan-reviewer 产出覆盖缺口（dry-run）
@@ -60,12 +63,6 @@ SKILL_REL="plugins/autopilot/skills/autopilot/SKILL.md"
 PLAN_REVIEWER_REL="plugins/autopilot/skills/autopilot/references/plan-reviewer-prompt.md"
 QA_REVIEWER_REL="plugins/autopilot/skills/autopilot/references/qa-reviewer-prompt.md"
 
-# 允许被改动的文件集合（C3 / SC3.P4 命中集上界）
-ALLOWED_CHANGED=(
-    "$SKILL_REL"
-    "$PLAN_REVIEWER_REL"
-    "$QA_REVIEWER_REL"
-)
 
 # ── 计数器 ───────────────────────────────────────────────────────────────────
 PASSED=0
@@ -178,46 +175,6 @@ assert_file_exists "PCpre.1" "$SKILL_FILE"
 assert_file_exists "PCpre.2" "$PLAN_REVIEWER"
 assert_file_exists "PCpre.3" "$QA_REVIEWER"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# SC1.P1（C1）：git diff --numstat SKILL.md added（第1列）== 0
-#   契约 C1 assert: added == 0
-#   设计：约束1「SKILL.md 只减不增」硬核 —— 本次改动 M1/M2 落 references/ 不触 SKILL.md，
-#         故 added 必须为 0（M3 可选净减，added 仍 0）。
-#   git diff 默认对比工作区与 HEAD；若改动已 commit，回退 HEAD~1 取本次提交的 numstat。
-# ─────────────────────────────────────────────────────────────────────────────
-echo ""
-echo "--- SC1.P1 / C1: SKILL.md added(第1列) == 0 ---"
-
-get_numstat_added() {
-    local ref="${1:-HEAD}"
-    local out added
-    out=$(git -C "$REPO_ROOT" diff --numstat "$ref" -- "$SKILL_REL" 2>/dev/null || true)
-    if [[ -z "$out" ]]; then
-        echo "0"; return
-    fi
-    # 取第一行第一列（added）；二进制为 '-' 视为 0
-    added=$(echo "$out" | head -1 | awk -F'\t' '{print $1}')
-    [[ "$added" == "-" || -z "$added" ]] && added=0
-    # 非数字兜底为 0
-    [[ "$added" =~ ^[0-9]+$ ]] || added=0
-    echo "$added"
-}
-
-# 取 added/deleted 双值（净非增判定）：行内删改/表格化 git 计 added 但语义纯减，
-# 原 added==0 对减法/下沉任务系统性误报；改 deleted>=added（净非增）才是"只减不增"准确语义。
-SKILL_NUMSTAT=$(git -C "$REPO_ROOT" diff --numstat HEAD -- "$SKILL_REL" 2>/dev/null | head -1)
-SKILL_ADDED=$(echo "$SKILL_NUMSTAT" | awk -F'\t' '{print $1}'); SKILL_ADDED=${SKILL_ADDED:-0}
-SKILL_DELETED=$(echo "$SKILL_NUMSTAT" | awk -F'\t' '{print $2}'); SKILL_DELETED=${SKILL_DELETED:-0}
-[[ "$SKILL_ADDED" =~ ^[0-9]+$ ]] || SKILL_ADDED=0
-[[ "$SKILL_DELETED" =~ ^[0-9]+$ ]] || SKILL_DELETED=0
-DIFF_REF_DESC="HEAD (working tree, uncommitted)"
-
-# 净非增：deleted >= added（适配减法/下沉任务；原 added==0 过严致减法任务误报）
-if [[ "$SKILL_DELETED" -ge "$SKILL_ADDED" ]]; then
-    _log_pass "PC.SC1.P1" "SKILL.md 净非增 deleted(${SKILL_DELETED}) >= added(${SKILL_ADDED}) [$DIFF_REF_DESC]（约束1：只减不增）"
-else
-    _log_fail "PC.SC1.P1" "SKILL.md 净增 added(${SKILL_ADDED}) > deleted(${SKILL_DELETED}) [$DIFF_REF_DESC]（违反约束1：只减不增）"
-fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SC1.P2（C1）：wc -l < SKILL.md <= 585
@@ -259,66 +216,6 @@ for f in "$PLAN_REVIEWER" "$QA_REVIEWER"; do
     fi
 done
 
-# ─────────────────────────────────────────────────────────────────────────────
-# SC3.P4（C3）：git diff --name-only HEAD 命中集 ⊆ {plan-reviewer, qa-reviewer, SKILL.md}
-#   契约 C3 assert: 新增内容仅命中 plan-reviewer-prompt.md / qa-reviewer-prompt.md
-#   设计：改动落 references/（SKILL.md 仅减）。本次改动不应触及其他文件。
-#   注：本断言只校验「本次改动相关的核心三文件之外无改动」。
-#       工作区可能有其他无关改动（如 state.md），故只断言三文件 ⊆ ALLOWED，并提示额外文件需 QA 确认。
-#   策略：取 git diff --name-only HEAD 全集，断言每个条目要么在 ALLOWED_CHANGED，
-#         要么是 .autopilot/runtime/（任务产物，允许）—— 除此之外的文件 FAIL。
-# ─────────────────────────────────────────────────────────────────────────────
-echo ""
-echo "--- SC3.P4 / C3: 改动命中集 ⊆ {plan-reviewer, qa-reviewer, SKILL.md} + .autopilot/runtime/ ---"
-
-NAME_ONLY_OUT=$(git -C "$REPO_ROOT" diff --name-only HEAD 2>/dev/null || true)
-# 若工作区 clean（全部已 commit），回退 HEAD~1
-if [[ -z "$NAME_ONLY_OUT" ]]; then
-    NAME_ONLY_OUT=$(git -C "$REPO_ROOT" diff --name-only HEAD~1 2>/dev/null || true)
-    DIFF_REF_DESC_N="HEAD~1 (committed, fallback)"
-else
-    DIFF_REF_DESC_N="HEAD (working tree, uncommitted)"
-fi
-
-VIOLATIONS=0
-EXTRA_NON_RUNTIME=()
-if [[ -n "$NAME_ONLY_OUT" ]]; then
-    while IFS= read -r line; do
-        [[ -z "$line" ]] && continue
-        # 在 ALLOWED_CHANGED 中？
-        local_in_allowed=0
-        for a in "${ALLOWED_CHANGED[@]}"; do
-            if [[ "$line" == "$a" ]]; then
-                local_in_allowed=1
-                break
-            fi
-        done
-        if [[ $local_in_allowed -eq 1 ]]; then
-            continue
-        fi
-        # .autopilot/runtime/ 任务产物允许（state.md / acceptance-staging/ 等）
-        if [[ "$line" == .autopilot/runtime/* ]]; then
-            continue
-        fi
-        # autopilot 自身演进文件允许（lib.sh/stop-hook/references/SKILL.md/tests 等任意子路径）
-        if [[ "$line" == plugins/autopilot/* ]]; then
-            continue
-        fi
-        # 仓库级版本同步文件允许（marketplace.json / CLAUDE.md 索引）
-        if [[ "$line" == ".claude-plugin/marketplace.json" ]] || [[ "$line" == "CLAUDE.md" ]]; then
-            continue
-        fi
-        # 其他文件 = 违规
-        VIOLATIONS=$((VIOLATIONS + 1))
-        EXTRA_NON_RUNTIME+=("$line")
-    done <<< "$NAME_ONLY_OUT"
-fi
-
-if [[ $VIOLATIONS -eq 0 ]]; then
-    _log_pass "PC.SC3.P4" "SC3.P4: 改动命中集 ⊆ {plan-reviewer, qa-reviewer, SKILL.md} ∪ .autopilot/runtime/ [$DIFF_REF_DESC_N]（约束3：改动落 references/+runtime/）"
-else
-    _log_fail "PC.SC3.P4" "SC3.P4: 改动命中集含 $VIOLATIONS 个非允许文件：${EXTRA_NON_RUNTIME[*]}（违反约束3：本次改动应仅触 references/ + SKILL.md(仅减)）"
-fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SC5.P7（C5）：grep -cE 'oracle adequacy|predicate coverage|充分性' 两文件 >= 1
@@ -372,7 +269,7 @@ echo "=========================================="
 echo " R_PRED_COV 汇总: PASSED=$PASSED  FAILED=$FAILED"
 echo "=========================================="
 echo ""
-echo "覆盖的 det-machine 谓词：SC1.P1/P2、SC2.P3、SC3.P4、SC5.P7、SC7.P9 + 维度9 + 第三条"
+echo "覆盖的 det-machine 谓词：SC1.P2、SC2.P3、SC5.P7、SC7.P9 + 维度9 + 第三条（SC1.P1/SC3.P4 时序耦合断言已删，见文件头）"
 echo "deferred（real-process，留 QA Wave 1.5 dry-run / claude -p dogfood）：SC4.P5/P6、SC6.P8、SC7.P10"
 
 if [[ $FAILED -gt 0 ]]; then

@@ -1,0 +1,22 @@
+project: autopilot-efficiency-p0p2p3
+title: autopilot 执行效率优化（QA 去重合并 → QA 回炉治理 → 机制性能与卫生）
+created: 2026-09-07
+status: active
+critical_path: "p0-qa-dedup → p2-qa-loop → p3-mechanism-hygiene"
+
+tasks:
+  - id: p0-qa-dedup
+    title: QA 重复执行合并（Tier1∪Tier5 coverage / contract-checker 并入 qa-reviewer Section D / context.md 探针产物化）→ v3.63.0
+    depends_on: []
+    status: done
+    brief: tasks/p0-qa-dedup.md
+  - id: p2-qa-loop
+    title: QA 回炉治理（auto-fix 批量修复纪律 / 蓝队自检证据复用）→ v3.64.0
+    depends_on: [p0-qa-dedup]
+    status: pending
+    brief: tasks/p2-qa-loop.md
+  - id: p3-mechanism-hygiene
+    title: 机制性能与卫生（load_state 批量化 / artifacts TTL + doctor runtime 体积）→ v3.65.0
+    depends_on: [p2-qa-loop]
+    status: pending
+    brief: tasks/p3-mechanism-hygiene.md

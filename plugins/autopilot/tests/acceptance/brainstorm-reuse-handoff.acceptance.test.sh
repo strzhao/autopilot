@@ -20,10 +20,12 @@
 #   SC3.P1: awk design-modes.md「## §3」段 + grep -F「先查复用」命中≥1
 #   SC4.P1: git diff --name-only 不含 autopilot-brainstorm/SKILL.md（brainstorm skill 零改）
 #   SC4.P2: git diff --name-only 不含 setup.sh / lib.sh / stop-hook.sh（脚本零改）
-#   SC4.P3: git diff --unified=0 SKILL.md 改动行号 ⊂ Standard Design 段行号范围
-#           （步骤1/决策树区域零改；委托 fast-mode-decision-timing / brainstorm-default 兜底）
+#   SC4.P2: scripts/ 不含 brainstorm 复用扫描逻辑（内容断言，环境无关）
 #   SC5.P1: awk Standard 段 + grep -F brainstorm.md AND grep -F 先查复用 双重命中
 #           （[2026-05-25] 双重 grep 长效守护，AND 关系）
+#   已删除（[2026-09-07] 断言机制错适配，用户批准）：SC4.P3 读工作区 git diff hunk 行号做
+#   v3.61.0 单次任务的位置自证——任何后续任务改 SKILL.md 其他段落即假阳性（p0-qa-dedup
+#   实证）。位置守护本就自述「一次性 QA」，持续守护由 SC2.P1 语义断言承载，无守卫损失。
 #   SC6.P1: [SKIP] claude -p headless Read + quote 判语义可读 — bash 无法直接调 LLM，
 #           由编排器手动跑 claude -p 独立验证（[2026-07-19] 减法三件套①）
 #
@@ -207,61 +209,18 @@ fi
 pass "SC4.P1: autopilot-brainstorm/SKILL.md 零改（方案 A' 不依赖）"
 
 # ════════════════════════════════════════════════════════════════════════════
-# 谓词 SC4.P2 [det-machine]: git diff --name-only 不含 setup.sh / lib.sh / stop-hook.sh
-# observe: git diff --name-only
-# assert:  不含任一脚本（语义活不下沉 bash，智力活留 skill md）
+# 谓词 SC4.P2 [det-machine]: brainstorm 复用语义扫描不下沉 bash（standing invariant）
+# observe: grep scripts/ 内容
+# assert:  scripts/ 不含「先查复用」指令 ∧ 不含 requirements/*/brainstorm.md 扫描 glob
+# [2026-09-07] 断言机制适配（用户批准）：原断言读工作区 git diff 做 v3.61.0 单次任务的
+#   「脚本零改」自证，任何后续任务未提交改动三脚本即假阳性（p0-qa-dedup 实证）。
+#   改为环境无关的内容断言——若复用逻辑真下沉 bash，必出现「先查复用」字样或扫描 glob。
 # ════════════════════════════════════════════════════════════════════════════
-for script_rel in "$SETUP_SH_REL" "$LIB_SH_REL" "$STOP_HOOK_REL"; do
-    if echo "$changed_files" | grep -F -q "$script_rel"; then
-        fail "SC4.P2: 脚本改动违规（$script_rel 出现在 git diff，方案 A' 语义判断留 skill，不下沉 bash）"
-    fi
-done
-pass "SC4.P2: setup.sh / lib.sh / stop-hook.sh 三脚本零改"
-
-# ════════════════════════════════════════════════════════════════════════════
-# 谓词 SC4.P3 [det-machine]: git diff --unified=0 SKILL.md 改动行号 ⊂ Standard Design 段范围
-# observe: git diff --unified=0 SKILL.md 所有 hunk 的 new_start..new_end
-# assert:  每个 hunk 的 [new_start, new_end] ⊂ [standard_start, standard_end]
-#          （步骤1 fast_mode 探针区 / 决策树区域零改，委托 fast-mode-decision-timing /
-#           brainstorm-default 兜底）
-# ════════════════════════════════════════════════════════════════════════════
-# 策略：
-#   1. git diff --unified=0 解析 hunk 头 `@@ -l,s +l,s @@`，提取 +new_start,new_len
-#   2. new_len 省略时默认 1；new_len=0（纯删除）当作单点 [new_start, new_start]（保守）
-#   3. 断言所有 hunk 的 [new_start, new_end] ⊂ [standard_start, standard_end]
-#   行号基准：git diff +new 段对应改动后文件行号，与 awk NR（当前磁盘 SKILL.md）一致。
-#   注：用 awk POSIX match/substr/split 一次性解析所有 hunk，避免 BSD/gawk 差异。
-# commit-aware：工作区 clean（改动已 commit，DIFF_REF=HEAD~1）→ 位置守护 N/A
-# （位置守护是 brainstorm-reuse 一次性 QA，非跨任务持续约束；持续守护靠 SC2.P1 先查复用语义 + SC1.P1 净减）
-if [[ "$DIFF_REF" == "HEAD~1" ]]; then
-    pass "SC4.P3: 工作区 clean（改动已 commit），位置守护 N/A（一次性 QA；持续守护靠 SC2.P1 语义 + SC1.P1 净减）"
-else
-    hunk_output=$(git -C "$REPO_ROOT" diff --unified=0 "$DIFF_REF" -- "$SKILL_FILE_REL" 2>/dev/null || true)
-
-    if [[ -n "$hunk_output" ]]; then
-        # awk 解析所有 @@ hunk 头，输出越界违规行（若有）
-        violations=$(echo "$hunk_output" | awk -v s="$standard_start" -v e="$standard_end" '
-            /^@@/ {
-                # 提取 +new_start,new_len 部分（match 找到 +数字[,数字]）
-                if (match($0, /\+[0-9]+(,[0-9]+)?/)) {
-                    plus = substr($0, RSTART+1, RLENGTH-1)
-                    split(plus, a, ",")
-                    ns = a[1] + 0
-                    nl = (a[2] != "" ? a[2] + 0 : 1)
-                    ne = (nl == 0 ? ns : ns + nl - 1)
-                    if (ns < s || ne > e) {
-                        print "  hunk [" ns "," ne "] 越出 Standard Design 段 [" s "," e "]"
-                    }
-                }
-            }
-        ')
-        if [[ -n "$violations" ]]; then
-            fail "SC4.P3: 检测到 hunk 改动行号越出 Standard Design 段 [$standard_start, $standard_end]（步骤1/决策树区域零改违规）：
-$violations"
-        fi
-    fi
-    pass "SC4.P3: 所有 hunk 改动行号 ⊂ Standard Design 段 [$standard_start, $standard_end]（步骤1/决策树区域零改）"
+if grep -rE '先查复用|requirements/\*.*brainstorm\.md' "$REPO_ROOT/plugins/autopilot/scripts/" 2>/dev/null | grep -q .; then
+    fail "SC4.P2: brainstorm 复用语义扫描疑似下沉 bash（scripts/ 命中「先查复用」或 brainstorm.md 扫描 glob，方案 A' 语义判断留 skill）"
 fi
+pass "SC4.P2: scripts/ 无 brainstorm 复用扫描逻辑（内容断言，环境无关）"
+
 
 # ════════════════════════════════════════════════════════════════════════════
 # 谓词 SC5.P1 [det-machine]: awk Standard 段 brainstorm.md 字面 AND 先查复用语义 双重命中

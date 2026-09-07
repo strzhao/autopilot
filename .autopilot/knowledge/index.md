@@ -59,7 +59,8 @@
 - [2026-03-26] doctor Dim 1 测试金字塔分层评估优于文件计数 | tags: autopilot, doctor, testing, test-pyramid, scoring | → domains/knowledge-token-arch.md
 - [2026-03-21] 知识工程采用三层 Progressive Disclosure 而非单层扩展 | tags: knowledge, architecture, progressive-disclosure | → domains/knowledge-token-arch.md
 
-## Patterns（56）
+## Patterns（57）
+- [2026-09-07] 验收测试「一次性任务证明」读工作区 git diff/status = 时序耦合假阳性定时炸弹——断言分两类的判别问句 + 存量处置模式（转 standing invariant 或删） | tags: autopilot, acceptance-test, assertion-mechanism, git-diff, time-scoped-assertion, false-positive, test-lifecycle, standing-invariant, v3.63.0 | → patterns.md
 - [2026-07-23] awk 正则单词边界 `\b` 在 BSD/macOS 不支持 → 反向断言永真无判别力（tautological/mutation-survival，改 `[^a-zA-Z]` POSIX 兼容） | tags: bash, awk, bsd, macos, word-boundary, regex, tautological, mutation-survival, red-team | → domains/bash-shell-pitfalls.md
 - [2026-07-19] 红队测试 FAIL 三分类——断言机制错/与契约矛盾/实现 bug（auto-fix 先分类再改；盲目以红队为准会把正确实现改错） | tags: autopilot, red-team, acceptance-test, auto-fix, false-positive, assertion-mechanism, regex-pitfall, set-comparison, debug-classification, v3.58.0 | → patterns.md
 - [2026-07-19] 业务维度数 vs 实现函数数——契约/验收措辞澄清避免 count 矛盾（N 维能力 ≠ M 函数；部分维度由非函数机制承载） | tags: autopilot, contract, plan-reviewer, acceptance-test, naming, business-vs-implementation, count-mismatch, v3.58.0 | → patterns.md

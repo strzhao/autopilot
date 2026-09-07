@@ -57,6 +57,8 @@ coverage_branch_threshold: 70
 - mutation: 600s (10 min)
 - coverage: 120s
 
+**与 Tier 1 合并执行（coverage 子项去重）**：检出 coverage 工具的项目，Tier 1 单元测试直接以上表 coverage 命令形态执行（同一套件只跑一次），产物 `coverage/coverage-summary.json`；Tier 5 coverage 判定复用该产物——先 `freshness_check coverage/coverage-summary.json <src_dir>`：FRESH → 直接调 `tier5_coverage_check`，不二次执行套件；STALE/UNKNOWN → 才按上表重跑。`src_dir` 口径：排除 `.autopilot/`、`node_modules/`、`.git` 的源码根（优先 git 跟踪的源码目录，编排器据 context.md 技术栈语义选定）——防 state.md 持续写入致恒 STALE、合并退化为重复执行。无 coverage 工具 → Tier 1 原样执行、Tier 5 维持 §5/§7 既有 na 判定，行为与合并前逐字节一致。
+
 ---
 
 ## 4. tier5-report.json Schema（OC-4 契约）
