@@ -1,7 +1,7 @@
 project: autopilot-efficiency-p0p2p3
 title: autopilot 执行效率优化（QA 去重合并 → QA 回炉治理 → 机制性能与卫生）
 created: 2026-09-07
-status: active
+status: completed
 critical_path: "p0-qa-dedup → p2-qa-loop → p3-mechanism-hygiene"
 
 tasks:
@@ -18,5 +18,5 @@ tasks:
   - id: p3-mechanism-hygiene
     title: 机制性能与卫生（load_state 批量化 / artifacts TTL + doctor runtime 体积）→ v3.65.0
     depends_on: [p2-qa-loop]
-    status: pending
+    status: done
     brief: tasks/p3-mechanism-hygiene.md
