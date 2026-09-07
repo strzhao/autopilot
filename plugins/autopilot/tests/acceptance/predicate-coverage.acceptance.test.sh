@@ -59,9 +59,6 @@ PLAN_REVIEWER="$REPO_ROOT/plugins/autopilot/skills/autopilot/references/plan-rev
 QA_REVIEWER="$REPO_ROOT/plugins/autopilot/skills/autopilot/references/qa-reviewer-prompt.md"
 
 # git diff 相对路径（REPO_ROOT 为根）
-SKILL_REL="plugins/autopilot/skills/autopilot/SKILL.md"
-PLAN_REVIEWER_REL="plugins/autopilot/skills/autopilot/references/plan-reviewer-prompt.md"
-QA_REVIEWER_REL="plugins/autopilot/skills/autopilot/references/qa-reviewer-prompt.md"
 
 
 # ── 计数器 ───────────────────────────────────────────────────────────────────

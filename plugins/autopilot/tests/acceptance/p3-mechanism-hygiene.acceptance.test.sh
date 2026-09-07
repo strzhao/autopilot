@@ -407,7 +407,7 @@ fi
 D11="${TMP_BASE}/no-such-artifacts-dir-xyz"
 export ST="${D11}"
 ERRF11="${TMP_BASE}/s11-stderr.txt"
-out11="$(lib_run 'cleanup_artifacts_ttl "$ST"' 2>"${ERRF11}")"
+lib_run 'cleanup_artifacts_ttl "$ST"' 2>"${ERRF11}" >/dev/null
 rc11=$?
 if [[ ${rc11} -eq 0 && ! -s "${ERRF11}" ]]; then
     pass "场景11.P1: 目录不存在 → rc==0 静默无 stderr"

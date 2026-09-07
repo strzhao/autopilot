@@ -1043,7 +1043,7 @@ if [[ "$PHASE" == "design" ]]; then
         # 万一失效，standard design 会落到无匹配分支、PROMPT 为空 → 空 reason 的 block 唤醒
         # AI 却无指令，更易冲进 implement，与"防 design 绕过审批"目标相悖。
         # 默认含 brainstorm 探索流程（原 deep 行为）。plan_mode=="deep" 的历史 state.md 同样走此分支（兼容期）
-        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. 默认 standard 路径请走 \`Skill: autopilot-brainstorm\` 委托完成 Q&A 与方案共识，brainstorm skill 输出 brainstorm.md 后主 SKILL 接力写设计文档. ⚠️ 必须使用 Agent 工具启动 plan-reviewer sub-agent (model: sonnet) 审查设计方案, 参见 references/plan-reviewer-prompt.md. 审查通过后使用 AskUserQuestion 请求用户审批. 产出物写入 task_dir: ${task_dir}. 按照 autopilot skill 的 Phase: design 指引执行."
+        PROMPT="读取 ${STATE_FILE} 状态文件获取目标描述. 默认 standard 路径请走 \`Skill: autopilot-brainstorm\` 委托完成 Q&A 与方案共识，brainstorm skill 输出 brainstorm.md 后主 SKILL 接力写设计文档. ⚠️ 必须使用 Agent 工具启动 plan-reviewer sub-agent (model: sonnet) 审查设计方案, 参见 references/plan-reviewer-prompt.md. 审查通过后使用 AskUserQuestion 请求用户审批. 产出物写入 task_dir: ${TASK_DIR}. 按照 autopilot skill 的 Phase: design 指引执行."
     fi
 elif [[ "$PHASE" == "implement" ]]; then
     PROMPT="读取 ${STATE_FILE} 状态文件, 当前阶段: implement, 迭代: ${NEXT_ITERATION}. ⚠️ 红蓝对抗铁律: (1) 从状态文件读取设计文档, 检查是否有领域 Skill 委托; (2) 无委托时必须使用 Agent 工具在同一轮响应中同时启动蓝队和红队两个并行 sub-agent (model: sonnet), prompt 模板参见 references/blue-team-prompt.md 和 references/red-team-prompt.md; (3) 红队绝对不能读取蓝队新写的实现代码——红队只看设计文档; (4) 两个 Agent 都完成后合流: 收集产出、写入红队测试文件、更新状态文件. 详细工作流参见 references/implement-phase.md. 按照 autopilot skill 的 Phase: implement 指引执行."
