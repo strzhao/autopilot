@@ -144,7 +144,7 @@ compress_qa_report() {
 
 # has_pending_subagents — 检测主线程是否有未完成的 Agent 调用
 #
-# 行为：两条独立路径合并判断 —
+# 行为：三条独立路径合并判断 —
 #   路径 A（同步 Agent）：主线程（isSidechain=false）启动的 Agent tool_use 集合 S，
 #       减去所有 tool_result.tool_use_id 集合 R，余项 = 同步 pending。
 #   路径 B（异步 Agent，run_in_background=true）：toolUseResult.isAsync==true &&
@@ -152,6 +152,11 @@ compress_qa_report() {
 #       enqueue 中 <task-id>X</task-id> 的 X 集合 C，余项 = 异步 pending。
 #       异步路径必须独立判定，因其 tool_result 在启动瞬间就回流（写有
 #       "Async agent launched..." 文本），路径 A 看不到它仍在跑。
+#   路径 C（后台 Bash 任务，Bash run_in_background=true）：toolUseResult
+#       .backgroundTaskId 非空的 id 集合 LB，减去完成通知集合 C（queue-operation
+#       enqueue 的 <task-id>，与路径 B 共用同一通知集），余项 = 后台 Bash pending。
+#       后台 Bash 的 tool_result 同样在启动瞬间回流（携带 backgroundTaskId），
+#       路径 A 看不到它仍在跑，故也须独立判定。
 #
 # v3.26.0 关键修复：
 #   - 窗口 2MB → 4MB（长会话覆盖更稳）
@@ -160,7 +165,11 @@ compress_qa_report() {
 #   - jq 失败兜底：grep raw tail 文本 "status":"async_launched"，存在则 fail-safe
 #     返回 0（视为 pending），避免重蹈 fail-unsafe 灾难
 #
-# 退出码：0 = 有 pending（同步∪异步）、1 = 无 pending（含错误降级）。
+# v3.66.0 路径 C 背景：harmony-space 实证 AI 启动 Bash run_in_background=true 后
+#   结束回合等待后台命令，本函数看不见后台 Bash（只有 A/B 两路径），stop-hook 误判
+#   「摸鱼」block 重注入，烧光 iteration。补路径 C 治此误判。
+#
+# 退出码：0 = 有 pending（同步∪异步∪后台 Bash）、1 = 无 pending（含错误降级）。
 has_pending_subagents() {
     local transcript="$1"
     [ -n "$transcript" ] && [ -f "$transcript" ] || return 1
@@ -171,10 +180,20 @@ has_pending_subagents() {
     [ -n "$raw_tail" ] || return 1
 
     # 丢弃首行：tail -c 在字节边界切，首行几乎必然是半截 JSON 行（实测）。
+    # v3.66.0 条件化丢行（S1.P3/C10a 根因修复，qa-reviewer 四组实验证实）：
+    # 仅当文件 > 窗口上限（真截断）时首行才可能是半截 JSON；<4MB 时 tail -c
+    # 返回完整文件、首行是合法完整条目，无条件丢弃 = 纯数据丢失（C10a 夹具
+    # async launched 恰在第 1 行被吞 → pending 漏检，fail-unsafe）。
     # 边界 case：若丢首行后为空但原始非空（极短 transcript），回退原始数据，
     # 让 jq 或 grep fail-safe 自己处理。
-    local tail_data
-    tail_data=$(echo "$raw_tail" | tail -n +2)
+    local tail_data file_size
+    file_size=$(wc -c < "$transcript" 2>/dev/null) || file_size=0
+    [[ "$file_size" =~ ^[0-9]+$ ]] || file_size=0
+    if [[ "$file_size" -gt 4194304 ]]; then
+        tail_data=$(echo "$raw_tail" | tail -n +2)
+    else
+        tail_data="$raw_tail"
+    fi
     [ -n "$tail_data" ] || tail_data="$raw_tail"
 
     local pending_count
@@ -197,6 +216,11 @@ has_pending_subagents() {
               | select(.isAsync == true and .status == "async_launched")
               | .agentId]) as $async_launched
         |
+        # 路径 C — 后台 Bash 任务 (run_in_background=true)：启动痕迹 backgroundTaskId
+        ([.[] | .toolUseResult? | objects
+              | select(.backgroundTaskId? != null and .backgroundTaskId? != "")
+              | .backgroundTaskId]) as $bash_launched
+        |
         ([.[] | select(.type? == "queue-operation" and .operation? == "enqueue")
               | .content // ""
               | (capture("<task-id>(?<id>[^<]+)</task-id>") | .id)?
@@ -204,7 +228,9 @@ has_pending_subagents() {
         |
         ($async_launched - $async_completed) as $async_pending
         |
-        ($sync_pending | length) + ($async_pending | length)
+        ($bash_launched - $async_completed) as $bash_pending
+        |
+        ($sync_pending | length) + ($async_pending | length) + ($bash_pending | length)
     ' 2>/dev/null)
     local jq_exit=$?
 
@@ -230,6 +256,17 @@ has_pending_subagents() {
 
     if [ "$launched_count" -gt "$completed_count" ]; then
         echo "[has_pending_subagents] jq 失败，fail-safe 文本检测 launched=$launched_count completed=$completed_count → pending" >&2
+        return 0
+    fi
+
+    # 路径 C fail-safe（纯文本，不依赖 jq）：后台 Bash 启动 id 集 − 完成通知 id 集，
+    # 差集非空 → pending（对齐既有 fail-safe 朝 pending 哲学）。通知集与路径 B 共用
+    # <task-id> 字面量，启动集用 backgroundTaskId 字面量。sort -u 去重 + 空集防御。
+    local bash_launched_ids bash_completed_ids
+    bash_launched_ids=$(echo "$raw_tail" | grep -o '"backgroundTaskId":"[^"]*"' 2>/dev/null | sed 's/^"backgroundTaskId":"//; s/"$//' | sort -u)
+    bash_completed_ids=$(echo "$raw_tail" | grep -o '<task-id>[^<]*</task-id>' 2>/dev/null | sed 's|<task-id>||; s|</task-id>||' | sort -u)
+    if [ -n "$bash_launched_ids" ] && [ -n "$(comm -23 <(printf '%s\n' "$bash_launched_ids") <(printf '%s\n' "$bash_completed_ids"))" ]; then
+        echo "[has_pending_subagents] jq 失败，fail-safe 文本检测到未完成后台 Bash 任务（启动 id − 完成通知 id 非空）→ pending" >&2
         return 0
     fi
 
@@ -770,8 +807,8 @@ fi
 # 教训（flag-asymmetry）：检测机制必须在所有相关转换点一致生效，
 # 单点修复（仅 implement）会在其他阶段留下同类漏洞。
 if [[ -n "$HOOK_TRANSCRIPT" ]] && has_pending_subagents "$HOOK_TRANSCRIPT"; then
-    echo "[autopilot] 检测到后台 sub-agent 运行中，等待 (phase: ${PHASE}, iter: ${ITERATION})" >&2
-    jq -n --arg msg "⏳ autopilot · 正在等待后台 sub-agent 完成（phase: ${PHASE}）。完成后会自动继续；若超过 ~10 分钟仍无进展（sub-agent 可能已异常退出），用 /autopilot cancel 恢复。" \
+    echo "[autopilot] 检测到后台 sub-agent / 后台命令运行中，等待 (phase: ${PHASE}, iter: ${ITERATION})" >&2
+    jq -n --arg msg "⏳ autopilot · 正在等待后台 sub-agent / 后台命令完成（phase: ${PHASE}）。完成后会自动继续；若超过 ~10 分钟仍无进展（sub-agent 可能已异常退出），用 /autopilot cancel 恢复。" \
         '{"systemMessage": $msg}'
     exit 0
 fi

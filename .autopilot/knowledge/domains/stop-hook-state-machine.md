@@ -86,3 +86,11 @@
 **Lesson**: Shell 脚本中带 `exit 0` 的守卫会创建隐式的顺序依赖：守卫之后添加的任何新路径都需要先通过守卫。新增 phase=done 的合法路径时，必须同步审查所有前置守卫是否需要豁免。检查方法：搜索 `exit 0` 前的条件判断，确认新路径是否被覆盖
 **Evidence**: autopilot.case 行 494 "知识提取回滚" — 项目 design 完成后守卫误触发，Case 0.5 auto-chain 被短路，首个 DAG 任务未自动启动。修复：守卫内增加 mode=project+brief_file="" 和 mode=project-qa 豁免
 
+### [2026-09-09] tail -c 窗口丢首行必须条件化于「真截断」——v3.26.0 修复自带的潜伏 fail-unsafe；红队黑盒根因假设需独立证伪
+<!-- tags: autopilot, stop-hook, has-pending-subagents, tail-byte-cut, first-line-drop, fail-unsafe, conditional-drop, red-team-hypothesis, qa-reviewer-falsify, mutation-survival, fixture-precondition, v3.66.0, v3.66.0 -->
+**Scenario**: v3.66.0 为 `has_pending_subagents` 补后台 Bash 任务检测（路径 C：`toolUseResult.backgroundTaskId` 启动痕迹 − queue-operation `<task-id>` 通知集）。红队 C10a 混合夹具（异步 Agent pending + bash 已完成通知）FAIL，黑盒探针得出「通知抵消带顺序/计数语义」根因假设（1 launched + 1 不匹配通知 → pending 被吃；通知在启动前不抵消；2L+2N → pending=1）。qa-reviewer 四组独立实验证伪：同夹具仅行序重排 rc=0、首行垫哑条目 rc=0、对 3 行完整数据直跑 jq 集合差=1——jq `-` 本是纯集合差无序无计数。真根因：L186 `tail -c 4MB | tail -n +2` **无条件丢首行**，transcript <4MB 时 tail 返回完整文件、首行是合法完整条目，async launched 恰在第 1 行被吞 → pending 漏检（fail-unsafe）。红队观察到的全部「顺序规律」被「谁在第 1 行」精确解释。
+**Choice**: 丢行条件化——`wc -c > 4194304` 才丢（只有真截断时首行才可能是半截 JSON），<4MB 保留全部行。顺带效应：红队 C11a/b/c 夹具（坏行放第 1 行试图强制 jq 失败）此前被丢行逻辑吃掉坏行、jq 实际解析成功 → fail-safe 分支零锁定（mutation-survival：删 fail-safe 代码测试仍绿）；条件化后坏行保留、jq 真失败、夹具声明前置真实达成，红队测试零修改即闭合 BLOCKER。附 mutation 验证法：fail-safe 分支恒假化变异副本 → C11a 即红，证明锁定真实。
+**Alternatives rejected**: 按红队假设改 jq 集合差（jq 本身正确，改了反而引入顺序语义）；移坏行到第 2 行修夹具（属红队铁律例外需用户批准，实现修复后已无必要）。
+**Trade-offs**: >4MB 且字节边界恰落在行首时首行为完整条目仍会被丢（概率性、与既有行为一致）；C3/C4 既有测试夹具改走 fail-safe 路径（语义不变）。
+**Lesson**: (1) 一切「为字节截断设计」的兜底丢弃必须以截断真实发生为前提条件化，否则短输入下兜底本身成为数据丢失源——兜底逻辑也要审「前提是否成立」；(2) 测试夹具声明的异常前置（jq 必败/超时/崩溃）必须验证真的触达（stderr 路径日志可证），否则该分支零锁定；(3) 红队黑盒探针归纳的根因假设与真根因可能差一层——「顺序敏感」的表象可由完全无关的机制（丢首行）投影出来，审查者独立证伪（最小对照实验：重排/垫行/绕过被测函数直算）是必要环节，不能黑盒假设直接进修复。
+**Evidence**: v3.66.0 修复后红队 10/10、既有 C1-C8 10/10、全仓 31 acceptance 文件 0 失败、真实 3.6MB transcript（>4MB 窗口，走丢行分支）判定不变。

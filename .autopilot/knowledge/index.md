@@ -3,7 +3,7 @@
 > 三层 Progressive Disclosure：本索引（≤5s 扫描）→ 全局 decisions/patterns（热区）→ domains/（历史归档按主题）。
 
 ## Domains 导航（历史归档，按主题）
-- [stop-hook-state-machine](domains/stop-hook-state-machine.md) — stop-hook 兜底 / 状态机 / flag-asymmetry / pending-subagent（7 entry）
+- [stop-hook-state-machine](domains/stop-hook-state-machine.md) — stop-hook 兜底 / 状态机 / flag-asymmetry / pending-subagent（8 entry）
 - [skill-authoring](domains/skill-authoring.md) — SKILL.md 改动纪律 / 命名 / best-practice / 版本同步（17 entry）
 - [qa-testing](domains/qa-testing.md) — QA 判定 / red-team / mutation / contract / 量化门禁（15 entry）
 - [worktree-git](domains/worktree-git.md) — worktree 检测 / symlink / git porcelain / 文件管理（7 entry）
