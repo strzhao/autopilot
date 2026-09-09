@@ -76,7 +76,7 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 #### 步骤 1. 模式检测与分流
 
-读取状态文件 frontmatter 的 `mode` 和 `brief_file` 字段。**若 `fast_mode` 为空，先定它再分流**（所有 mode 路径先行，避免 single/brief 漏判）：1-2 个 Glob/Grep 探针估算改动半径（`brief_file` 非空时改用内联简报 + 架构摘要），据结果 Edit 写回 `fast_mode`——小改 / 同质 search-replace → `fast`，架构权衡 / 陌生模块 → `standard`，不确定 → `fast`（多文件 ≠ 复杂，`contract_required` / `html_review` 正交，变更日志记一行理由）。探针结论写入 `$TASK_DIR/context.md`——固定四节 `## 技术栈` / `## 测试框架` / `## 测试命令` / `## 构建命令`，节内 bullet、空节写 `N/A`，供蓝队/红队/qa-reviewer 复用。然后按 `mode` 分流：
+读取状态文件 frontmatter 的 `mode` 和 `brief_file` 字段。**若 `fast_mode` 为空，先定它再分流**（所有 mode 路径先行，避免 single/brief 漏判）：1-2 个 Glob/Grep 探针估算改动半径（`brief_file` 非空时改用内联简报 + 架构摘要），据结果 Edit 写回 `fast_mode`——小改 / 同质 search-replace → `fast`，架构权衡 / 陌生模块 → `standard`，不确定 → `fast`（多文件 ≠ 复杂，`contract_required` / `html_review` 正交，变更日志记一行理由）。探针结论写入 `$TASK_DIR/context.md`——固定五节 `## 技术栈` / `## 测试框架` / `## 测试命令` / `## 构建命令` / `## 相关历史知识`（步骤 0 加载到的相关条目一句话摘要 ≤3 条；无则 N/A），节内 bullet、空节写 `N/A`，供蓝队/红队/qa-reviewer 复用。然后按 `mode` 分流：
 
 - **`mode: "single"` 或 `brief_file` 非空** → 跳过检测，继续步骤 2（标准单任务流程）。brief 模式下，目标区域已内联任务简报 + 依赖 handoff + 架构摘要，优先使用这些上下文。
 - **`mode: "project"`** → 跳过检测，直接走 [项目模式设计](#项目模式设计内容)

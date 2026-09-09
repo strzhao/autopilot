@@ -31,3 +31,9 @@
 **Lesson**: awk 正则禁用 `\b` / `\<` / `\>`（GNU awk 扩展，BSD/macOS awk 不支持，跨平台失效）。需要「单词边界」语义时用 `[^a-zA-Z]`（非字母字符）或 `([^a-zA-Z]|$)`（非字母或行尾）替代——POSIX 兼容、跨平台一致。判据：跨平台 bash 脚本的 awk 正则只用 POSIX 字符类，不用 GNU 扩展。注意：grep 的 `\b` 在 BSD grep 支持（与 awk 行为不同），同一脚本里 awk 用 `\b` 失效但 grep 用 `\b` 工作会掩盖 bug（debug 输出匹配但断言不匹配）。
 **Evidence**: critical-path-readiness.acceptance.test.sh:458-461 场景7.P3.NEGATE；`printf "未覆盖 pass" | awk '/未覆盖/ && /[[:space:]"(]pass\b/'` → 不匹配（c=0，失效）；改 `([^a-zA-Z]|$)` → c=1 恢复判别力。qa-reviewer M6 mutation 实证 + 用户 AskUserQuestion 确认红队铁律例外（「断言机制错」）+ 重锁修复（核对锚点：2026-07-23 v3.59.0 acceptance.test.sh:458）。
 
+### [2026-09-09] git worktree 下 `.git` 是 gitdir 指针文件非目录——`-d` 前置守卫恒假
+<!-- tags: bash, git-worktree, gitdir-pointer, guard, -d-flag, worktree-env, acceptance-test, false-fail -->
+**Scenario**: acceptance 测试前置守卫 `[[ -d "$REPO_ROOT/.git" ]]` 判「是否 git 仓库」，主仓库正常，但 `claude -w` worktree 中 `.git` 是 87 字节 `gitdir: ...` 指针**文件**非目录 → `-d` 恒假 → 误判「非 git 仓库」直接 fail。fail 消息若写 `$REPO_ROOT（全角` 会叠 [2026-06-24] 的 unbound 崩溃，把真实 FAIL 遮蔽成 `REPO_ROOT: unbound variable`。autopilot 仓 9 个测试文件同款（v3.69.0 QA 实测 run-all 首跑 8 挂 + shrinkage 1 挂，全部环境性、与被测改动无关）。
+**Lesson**: worktree 环境兼容判据：`.git` 存在性检查用 `-d || -f` 双态（`[[ -d "$R/.git" || -f "$R/.git" ]]`），或改用 `git rev-parse --is-inside-work-tree`（lib.sh tree_sig 同款，语义最准）。判据：任何会被 worktree 执行的脚本，凡以 `.git` 目录存在性为前置的守卫都是潜在环境性假 FAIL。修复后必须验证「守卫放过 + 后续断言仍真」双条件，防借机放宽。审计入口：`grep -rn 'REPO_ROOT/.git' tests/`。
+**Evidence**: v3.69.0 QA：skill-shrinkage-invariants:66 等 9 文件修复（每文件 1-2 行，零断言语义变化，qa-reviewer 逐一核 diff）；`ls -la .git` 实测 87 字节常规文件；HEAD 基线同坏（E1 证据）。关联 [[2026-06-24]] [[2026-05-07]]。
+

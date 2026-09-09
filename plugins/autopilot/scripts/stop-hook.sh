@@ -169,7 +169,7 @@ compress_qa_report() {
 #   结束回合等待后台命令，本函数看不见后台 Bash（只有 A/B 两路径），stop-hook 误判
 #   「摸鱼」block 重注入，烧光 iteration。补路径 C 治此误判。
 #
-# v3.68.0 关键修复（macOS 生产实证：正在跑的异步 sub-agent 被判「无 pending」，
+# v3.69.1 关键修复（macOS 生产实证：正在跑的异步 sub-agent 被判「无 pending」，
 # stop-hook 反复重注入死循环）：
 #   - D1 macOS `wc -c` 输出带前导空格（BSD wc，实测 " 6874127"），v3.66.0 的
 #     条件化丢首行正则 [[ =~ ^[0-9]+$ ]] 恒假 → file_size 恒 0 → >4MB transcript

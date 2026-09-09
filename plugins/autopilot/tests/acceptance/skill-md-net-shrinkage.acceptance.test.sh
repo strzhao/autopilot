@@ -40,7 +40,7 @@ pass() {
 }
 
 # 前置：仓库根可识别为 git 仓库
-[[ -d "$REPO_ROOT/.git" ]] || fail "REPO_ROOT 非 git 仓库: $REPO_ROOT（无法 git diff --numstat）"
+[[ -d "$REPO_ROOT/.git" || -f "$REPO_ROOT/.git" ]] || fail "REPO_ROOT 非 git 仓库: ${REPO_ROOT}（无法 git diff --numstat）"
 
 # 四文件必须存在（相对路径用于 git diff）
 for f in "$RED_TEAM_FILE" "$BLUE_TEAM_FILE" "$IMPLEMENT_PHASE_FILE" "$SKILL_FILE"; do
