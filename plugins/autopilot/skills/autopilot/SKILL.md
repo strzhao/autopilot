@@ -318,7 +318,7 @@ qa-reviewer 完成后：收集 Section A/B/C/D 审查结果合并为 QA 报告�
 
 #### 产出报告
 
-在对话中产出 QA 报告（用户直接看），仅在 frontmatter 写 gate/phase。报告格式和示例参见 `references/qa-report-template.md`。
+在对话中产出 QA 报告（用户直接看），frontmatter 写 gate/phase + 分级字段。报告格式和示例参见 `references/qa-report-template.md`。
 
 #### 结果判定
 
@@ -326,9 +326,9 @@ qa-reviewer 完成后：收集 Section A/B/C/D 审查结果合并为 QA 报告�
 
 三元组来自 Tier 1.5 对 `## 验收场景` 谓词的逐条求值。每条预注册验收谓词产出 `(谓词, artifact 路径, PASS/FAIL)`：
 - 闸门 = **∀ 谓词 PASS 且 Section A/B/C/D 无 Critical**。无分数、无 "Ready to merge"。
-
-- **全绿** → 更新 frontmatter：`gate: "review-accept"`
-- **有 FAIL 或 Critical** → 更新 frontmatter：`phase: "auto-fix"`，报告末尾列出每条 FAIL 谓词（含其 artifact 与期望值）
+- **有 FAIL 或 Critical** → `phase: "auto-fix"`，报告末尾列出每条 FAIL 谓词（含其 artifact 与期望值）
+- **全绿** → 同轮产出**验收决策卡**（对话顶格 + 写 `$TASK_DIR/acceptance-card.md`，结构契约见 `references/qa-report-template.md`）+ 据卡写分级字段 `e2e_status` / `leftover_critical`（语义见 `references/state-file-guide.md`）+ `gate: "review-accept"`——stop-hook 据分级字段机械分级：auto_approve=true ∧ verified ∧ 0 → 自动 merge；字段缺失/非法 → block 回本轮补判
+- **收口点名问**（auto_approve=false 且 e2e≠verified ∨ leftover>0）：QA 报告后 AskUserQuestion，问题文本点名具体未实证链路/遗留项（禁泛泛「是否通过」），选项：**补验证后合入 / 带遗留合入 / 回炉修复**（回炉 → `phase: "auto-fix"`）；预授权（auto_approve=true 或用户明确「不要问」）不问，gate 停等由用户对卡决策；用户「要细看」→ tunnel 详审页（`references/tunnel-review-guide.md`，降级 AskUserQuestion 复用同三选项）
 
 > Tier 3.5 性能 ⚠️ 仍按既有降级（不阻塞、不计入谓词闸门）。
 
@@ -452,7 +452,7 @@ qa-reviewer 完成后：收集 Section A/B/C/D 审查结果合并为 QA 报告�
 
 #### 5. 最终总结
 
-输出结构化完成报告（6 个区块）。报告模板和格式要求参见 `references/completion-report-template.md`。
+输出完成报告（顶部复用验收决策卡结构，过程细节按需；模板见 `references/completion-report-template.md`）。
 
 #### 6. 清理
 - 更新 frontmatter：`phase: "done"`，**同时确认 `gate: ""` 清空**（若 QA 阶段曾设 `gate: "review-accept"` 且本次走过 auto-chain 或 setup.sh approve 自动推进，gate 应已被清；若 AI 自行从 review-accept 推进到 merge 则必须显式清以保持 state 一致）
@@ -469,7 +469,7 @@ qa-reviewer 完成后：收集 Section A/B/C/D 审查结果合并为 QA 报告�
 
 **Read 操作精简**：每个阶段开始时 Read 一次状态文件获取全局信息，后续操作使用 Edit 精确修改。不需要在每次 Edit 前重复 Read 整个文件。
 
-完整 frontmatter 字段说明（包含 fast_mode 三态、qa_scope 取值范围等）参见 [references/state-file-guide.md](references/state-file-guide.md)。AI 可写字段：`phase` / `gate` / `retry_count` / `mode` / `qa_scope` / `next_task` / `knowledge_extracted` / `fast_mode`（仅在 design 步骤 1 探针后自适应判断时，且当前为空字符串才写）/ `auto_approve`（仅 design 步骤 4 据风险判断设 true，或 revise 回 design 重置 false；其余由 stop-hook auto-chain 设置）。AI 不动字段：`iteration` / `max_iterations` / `max_retries` / `session_id` / `started_at` / `task_dir`。（各枚举字段合法值见 references/state-file-guide.md 闭合枚举；shell 仅认 canonical，越界会被 stop-hook 退回纠正）
+完整 frontmatter 字段说明（包含 fast_mode 三态、qa_scope 取值范围等）参见 [references/state-file-guide.md](references/state-file-guide.md)。AI 可写字段：`phase` / `gate` / `retry_count` / `mode` / `qa_scope` / `next_task` / `knowledge_extracted` / `fast_mode`（仅在 design 步骤 1 探针后自适应判断时，且当前为空字符串才写）/ `auto_approve`（仅 design 步骤 4 据风险判断设 true，或 revise 回 design 重置 false；其余由 stop-hook auto-chain 设置）/ `e2e_status` / `leftover_critical`（仅 QA 结果判定轮与决策卡同轮写）。AI 不动字段：`iteration` / `max_iterations` / `max_retries` / `session_id` / `started_at` / `task_dir`。（各枚举字段合法值见 references/state-file-guide.md 闭合枚举；shell 仅认 canonical，越界会被 stop-hook 退回纠正）
 
 ### 内容区域更新
 - `## 设计文档`：design 阶段写入，后续不修改（除非 revise 回到 design）

@@ -2,6 +2,39 @@
 
 QA 报告在对话中产出供用户直接看（v3.37+ 不再持久化到 state.md，仅 frontmatter 写 gate/phase）：
 
+## 验收决策卡（结果判定闸门通过时产出，顶格 + 持久化）
+
+谓词闸门（∀ 谓词 PASS ∧ 0 Critical）通过时，编排器在 QA 报告**之后**产出验收决策卡：对话中**顶格**呈现（≤30 行）并写入 `$TASK_DIR/acceptance-card.md` 持久化，与 frontmatter 分级字段（`e2e_status` / `leftover_critical`，见 state-file-guide.md）同轮产出。硬性结构（区块标题为契约字面，stop-hook §5.7b 依赖分级字段、红队测试依赖卡结构）：
+
+```markdown
+**{一句话总结——消费视角：你得到什么/还欠什么，非实现视角}**
+
+### 端到端真实验证结论
+- {链路名} ｜ 已执行 ｜ {证据：命令输出 / artifact 路径 / exit 码等可核验凭据}
+- {链路名} ｜ 未执行 ｜ {原因：为何本轮未真实驱动}
+- {链路名} ｜ 未执行 ｜ {原因}（顺带改动的旧 CLI 文档，无行为变更——非核心降级须行内留理由）
+
+### 遗留问题
+- {每条一行：影响面 + 建议处理时机；统一叫法「遗留问题」，禁止挂账/Follow-up/Important 等多叫法}
+
+### 风险
+- {每条一行，带依据；禁止空壳风险表}
+
+### 证据一行链
+- {命令} ｜ {结果} ｜ exit={码}
+```
+
+规约：
+- 空区块写字面「无」（治空壳零行）；「证据一行链」2-4 行关键命令（取代 tree_sig 哈希与逐条命令清单）
+- **「### 端到端真实验证结论」= 执行面清单**（区块标题字面为契约不变）：
+  - 每行格式固定 `- <链路名> ｜ 已执行 ｜ <证据>` 或 `- <链路名> ｜ 未执行 ｜ <原因>`（fullwidth `｜` 分隔，与「证据一行链」同款）
+  - 枚举源 = 设计文档声明的交付物 + 新增文件清单（**不是 diff**——diff 漏文档型交付物声明的可执行工作流）
+  - 默认全部核心链路入清单；AI 降级非核心链路须**行内留理由**（如「顺带改动的旧 CLI 文档，无行为变更」），降级链路不计入 `unexecuted_core_paths`
+  - 纯文档任务（无可执行链路）：写单行豁免行「无可执行链路」，`unexecuted_core_paths="0"`，verified 不受限
+  - 清单行数 ≥ 1（含豁免行）；清单中「未执行」核心链路条数 = frontmatter `unexecuted_core_paths`（见 state-file-guide.md）
+- 「### 端到端真实验证结论」的结论必须与 `e2e_status`、`unexecuted_core_paths` **三方一致**（qa-reviewer 执行面一致性反查，任一矛盾列 Critical）：清单（存在未执行核心链路）∧ 字段（`unexecuted_core_paths=0` ∨ `e2e_status=verified`）不得同时成立——存在未执行核心链路时 `e2e_status` 最多 partial
+- 过程审计内容（Tier 全表 / auto-fix 清单 / plan-reviewer 历史）**不下沉到卡**——卡只承载决策信息，过程细节按需走 tunnel 详审页（references/tunnel-review-guide.md）
+
 ```markdown
 ### QA 轮次 N (时间戳)
 

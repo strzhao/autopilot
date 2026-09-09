@@ -434,7 +434,8 @@ compute_numstat() {
     local ta=0
     local td=0
     local out
-    out=$(git -C "${REPO_ROOT}" diff --numstat "${diff_ref}" -- "${FOUR_FILES[@]}" 2>/dev/null) || true
+    # diff_ref 可能是区间（"A B"，含空格）或单 ref——故意不加引号按词分割
+    out=$(git -C "${REPO_ROOT}" diff --numstat ${diff_ref} -- "${FOUR_FILES[@]}" 2>/dev/null) || true
     if [[ -n "${out}" ]]; then
         while IFS=$'\t' read -r added deleted _path; do
             [[ "${added}" == "-" || "${deleted}" == "-" ]] && continue
@@ -454,11 +455,18 @@ TOTAL_ADDED=${NUM_HEAD%% *}
 TOTAL_DELETED=${NUM_HEAD##* }
 DIFF_REF_DESC="HEAD (working tree, uncommitted)"
 
+# [2026-09-09 适配] 工作区 clean（改动已提交）时，动态定位最近触碰四文件的 commit
+# 并取其自身 diff（区间形式）——固定层数回退（HEAD~1/HEAD~2）会被中间不相关 commit
+# 击穿（rebase/多 commit 合流后必现）；对齐 skill-shrinkage-invariants 场景 1.P2
+# 的 commit-aware 适配先例。
 if [[ "${TOTAL_ADDED}" -eq 0 && "${TOTAL_DELETED}" -eq 0 ]]; then
-    NUM_HEAD1=$(compute_numstat "HEAD~1")
-    TOTAL_ADDED=${NUM_HEAD1%% *}
-    TOTAL_DELETED=${NUM_HEAD1##* }
-    DIFF_REF_DESC="HEAD~1 (committed, fallback diff)"
+    LAST_TOUCH=$(git -C "${REPO_ROOT}" log -1 --format=%H -- "${FOUR_FILES[@]}" 2>/dev/null) || true
+    if [[ -n "${LAST_TOUCH}" ]]; then
+        NUM_LAST=$(compute_numstat "${LAST_TOUCH}~1 ${LAST_TOUCH}")
+        TOTAL_ADDED=${NUM_LAST%% *}
+        TOTAL_DELETED=${NUM_LAST##* }
+        DIFF_REF_DESC="$(git -C "${REPO_ROOT}" log -1 --format=%h "${LAST_TOUCH}" 2>/dev/null) (last commit touching the four files)"
+    fi
 fi
 
 if [[ "${TOTAL_ADDED}" -eq 0 && "${TOTAL_DELETED}" -eq 0 ]]; then
@@ -484,7 +492,13 @@ if [[ -n "${SKILL_OUT}" ]]; then
     done <<< "${SKILL_OUT}"
 fi
 if [[ "${S_ADDED}" -eq 0 && "${S_DELETED}" -eq 0 ]]; then
-    SKILL_OUT=$(git -C "${REPO_ROOT}" diff --numstat HEAD~1 -- "plugins/autopilot/skills/autopilot/SKILL.md" 2>/dev/null) || true
+    # [2026-09-09 适配] 工作区 clean 时动态定位最近触碰 SKILL.md 的 commit 取其自身
+    # diff——固定 HEAD~1 单 ref 回退会被中间不相关 commit 击穿（区间形式 + 去引号）；
+    # 对齐场景 5.1 同款 last-touch 适配。
+    SKILL_LAST=$(git -C "${REPO_ROOT}" log -1 --format=%H -- "plugins/autopilot/skills/autopilot/SKILL.md" 2>/dev/null) || true
+    if [[ -n "${SKILL_LAST}" ]]; then
+        SKILL_OUT=$(git -C "${REPO_ROOT}" diff --numstat "${SKILL_LAST}~1" "${SKILL_LAST}" -- "plugins/autopilot/skills/autopilot/SKILL.md" 2>/dev/null) || true
+    fi
     if [[ -n "${SKILL_OUT}" ]]; then
         while IFS=$'\t' read -r added deleted _path; do
             [[ "${added}" == "-" || "${deleted}" == "-" ]] && continue

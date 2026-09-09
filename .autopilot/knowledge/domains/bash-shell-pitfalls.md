@@ -24,6 +24,7 @@
 **Scenario**: 红队验收测试 `set -uo pipefail`，pass 消息含 `$PATH_HAS_TMP（场景5.P1...`——`$VAR` 后紧跟全角括号「（」（U+FF08）。变量实际已定义并赋值，但 bash 词法分析器把多字节字符的字节并入变量名 → 解析出 `PATH_HAS_TMP` + 非法字节，`set -u` 报 `PATH_HAS_TMP�: unbound variable`。该行此前因另一断言先 FAIL exit 没跑到（latent bug，改了上一条断言后暴露）。
 **Lesson**: bash `set -u` 下，双引号内 `$VAR` 后紧跟**非 ASCII / 多字节字符**（全角括号、中文、Unicode 符号）时，词法分析器可能把多字节字符的字节并入变量名 → 误报 unbound。**修复**：用 `${VAR}` 花括号明确界定变量名边界（`pass "...${PATH_HAS_TMP}（场景..."`）。判据：`set -u` + 双引号 + `$VAR` + 紧邻多字节字符 = 必须用 `${VAR}`。同类：含 `$VAR` 插值的 pass/fail 消息避免 `$VAR` 直接接全角字符；中文字符串内 `$((...))` 算术展开也有类似词法问题。`$VAR `（后接半角空格/ASCII）无此问题——半角空格是变量名截止符。
 **Evidence**: acceptance-staging-contract.acceptance.test.sh:231 `$PATH_HAS_TMP（` 报 unbound（bash -n 通过，纯运行时 set -u 暴露），改 `${PATH_HAS_TMP}` 后全 PASS。同文件 `$PATH_HAS_RUNTIME ` / `$STAGING_IN_BLUE `（半角空格分隔）均无问题，证明确是全角字符边界问题。
+**复现 [2026-09-09]**：tiered-approve.acceptance.test.sh 5 处同款（`$after）` 等，fail/pass 消息分支），macOS bash 3.2 崩溃字节 `after\xef` 铁证；**已入库知识未防住复现——红队 sub-agent 不加载 knowledge**（见 decisions.md [2026-09-09] Lesson④），修复同款 brace。
 
 ### [2026-07-23] awk 正则单词边界 `\b` 在 BSD/macOS 不支持 → 反向断言永真无判别力
 <!-- tags: bash, awk, bsd, macos, word-boundary, regex, tautological, mutation-survival, red-team, acceptance-test -->
