@@ -1,5 +1,14 @@
 # Architecture Decisions（热区：近 30 天活跃决策）
 
+### [2026-09-09] 分级自动 approve——机器可读分级字段 + stop-hook 机械分级 + 验收决策卡（消费视角收口，v3.68.0）
+<!-- tags: autopilot, approve, tiered-approve, e2e-status, leftover-critical, acceptance-card, deterministic-signal, stop-hook, §5.5, §5.7b, single-json, dogfood, user-experience, tunnel-review, v3.68.0 -->
+**Background**: martin/little-bee 实证 approve 环节信息偏向过程审计（变更日志单条 300-500 字 / tree_sig 哈希 / Tier 全表），三类决策关键信息缺失降格：端到端真实验证结论（build 跳过埋表格格、推送未实证埋 250 字段落第 3 项、首跑推迟到 approve 后无顶格声明）、遗留（四种叫法散落一律「不阻断」）、风险（模板空壳零行数据）。用户已常态预授权 auto_approve，真痛点 = 信息质量 + 分级边界。
+**Choice**: ① QA 收口 AI 写分级字段 `e2e_status`（verified/partial/unverified）+ `leftover_critical` 与验收决策卡（一句话消费视角 + 端到端结论 + 遗留统一叫法 + 风险 + 证据一行链 `命令｜结果｜exit=码`）同轮落 state.md frontmatter + `$TASK_DIR/acceptance-card.md`；② stop-hook §5.5 达标（auto_approve ∧ verified ∧ 0）自动清 gate 进 merge，未达标保持 gate 落 §6 放行交回用户 + systemMessage「分级未达标」（[2026-05-31]）；③ §5.7b（§5.7 后，仅 auto_approve=true）缺失/越界 → block 回 qa 补判不耗 retry（tier5_status §5.6 先例）；④ 详审按需 tunnel 交互页（radio 三选项 + twq:submit-top，降级 AskUserQuestion）。
+**Alternatives rejected**: 纯语义分级——实证「未实证」信息均为 AI 自埋，恰是 AI 最有动机模糊化的信号，必须硬信号；新增 gate 枚举——[2026-05-31] 复用 review-accept + systemMessage；正文行机器可读——load_state frontmatter 通道 + tier5 先例，正文行解析脆弱。
+**Trade-offs**: 分级字段 AI 自评，机械层只防缺失/格式不防虚标 verified → qa-reviewer 独立反查条前置介入（收口前独立判定对照，本次首跑一致）+ §5.7 artifact 校验兜底；SKILL.md 净持平 478（决策卡规范下沉 qa-report-template，引用链一层深）。
+**Lesson**: ① 分级判定必须机械、呈现必须语义——「机械下沉/智力留 AI」在审批域的具体形态；② 单 JSON 铁律下的双段分工：字段非法时 §5.5 静默跳过、§5.7b block 独揽 systemMessage，杜绝 double JSON（stop-hook:1124 先例）；③ 决策卡 dogfood 自指闭环：本任务收口写 verified+0 后 §5.5 真实裁决自身任务自动进 merge，机制首跑即 dogfood；④ **红队 sub-agent 不加载 knowledge**：[2026-06-24] bash 全角吞变量名坑在红测中原样复现——已知坑防不住未读坑，红队 prompt 注入相关坑锚点是候选改进（本次未做，范围控制，列普通遗留）。
+**Evidence**: tiered-approve 81/81 + run-all 46/46 + lint/bash-n 零告警；§5.5 自动推进实证（本任务 verified+0 → 自动进 merge）；复现记录见 domains/bash-shell-pitfalls.md [2026-06-24] Evidence 追加行。
+
 ### [2026-09-08] 红队铁律仲裁点迁移——v3.53.0 人审升级为 AI 证据门槛自决 + 事后留痕审计（v3.66.0）
 <!-- tags: autopilot, red-team, iron-law, evidence-gate, self-decision, audit-trail, hook-backstop, escape-hatch-evolution, decision-tree, verbatim-anchor, v3.66.0 -->
 **Background**: v3.53.0 escape hatch（[2026-07-09]）的三情形 AskUserQuestion 人审在真实使用中高频打断——红队测试锁定前从未被执行 + 信息隔离抬高断言机制错概率，每次「测试自身问题」都要用户裁决，违背「AI 很强大」预期。用户目标：主 agent 自己先决策，决策不了的再问；主 SKILL.md 只减不增。

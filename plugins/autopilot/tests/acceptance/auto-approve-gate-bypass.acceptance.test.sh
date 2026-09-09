@@ -53,6 +53,9 @@ fast_mode: true
 brief_file: "$dir/.autopilot/project/tasks/001-x.md"
 next_task: ""
 auto_approve: $auto_approve
+e2e_status: "verified"
+leftover_critical: "0"
+tier5_status: "na"
 knowledge_extracted: ""
 task_dir: "$dir/.autopilot/runtime/requirements/test-task"
 session_id: r12sess

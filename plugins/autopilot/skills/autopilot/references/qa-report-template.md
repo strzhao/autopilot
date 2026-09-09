@@ -2,6 +2,31 @@
 
 QA 报告在对话中产出供用户直接看（v3.37+ 不再持久化到 state.md，仅 frontmatter 写 gate/phase）：
 
+## 验收决策卡（结果判定闸门通过时产出，顶格 + 持久化）
+
+谓词闸门（∀ 谓词 PASS ∧ 0 Critical）通过时，编排器在 QA 报告**之后**产出验收决策卡：对话中**顶格**呈现（≤30 行）并写入 `$TASK_DIR/acceptance-card.md` 持久化，与 frontmatter 分级字段（`e2e_status` / `leftover_critical`，见 state-file-guide.md）同轮产出。硬性结构（区块标题为契约字面，stop-hook §5.7b 依赖分级字段、红队测试依赖卡结构）：
+
+```markdown
+**{一句话总结——消费视角：你得到什么/还欠什么，非实现视角}**
+
+### 端到端真实验证结论
+{1-3 行：真实启动/触发过没有 + 结果；未实证链路点名}
+
+### 遗留问题
+- {每条一行：影响面 + 建议处理时机；统一叫法「遗留问题」，禁止挂账/Follow-up/Important 等多叫法}
+
+### 风险
+- {每条一行，带依据；禁止空壳风险表}
+
+### 证据一行链
+- {命令} ｜ {结果} ｜ exit={码}
+```
+
+规约：
+- 空区块写字面「无」（治空壳零行）；「证据一行链」2-4 行关键命令（取代 tree_sig 哈希与逐条命令清单）
+- `### 端到端真实验证结论` 的结论必须与 `e2e_status` 一致（qa-reviewer 一致性反查，虚标 verified 列 Important）
+- 过程审计内容（Tier 全表 / auto-fix 清单 / plan-reviewer 历史）**不下沉到卡**——卡只承载决策信息，过程细节按需走 tunnel 详审页（references/tunnel-review-guide.md）
+
 ```markdown
 ### QA 轮次 N (时间戳)
 

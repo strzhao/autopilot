@@ -179,6 +179,7 @@
 - **artifact 真实性**：逐条核验 Tier 1.5 三元组里每个 PASS 引的 artifact 真实存在且支持该判定；artifact 缺失/不匹配 → 该谓词改判 FAIL，写入 Critical。
 - **谓词充分性反查**（基于共同准备已读的代码改动 `git diff` + 变更文件全文）：反向枚举本次改动触及的风险面 —— 新增分支与错误处理路径 / 对外部输入（用户输入、legacy 数据、第三方返回）的假设 / 向后兼容·降级契约（字段 optional vs required、旧格式）/ 同一行为的多个执行入口 / 并发·异步·状态机路径。**语义判断哪些与本次改动真正相关**，逐个反查 `## 验收场景` 是否有谓词覆盖。未覆盖的风险面列入下表（Important，置信度 80+，**非 BLOCKER** —— 漏覆盖 ≠ 实现错）。
 - Tautological 与 artifact 两项计入 Critical；**充分性反查计入 Important**（缺口触发编排器按 SKILL「## 验收场景 为 N/A 时现场推导谓词」机制补谓词并重求值 SKILL.md:354 —— 补的谓词 FAIL 才真卡闸门，软触发硬验证）。
+- **e2e_status 一致性反查**（防虚标 verified）：据 Tier 1.5 三元组 + 证据链反查 frontmatter `e2e_status` 分级是否成立——存在真实驱动跳过格 / 关键链路仅 mock 覆盖 / 首跑推迟却标 `verified` → 不一致列 Important（置信度 85+，注明反查依据 file:line 或 artifact 路径）；分级语义见 `references/state-file-guide.md`。
 
 ### Section D — 契约符合性
 

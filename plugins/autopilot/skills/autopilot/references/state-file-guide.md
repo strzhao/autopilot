@@ -11,6 +11,8 @@
 - `mode`: 任务模式，AI 在 design 阶段 1.5 步骤检测后写入。**合法值（闭合枚举）：""（空）/ single / project / project-qa**
 - `qa_scope`: 选择性重跑标记，AI 更新。**合法值（闭合枚举）：""（空，默认全量 QA）/ smoke（diff 小或 fast_mode 触发，跳过 Wave 2 qa-reviewer）/ selective（auto-fix 后只重跑失败 Tier）**
 - `tier5_status`: Tier 5 量化指标门禁判定。**合法值（闭合枚举）：""（空，未判）/ na（无 mutation/coverage 工具）/ skipped（smoke 路径主动跳过）/ pass / fail**。**写入者**：stop-hook §8.5.3（na/skipped 自动判，幂等：仅 tier5_status 空时写）/ 编排器（pass/fail，跑工具后调 lib.sh `tier5_coverage_check` / `tier5_mutation_check` 据结果写）。**读者**：stop-hook（gate=review-accept 时校验合规，缺失/越界 → block 回 qa 补判）。详见 references/quantitative-metrics.md
+- `e2e_status`: 端到端真实验证分级（QA 结果判定轮与验收决策卡同轮写入，**AI 不写其他时机**）。**合法值（闭合枚举，canonical 小写）：verified（核心变更层级真实产物已被真实驱动并观测——Tier 1.5 谓词全 PASS 且无真实驱动跳过格）/ partial（部分链路实证、部分未实证）/ unverified（关键链路未实证——首跑推迟/全量 mock）**。**读者**：stop-hook §5.5（auto_approve=true 时分级自动推进的唯一判定依据）+ §5.7b（`gate=review-accept ∧ phase=qa ∧ auto_approve=true` 时缺失/越界 → block 回 qa 补判，不耗 retry_count；auto_approve=false 不强制，向后兼容）
+- `leftover_critical`: 遗留问题分级计数（与 e2e_status 同轮写入）。**格式：非负整数十进制字符串**（如 `"0"` / `"2"`，无上限）。语义 = 遗留问题中用户可感知/影响核心链路的条数（AI 语义判断，普通遗留不计入）。校验与消费方同 e2e_status（§5.5 达标条件 = `e2e_status=verified ∧ leftover_critical=0`；§5.7b fail-safe 校验）。**同轮产物**：验收决策卡持久化到 `$TASK_DIR/acceptance-card.md`（结构契约见 references/qa-report-template.md，红队 TA-7 场景锁定）
 - `next_task`: 下一个就绪任务 ID（项目模式 merge 阶段写入，触发 auto-chain）
 - `knowledge_extracted`: 知识提取完成标记，AI 在 merge 阶段设为 `"true"`（有新增）或 `"skipped"`（无新增）。**合法值（闭合枚举）：""（空）/ true / skipped**。stop-hook 的 phase=done 守卫检查此字段，缺失或空值会回滚到 merge
 - `fast_mode`: 三态字段。`""`（默认/未定）/`"true"`（fast）/`"false"`（standard）。setup.sh 的 `--fast` / `--standard` flag 时直接写入；为空时 AI 在 design 步骤 1 探针后按自适应规则写回（bug 修复/小改动/单一概念跨文件 search-replace→true，架构权衡/新抽象/探索未知模块→false，不确定→true），写入后整个生命周期不再修改

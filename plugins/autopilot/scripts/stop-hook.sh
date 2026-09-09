@@ -632,17 +632,43 @@ fi
 # 蓝队失败兜底场景，那两类 phase 不是 qa）+ gate=review-accept + auto_approve=true（仅
 # stop-hook 的 create_brief_state_file / create_project_qa_state_file 会写 true，
 # 单任务模式默认 false，是 auto-chain 流的充分指标）。
+# v3.68.0 分级短路：追加达标条件 e2e_status=verified ∧ leftover_critical=0。
+#   - 字段有效但未达标 → 不自动推进、**保持 gate**（本通道清 gate 后本应落 §9 merge 注入
+#     唤醒 commit-agent，分级不满足路径绝不能清 gate），设 _GRADE_MSG 落 §6 既有放行链，
+#     systemMessage 携带「分级未达标」可见化（放行交回用户，非 block，依据 [2026-05-31]）。
+#   - 字段缺失/非法 → 本段只静默跳过自动推进、**不发独立 systemMessage**（单 JSON 铁律，
+#     先例 stop-hook §9:1124；该情形由 §5.7b block JSON 的 systemMessage 携带「分级未达标」文案）。
 AUTO_APPROVE=$(normalize_enum_value "${auto_approve:-}")
 if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]] && \
    [[ "${AUTO_APPROVE}" == "true" ]]; then
-    set_field "gate" '""'
-    set_field "phase" '"merge"'
-    # 同 run 读回链（C9）：set_field 后重新 eval load_state，§5.6/§9 的
-    # tier5_status/qa_scope/fast_mode 等读回取到的是文件当前值
-    eval "$(load_state "$STATE_FILE")" || true
-    GATE="${gate:-}"
-    PHASE="${phase:-}"
-    echo "🔗 auto-approve: review-accept → merge (auto-chain subtask)" >&2
+    _grade_e2e=$(normalize_enum_value "${e2e_status:-}")
+    _grade_leftover="${leftover_critical:-}"
+    # trim 前后空白（load_state 尾随空格 quirk 容错）后机械校验有效性
+    _grade_leftover="${_grade_leftover#"${_grade_leftover%%[![:space:]]*}"}"
+    _grade_leftover="${_grade_leftover%"${_grade_leftover##*[![:space:]]}"}"
+    _grade_fields_valid=1
+    case "${_grade_e2e}" in
+        verified|partial|unverified) : ;;
+        *) _grade_fields_valid=0 ;;
+    esac
+    case "${_grade_leftover}" in
+        ''|*[!0-9]*) _grade_fields_valid=0 ;;
+    esac
+    if [[ "${_grade_fields_valid}" -eq 1 ]]; then
+        if [[ "${_grade_e2e}" == "verified" ]] && [[ "${_grade_leftover}" -eq 0 ]]; then
+            set_field "gate" '""'
+            set_field "phase" '"merge"'
+            # 同 run 读回链（C9）：set_field 后重新 eval load_state，§5.6/§9 的
+            # tier5_status/qa_scope/fast_mode 等读回取到的是文件当前值
+            eval "$(load_state "$STATE_FILE")" || true
+            GATE="${gate:-}"
+            PHASE="${phase:-}"
+            echo "🔗 auto-approve: review-accept → merge (auto-chain subtask)" >&2
+        else
+            # 字段有效但未达标 → 保持 gate 落 §6 停等，systemMessage 可见化（§6 输出）
+            _GRADE_MSG="分级未达标：e2e_status=${_grade_e2e}, leftover_critical=${_grade_leftover}（达标条件 = e2e_status=verified ∧ leftover_critical=0）。auto-approve 不自动推进，gate=review-accept 保持停等，请查看验收决策卡后决策。"
+        fi
+    fi
 fi
 
 # ── 5.6 Tier 5 合规校验（gate=review-accept 时，照 §8.5.1 block+systemMessage 模式） ──
@@ -768,10 +794,50 @@ if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]]; then
     fi
 fi
 
+# ── 5.7b 分级判定字段校验（照 §5.6 block 模式；位于 §5.7 后保证其前置守卫先命中自己的信号） ──
+# 治 AI 漏写/越界写分级判定字段：e2e_status / leftover_critical 由编排器在 QA 结果判定轮
+# 与验收决策卡同轮写入（语义见 references/state-file-guide.md），是 §5.5 分级自动推进的
+# 唯一判定依据。gate=review-accept ∧ phase=qa ∧ auto_approve=true 时（分级判定唯一消费方）
+# 机械校验，缺失/越界 → 清 gate + block 回 qa 补判（不耗 retry_count）。
+#   - fail-safe 宁卡不放：字段缺失 ≠ 豁免（对齐 §5.6 tier5_status 先例与 [2026-05-30] 枚举容错）
+#   - 单 JSON 铁律：本段 block 的 systemMessage 携带「分级未达标」文案；§5.5 对字段缺失/非法
+#     不发独立 systemMessage，杜绝 double JSON
+#   - auto_approve=false 不触发（字段不强制，向后兼容旧 state）
+if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]] && \
+   [[ "$(normalize_enum_value "${auto_approve:-}")" == "true" ]]; then
+    _ac_e2e=$(normalize_enum_value "${e2e_status:-}")
+    _ac_leftover="${leftover_critical:-}"
+    _ac_leftover="${_ac_leftover#"${_ac_leftover%%[![:space:]]*}"}"
+    _ac_leftover="${_ac_leftover%"${_ac_leftover##*[![:space:]]}"}"
+    _ac_bad_field=""
+    case "${_ac_e2e}" in
+        verified|partial|unverified) : ;;
+        *) _ac_bad_field="e2e_status" ;;
+    esac
+    if [[ -z "${_ac_bad_field}" ]]; then
+        case "${_ac_leftover}" in
+            ''|*[!0-9]*) _ac_bad_field="leftover_critical" ;;
+        esac
+    fi
+    if [[ -n "${_ac_bad_field}" ]]; then
+        _ac_reason="分级判定字段缺失或非法（${_ac_bad_field}）[AC-FIELD-INVALID]。合法值：e2e_status ∈ {verified, partial, unverified}（canonical 小写）；leftover_critical = 非负整数（遗留问题中用户可感知/影响核心链路的条数）。请对照 QA 报告与验收决策卡（### 端到端真实验证结论 / ### 遗留问题）补判两个字段后重设 gate=review-accept。此 block 不耗 max_retries（非 auto-fix 路径）。"
+        set_field "gate" '""'
+        GATE=""
+        jq -n --arg reason "${_ac_reason}" \
+            --arg msg "autopilot stop-hook §5.7b: 分级未达标——分级判定字段缺失/非法（${_ac_bad_field}），回 qa 补判后重设 gate" \
+            '{"decision":"block","reason":$reason,"systemMessage":$msg}'
+        exit 0
+    fi
+fi
+
 # ── 6. 审批门检查 ──
 
 if [[ -n "$GATE" ]]; then
     bash "$SCRIPT_DIR/notify.sh" "$GATE" 2>/dev/null || true
+    # v3.68.0 §5.5 分级未达标可见化：放行同时注入 systemMessage（单 JSON，控制权交回用户）
+    if [[ -n "${_GRADE_MSG:-}" ]]; then
+        jq -n --arg msg "${_GRADE_MSG}" '{"systemMessage": $msg}'
+    fi
     # 放行退出，等待用户回来审批
     exit 0
 fi
