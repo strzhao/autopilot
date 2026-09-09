@@ -156,8 +156,8 @@ assert_wc_le() {
 }
 
 # 仓库根可识别为 git 仓库
-[[ -d "$REPO_ROOT/.git" ]] || {
-    echo "[FAIL] R_PRED_COV: REPO_ROOT 非 git 仓库: $REPO_ROOT（无法 git diff）" >&2
+[[ -d "$REPO_ROOT/.git" || -f "$REPO_ROOT/.git" ]] || {
+    echo "[FAIL] R_PRED_COV: REPO_ROOT 非 git 仓库: ${REPO_ROOT}（无法 git diff）" >&2
     exit 1
 }
 

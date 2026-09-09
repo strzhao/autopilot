@@ -67,7 +67,7 @@ PLUGIN_JSON="$REPO_ROOT/plugins/autopilot/.claude-plugin/plugin.json"
 MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
 CLAUDE_MD="$REPO_ROOT/CLAUDE.md"
 
-[[ -d "$REPO_ROOT/.git" ]] || { echo "[FAIL] REPO_ROOT 非 git 仓库: $REPO_ROOT" >&2; exit 1; }
+[[ -d "$REPO_ROOT/.git" || -f "$REPO_ROOT/.git" ]] || { echo "[FAIL] REPO_ROOT 非 git 仓库: $REPO_ROOT" >&2; exit 1; }
 [[ -f "$DOCTOR_SKILL"   ]] || fail "doctor SKILL.md 不存在: $DOCTOR_SKILL"
 [[ -f "$PLUGIN_JSON"    ]] || fail "plugin.json 不存在: $PLUGIN_JSON"
 [[ -f "$MARKETPLACE_JSON" ]] || fail "marketplace.json 不存在: $MARKETPLACE_JSON"

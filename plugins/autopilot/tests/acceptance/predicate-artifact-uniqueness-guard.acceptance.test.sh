@@ -66,7 +66,7 @@ _log_fail() {
 # ── 前置：关键文件存在 ───────────────────────────────────────────────────────
 [[ -f "$LIB_SH" ]] || { echo "[FAIL] R_PRED_DUP: lib.sh 不存在: $LIB_SH" >&2; exit 1; }
 [[ -f "$STOP_HOOK" ]] || { echo "[FAIL] R_PRED_DUP: stop-hook.sh 不存在: $STOP_HOOK" >&2; exit 1; }
-[[ -d "$REPO_ROOT/.git" ]] || {
+[[ -d "$REPO_ROOT/.git" || -f "$REPO_ROOT/.git" ]] || {
     echo "[FAIL] R_PRED_DUP: REPO_ROOT 非 git 仓库: $REPO_ROOT" >&2
     exit 1
 }

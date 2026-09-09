@@ -63,7 +63,7 @@ pass() {
 }
 
 # 前置：仓库根可识别为 git 仓库
-[[ -d "$REPO_ROOT/.git" ]] || fail "REPO_ROOT 非 git 仓库: $REPO_ROOT（无法 git show HEAD）"
+[[ -d "$REPO_ROOT/.git" || -f "$REPO_ROOT/.git" ]] || fail "REPO_ROOT 非 git 仓库: ${REPO_ROOT}（无法 git show HEAD）"
 
 # 前置：目标文件存在
 for f in "$AUTOPILOT_SKILL" "$DOCTOR_SKILL" "$RED_TEAM_PROMPT" "$BLUE_TEAM_PROMPT" "$STOP_HOOK"; do
