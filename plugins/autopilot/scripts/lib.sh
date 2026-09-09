@@ -364,6 +364,48 @@ acceptance_tests_tampered() {
     return 0
 }
 
+# acceptance_trace_missing <lock_file> <state_file>
+#
+# C6b 留痕 backstop（v3.66.0）：已锁验收测试文件工作区相对 index 存在差异
+# （git diff -- <file> 非空，即合流 git add 之后被改）∧ state 文件 ## 变更日志 区域
+# 无 "[auto-fix] AI 自决改红队测试" 留痕（留痕行须同现 "证据" 字面）。
+# 留痕只在 ## 变更日志 区域内匹配：设计文档/QA 报告正文会引用留痕格式示例，
+# 全域匹配会被引用文字误放行。
+# 基线=index（非 HEAD）：合流「即 add 即锁」下 HEAD 基线对新 add 文件恒非空，会误伤
+# 每次首次合流；index 基线天然豁免首次合流，精确命中「合流后被改」主场景。
+# 退出码语义（双信号，与 acceptance_tests_tampered 同构）：
+#   0 = clean（无锁 / 无 diff / 有合规留痕）
+#   2 = trace-missing（锁内文件有 index 基线 diff ∧ 无合规留痕）
+#   1 = no-lock / 无状态文件（自门控 no-op）
+# trace-missing 时 stdout 含 "TRACE-MISSING:" + 文件路径。
+# git 不可用 / 非仓库 → git diff 输出空 → 按 clean 放行（与 snapshot_oracle_regened n/a 同哲学）。
+acceptance_trace_missing() {
+    local lock="${1:-}" state_file="${2:-}"
+    [ -f "$lock" ] || return 1   # 无锁=未进入受保护期，自门控 no-op
+    [ -n "$state_file" ] && [ -f "$state_file" ] || return 1
+    local trace_hit=0
+    if awk '/^## 变更日志[[:space:]]*$/{f=1;next} /^## /{f=0} f' "$state_file" 2>/dev/null \
+        | grep -F '[auto-fix] AI 自决改红队测试' 2>/dev/null | grep -qF '证据'; then
+        trace_hit=1
+    fi
+    local bad=0 line path
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        # 锁格式 "<sha256>␣␣<path>"：无双空格 → path==整行，后续 -f / git diff 自然 no-op
+        path="${line#*  }"
+        # 缺失文件走 §8.5.1 TAMPER(missing)，本守卫不重复执法
+        [ -f "$path" ] || continue
+        if [ -n "$(git diff -- "$path" 2>/dev/null)" ]; then
+            if [ "$trace_hit" -eq 0 ]; then
+                echo "TRACE-MISSING: ${path}"
+                bad=1
+            fi
+        fi
+    done < "$lock"
+    [ "$bad" -eq 1 ] && return 2
+    return 0
+}
+
 # detect_quantitative_tools → stdout JSON {stryker,c8,nyc,istanbul,jest_coverage}（5 bool），rc=0
 #
 # 检测当前项目是否具备 Tier 5 量化指标门禁所需工具（mutation / coverage）。

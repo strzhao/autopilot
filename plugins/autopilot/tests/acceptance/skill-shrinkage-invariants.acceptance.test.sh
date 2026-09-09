@@ -12,7 +12,11 @@
 #
 # 谓词映射（状态文件 ## 验收场景 SSOT）：
 #   场景1.P1a [det-machine]: autopilot/SKILL.md <= 500 && doctor/SKILL.md <= 580
-#   场景1.P2  [det-machine]: 两文件各自 deleted > added（独立守护，不依赖 skill-md-net-shrinkage）
+#   场景1.P2  [det-machine]: 两文件各自 deleted >= added（独立守护，不依赖 skill-md-net-shrinkage）
+#                            [2026-09-08 语义化适配] deleted > added → >=：严格递减是 v3.58.1 减法专项的
+#                            一次性目标，非持久不变量；SSOT（20260908 任务 ## 验收场景 场景5.P2）冻结口径
+#                            为 deleted >= added（行数只减不增）。持久本质 = SKILL.md 不得增长，
+#                            单行内替换类机制任务（净 0）合法。与 v3.65.0 commit-aware 跳过同构语义收窄。
 #   场景2.P1  [det-machine]: (a) 7 词在两 SKILL.md 并集 after>=before
 #                            (b) acceptance-staging 在 red-team-prompt.md after>=before
 #   场景2.P2  [det-machine]: 两 SKILL.md diff 无新增 ^+## 顶层章节
@@ -78,15 +82,8 @@ read_before() {
     git -C "$REPO_ROOT" show "HEAD:$rel" 2>/dev/null || true
 }
 
-# 辅助：grep -c 计数（grep -c 无匹配时 stdout="0" + rc=1，直接 `|| echo 0` 会双重 "0\n0" 致算术崩；
-# 改 n=$(grep -c) || n=0 单值返回）
-grep_count() {
-    local pattern="$1" file="$2" n
-    n=$(grep -cE "$pattern" "$file" 2>/dev/null) || n=0
-    echo "$n"
-}
-
-# 辅助：对 stdin 内容做 grep -c 计数
+# 辅助：对 stdin 内容做 grep -c 计数（grep -c 无匹配时 stdout="0" + rc=1，直接 `|| echo 0` 会双重
+# "0\n0" 致算术崩；改 n=$(grep -c) || n=0 单值返回。原 file 参数版 grep_count 无调用方，已删）
 grep_count_stdin() {
     local pattern="$1" n
     n=$(grep -cE "$pattern" 2>/dev/null) || n=0
@@ -114,9 +111,9 @@ DOCTOR_LINES=$(wc -l < "$REPO_ROOT/$DOCTOR_SKILL" | tr -d ' ')
 pass "scene 1.P1a: 行数阈值达标 (autopilot=$AUTOPILOT_LINES<=520 软, doctor=$DOCTOR_LINES<=580)"
 
 # ===========================================================================
-# 断言 2（场景1.P2）：两 SKILL.md 各自 deleted > added（独立守护）
+# 断言 2（场景1.P2）：两 SKILL.md 各自 deleted >= added（独立守护）
 #   observe: git diff --numstat <两文件>
-#   assert: per file deleted > added
+#   assert: per file deleted >= added
 # ===========================================================================
 {
     git -C "$REPO_ROOT" diff --numstat HEAD -- "$AUTOPILOT_SKILL" "$DOCTOR_SKILL" 2>/dev/null || true
@@ -165,13 +162,15 @@ else
     # autopilot 独立 commit-aware（v3.65.0 适配，与下方 doctor 同构）：本次未改（added=0 ∧ deleted=0）
     # → 跳过净减检查。治纯 doctor/bash 任务误判 autopilot 0>0 false——净减守护只约束「本任务改了的文件」。
     if [[ "$AUTOPILOT_ADDED" -gt 0 || "$AUTOPILOT_DELETED" -gt 0 ]]; then
-        [[ "$AUTOPILOT_DELETED" -gt "$AUTOPILOT_ADDED" ]] || \
-            fail "scene 1.P2: autopilot/SKILL.md 未净减 (deleted=$AUTOPILOT_DELETED <= added=$AUTOPILOT_ADDED)。减法要求 deleted > added（独立守护，不依赖 skill-md-net-shrinkage）"
+        # [2026-09-08 语义化适配] > → >=（见文件头场景1.P2 适配说明；约束本质：行数只减不增）
+        [[ "$AUTOPILOT_DELETED" -ge "$AUTOPILOT_ADDED" ]] || \
+            fail "scene 1.P2: autopilot/SKILL.md 净增 (deleted=$AUTOPILOT_DELETED < added=$AUTOPILOT_ADDED)。约束本质：行数只减不增（deleted >= added，SSOT 场景5.P2）"
     fi
     # doctor 独立 commit-aware：本次未改（added=0 ∧ deleted=0）→ 跳过净减检查（未改不算违规，治 autopilot-only 任务误判 doctor 0>0 false）
     if [[ "$DOCTOR_ADDED" -gt 0 || "$DOCTOR_DELETED" -gt 0 ]]; then
-        [[ "$DOCTOR_DELETED" -gt "$DOCTOR_ADDED" ]] || \
-            fail "scene 1.P2: doctor/SKILL.md 未净减 (deleted=$DOCTOR_DELETED <= added=$DOCTOR_ADDED)。减法要求 deleted > added（独立守护）"
+        # [2026-09-08 语义化适配] > → >=（同 autopilot 分支；约束本质：行数只减不增）
+        [[ "$DOCTOR_DELETED" -ge "$DOCTOR_ADDED" ]] || \
+            fail "scene 1.P2: doctor/SKILL.md 净增 (deleted=$DOCTOR_DELETED < added=$DOCTOR_ADDED)。约束本质：行数只减不增（deleted >= added，SSOT 场景5.P2）"
     fi
     pass "scene 1.P2: autopilot 净减 + doctor 独立判定 (autopilot: -$AUTOPILOT_DELETED/+$AUTOPILOT_ADDED, doctor: -$DOCTOR_DELETED/+$DOCTOR_ADDED)"
 fi
@@ -435,15 +434,6 @@ pass "scene 4.P2: 红/蓝队 prompt 铁律词 after>=before (total=$IRON_AFTER_T
 #   零新增 GUI 测试机制（约束②锁定不越界）
 # ===========================================================================
 GUI_PATTERN='XCUITest|GUI.*(test|测试)'
-
-count_gui_hits() {
-    local ref="${1:-HEAD}"
-    if [[ "$ref" == "WORKING" ]]; then
-        git -C "$REPO_ROOT" grep -hE "$GUI_PATTERN" -- 'plugins/autopilot/skills/**' 2>/dev/null | wc -l | tr -d ' '
-    else
-        git -C "$REPO_ROOT" grep -hE "$GUI_PATTERN" "$ref" -- 'plugins/autopilot/skills/**' 2>/dev/null | wc -l | tr -d ' '
-    fi
-}
 
 # HEAD baseline（grep -c 无匹配 stdout="0"+rc=1，原 || echo 0 双重 "0\n0" 致算术崩；用 || true 取 grep 单值）
 GUI_BEFORE=$(git -C "$REPO_ROOT" ls-files 'plugins/autopilot/skills/**' | while read -r f; do

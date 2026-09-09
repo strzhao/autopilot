@@ -1,5 +1,12 @@
 # Patterns & Lessons（热区：近 30 天活跃决策）
 
+### [2026-09-08] Tier 1.5 谓词 artifact 两个机械陷阱——裸数字跨谓词 MD5 撞车 + staged 状态字面 diff 为空
+<!-- tags: autopilot, tier-1.5, predicate, artifact, md5-collision, pred-artifact-dup, git-staged, numstat, baseline, stop-hook, §5.7, dogfood, v3.66.0 -->
+**Scenario 1**: 多条谓词 artifact 用 `| wc -l` 产裸数字（两条都输出 `6\n`）——路径不同但 MD5 相同，stop-hook §5.7 PRED-ARTIFACT-DUP 守卫按「复制冒充独立产物」拦截（本轮 s2p2/s6p2 实证 block）。
+**Lesson 1**: artifact 必须自描述——每条写 `pred id + command + value + assert` 四行格式，天然唯一且自证；裸数字无自证力，被守卫拦截是正确行为不是误报。/tmp/autopilot-artifacts/ 是跨任务共享目录，历史遗留文件不算本任务谓词的重复（守卫只校验 state.md 谓词声明的路径）。
+**Scenario 2**: 谓词字面 driver `git diff --numstat` 在蓝队 `git add` 暂存后返回空（工作区==index）——字面执行无法证明「净非增」约束；红队场景 5 用 HEAD 基线（`git diff HEAD --numstat`）则 deleted=2 >= added=2 可判。
+**Lesson 2**: diff 类谓词/断言的基线按约束本质选（「相对改动前」= HEAD 基线），并与红队断言同口径；字面 driver 与 git 状态现实冲突时（staged/合流中），在 QA 报告注记口径修正依据，不静默换口径。与 [2026-07-08]「减行硬约束下守卫下沉 bash」同族：机制细节（基线、暂存状态）要在设计期想到，写进契约而非留给 QA 现场纠结。
+**Evidence**: v3.66.0 任务 QA 轮次 1——stop-hook PRED-ARTIFACT-DUP 实际拦截后 13 个 artifact 重写自描述格式复核 MD5 唯一；s5p1/s5p2 HEAD 口径重求值并在报告注记。
 ### [2026-06-02] `$(cmd || true); rc=$?` 把退出码永久吞成 0；要保留 rc 又不触发 trap ERR 用 `cmd || rc=$?`
 <!-- tags: bash, exit-code, command-substitution, or-true, rc-masking, trap-err, double-signal, stop-hook, lib-sh, defensive-edit, qa-reviewer-catch -->
 **Scenario**: stop-hook 在顶层有 `trap 'exit 0' ERR`，为防函数返回非零误触发 trap 早退，蓝队给"读取 tamper 守卫结果"写成 `out=$(check || true); rc=$?`。设计本是"双信号判定（rc==2 或 stdout 含 TAMPER）"，但 qa-reviewer 读实际代码发现 rc 分支永远不触发。

@@ -327,6 +327,7 @@ detect_smoke_eligible() {
     # v3.65.0 自足性：本函数读 load_state 批量变量（qa_scope/fast_mode）而非逐字段重扫。
     # 被 source 后单独调用（红队函数级测试）时批量变量尚未加载 → 先 eval 一次，
     # 保证读回的是 STATE_FILE 调用时值（与原逐字段读取语义一致，幂等零副作用）。
+    # shellcheck disable=SC2153  # STATE_FILE 由 lib.sh init_paths 赋值，跨文件不可见（同 line ~357 模式）
     eval "$(load_state "$STATE_FILE")" || true
 
     # qa_scope 已有值（如 "selective"）时不重复评估
@@ -982,9 +983,31 @@ if [[ "$NEW_PHASE" == "qa" ]]; then
         _tamper_out=$(acceptance_tests_tampered "${_lock_file}" 2>/dev/null) || _tamper_rc=$?
         # 双信号判断：rc==2 或 stdout contains "TAMPER"（防 rc 歧义）
         if [[ "${_tamper_rc}" -eq 2 ]] || echo "${_tamper_out}" | grep -q "TAMPER"; then
-            _tamper_reason="红队验收测试被修改（${_tamper_out}）。autopilot 铁律：默认不允许修改红队测试文件——问题在实现不在测试。若判定属红队测试本身问题（断言与契约矛盾/引用未声明私有seam/断言机制错），须先 AskUserQuestion 询问用户确认，确认后改测试并 source scripts/lib.sh 调 lock_acceptance_tests 重锁放行（详见 references/auto-fix-phase.md §6）；未经此流程不得直接改，必须 git checkout -- <测试文件> 还原后重修实现，再推进到 QA 阶段。"
+            _tamper_reason="红队验收测试被修改（${_tamper_out}）。autopilot 铁律：默认不允许修改红队测试文件——问题在实现不在测试。若失败属红队测试本身问题三情形（断言与契约矛盾/引用未声明私有seam/断言机制错）：证据链闭合则 AI 自决改测试，source scripts/lib.sh 调 lock_acceptance_tests 重锁放行 + 变更日志留痕；证据链不闭合才走 AskUserQuestion 升级（详见 references/auto-fix-phase.md §6）；三情形之外或无证据时 git checkout -- <测试文件> 还原后重修实现，再推进到 QA 阶段。"
             jq -n --arg reason "${_tamper_reason}" \
-                --arg msg "autopilot stop-hook: 验收测试篡改守卫触发（implement→qa），还原测试后重修实现" \
+                --arg msg "autopilot stop-hook: 验收测试篡改守卫触发（implement→qa），按 §6 双层决策树处理（证据闭合自决+重锁+留痕），否则还原测试重修实现" \
+                '{"decision":"block","reason":$reason,"systemMessage":$msg}'
+            exit 0
+        fi
+    fi
+
+    # ── 8.5.1b 留痕 backstop 守卫（C6b，与 §8.5.1 同构双信号） ──
+    # 治「AI 修改红队测试 + 静默重锁 = 无痕放水」：§8.5.1 sha 守卫在重锁后即放行，
+    # 放水面 = 重锁后的测试内容；本守卫把「改测试必须留痕」升为确定性执法——
+    # 已锁验收测试文件工作区相对 index 有 diff（git diff 非空，即 §8.5.0.5 合流
+    # git add 之后被改）∧ 变更日志无 `[auto-fix] AI 自决改红队测试`（行内同现 证据）
+    # 留痕 → decision:block。
+    # 基线=index 非 HEAD：合流「即 add 即锁」下 HEAD 基线对新 add 文件恒非空，会误伤
+    # 每次首次合流；index 基线天然豁免首次合流，精确命中「合流后被改」主场景。
+    # 自门控：无锁 / 无 diff / 有合规留痕 → no-op（零副作用）。
+    if [[ -n "${TASK_DIR}" ]]; then
+        _trace_rc=0
+        _trace_out=$(acceptance_trace_missing "${_lock_file}" "${STATE_FILE}" 2>/dev/null) || _trace_rc=$?
+        # 双信号判断：rc==2 或 stdout contains "TRACE-MISSING"（防 rc 歧义，参照 §8.5.1）
+        if [[ "${_trace_rc}" -eq 2 ]] || echo "${_trace_out}" | grep -q "TRACE-MISSING"; then
+            _trace_reason="检测到已锁红队验收测试文件被修改但变更日志无留痕（${_trace_out}）。改测试必须留痕：若属三情形且证据链闭合，AI 自决改测试后在状态文件 ## 变更日志记一行「[auto-fix] AI 自决改红队测试 <文件>，情形<①②③>，证据<E1/E2/E3 关键输出>，已重锁」并调 lock_acceptance_tests 重锁；证据链不闭合走 AskUserQuestion 升级（详见 references/auto-fix-phase.md §6）。"
+            jq -n --arg reason "${_trace_reason}" \
+                --arg msg "autopilot stop-hook: 留痕守卫触发（implement→qa），改测试须留痕 + 重锁，无证据自决 = 放水" \
                 '{"decision":"block","reason":$reason,"systemMessage":$msg}'
             exit 0
         fi

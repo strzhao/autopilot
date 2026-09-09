@@ -1,5 +1,13 @@
 # Architecture Decisions（热区：近 30 天活跃决策）
 
+### [2026-09-08] 红队铁律仲裁点迁移——v3.53.0 人审升级为 AI 证据门槛自决 + 事后留痕审计（v3.66.0）
+<!-- tags: autopilot, red-team, iron-law, evidence-gate, self-decision, audit-trail, hook-backstop, escape-hatch-evolution, decision-tree, verbatim-anchor, v3.66.0 -->
+**Background**: v3.53.0 escape hatch（[2026-07-09]）的三情形 AskUserQuestion 人审在真实使用中高频打断——红队测试锁定前从未被执行 + 信息隔离抬高断言机制错概率，每次「测试自身问题」都要用户裁决，违背「AI 很强大」预期。用户目标：主 agent 自己先决策，决策不了的再问；主 SKILL.md 只减不增。
+**Choice**: 双层决策树——三情形内按「证据链闭合」分流：E1-E3 命令级证据（①字段级 diff ②grep 零命中 ③机制指认）成立 → AI 自决改测试 + `lock_acceptance_tests` 重锁 + 变更日志留痕（不打断）；U1-U4（契约歧义/谓词 SSOT 冲突/根因不明/覆盖语义变化）→ `AskUserQuestion` 升级。三情形细节与判据全下沉 `auto-fix-phase.md` §6（SKILL.md 两处引用行单行内替换净 0 行）。防放水三件套：逐字一致锚点（修改后断言须能从契约文本逐字推导，contract-protocol.md 成文）+ C6b hook backstop（已锁测试 **index 基线** diff ∧ 变更日志无留痕 → block，lib.sh `acceptance_trace_missing` + stop-hook §8.5.1b，与 §8.5.1 同构双信号）+ QA 报告「红队测试修改清单」转记审计。
+**Alternatives rejected**: (1) 完全删除人审 → 契约歧义/SSOT 冲突等 U 类情形 AI 无锚点，放水面失控；(2) 只靠 prompt 教育防无证据自决 → [2026-05-16] 光靠教育无效，C6b 机械兜底；(3) 守卫 diff 用 HEAD 基线 → 与 §8.5.0.5「即 add 即锁」相撞，对已 add 新文件恒非空，本任务自身 QA 即卡死（plan-reviewer 复审抓到），改 index 基线天然豁免首次合流。
+**Trade-offs**: 留痕真实性机械不可验（自由文本）→ 语义审计层（QA 报告区块 + dogfood 实地观察）承接；index 基线残余边界（改测试后 git add 遮蔽 diff）由行为断言 + 实地观察兜底，不为此扩机制。
+**Evidence**: commit v3.66.0。红队 38 断言（C6b 真跑双向 S1-S5 + HEAD clone 反证 no-op kill）；qa-reviewer 四节全绿 0 Critical；claude -p 四情境独立验证全部正确路由（可读性 quote / E1+E3 → 自决 / U1 → 升级 / 实现 bug → 默认修实现不打断）。
+**Lesson**: 人审点不是只能删或留——按「证据可机械指认度」分层迁移：可指认的降为 AI 自决 + 事后留痕审计，不可指认的保留人审。防放水锚点与放行通道解耦：放行走确定性重锁（守卫机制零改动），放水约束走「逐字一致锚点 + 留痕 hook backstop + 事后可审计」。演化链：绝对禁（v3.53 前）→ 人审软化（v3.53.0）→ 证据门槛自决（v3.66.0），每步都在「守住不放水」前提下减少摩擦。关联 [[2026-07-09]]、[[2026-05-16]]。
 ### [2026-08-09] 独立 brainstorm 产物的主流程发现机制——编排器语义扫描复用（智力活留 AI），不塞 setup.sh bash
 <!-- tags: autopilot, brainstorm, independent-skill, reuse, semantic-scan, orchestrator, high-freedom, mechanical-vs-intellectual, degrees-of-freedom, skill-shrinkage, dogfood, claude-p, v3.61.0 -->
 **Background**: 用户习惯「先独立 `/autopilot:autopilot-brainstorm` 再 `/autopilot`」，但 [2026-07-17]（v3.56.1）只解决独立调用产物落 runtime 路径，没解决主流程「发现并复用」——三断点：① slug 双轨（brainstorm AI 手挑 `YYYYMMDD-<关键词>` vs setup.sh `generate_task_slug` 机械算 `YYYYMMDD-<目标前30字符>`，task_dir 分裂）② active.ptr 不衔接（brainstorm 纯 AI skill 不写指针 + setup.sh:490-503 每次无条件新建 task_dir 覆盖 state.md，从不复用）③ design 无条件重跑（SKILL.md Standard 段硬编码委托 brainstorm，无「已存在则复用」检测）。独立 brainstorm 产物成孤儿（runtime gitignored，主流程读不到）。
