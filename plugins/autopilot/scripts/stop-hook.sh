@@ -169,36 +169,40 @@ compress_qa_report() {
 #   结束回合等待后台命令，本函数看不见后台 Bash（只有 A/B 两路径），stop-hook 误判
 #   「摸鱼」block 重注入，烧光 iteration。补路径 C 治此误判。
 #
+# v3.70.1 关键修复（macOS 生产实证：正在跑的异步 sub-agent 被判「无 pending」，
+# stop-hook 反复重注入死循环）：
+#   - D1 macOS `wc -c` 输出带前导空格（BSD wc，实测 " 6874127"），v3.66.0 的
+#     条件化丢首行正则 [[ =~ ^[0-9]+$ ]] 恒假 → file_size 恒 0 → >4MB transcript
+#     永不丢半截首行 → jq 必 parse error → 全部集合判定死，每次退 fail-safe。
+#   - D2 4MB 窗口盲区：还在跑的 sidechain 持续追加巨量内容（transcript 自膨胀
+#     6.8→9.4MB），把 launch 标记全部推出窗外，而已完成任务的完成通知反在窗内，
+#     即使 jq 健康也算出 pending=∅ 假阴性。
+#   - 治法：jq 集合计算改直读全量 transcript（无字节截断，半截首行问题整类消失；
+#     窗口盲区随输入源切换消除）；raw_tail（末 4MB）仅保留给 fail-safe grep。
+#     27MB 实测 jq 全量 <1s，timeout 10 兜底，失败仍走 fail-safe（降级方向不变）。
+#   - 容错：-R 逐行 + map(fromjson?) 解析，单条损坏行（撕裂末行/半截 JSON）跳过
+#     不再拖垮整条精确路径（红队 P1/P2 契约测试锁定；单坏行→退窗口限定的弱
+#     fail-safe 属 D1 类属缺陷）。
+#   - hardening：fail-safe grep 全部加 -a（含 NUL 的 tail 输出会让 grep 在二进制
+#     判定下返回空而非计数）。
+#
 # 退出码：0 = 有 pending（同步∪异步∪后台 Bash）、1 = 无 pending（含错误降级）。
 has_pending_subagents() {
     local transcript="$1"
     [ -n "$transcript" ] && [ -f "$transcript" ] || return 1
 
-    # 末尾 4MB：覆盖含大代码内容的 tool_result（单 turn 通常 < 1MB），长会话留有余地
+    # 末尾 4MB：仅作 fail-safe grep 的文本底料（覆盖含大代码内容的 tool_result，
+    # 单 turn 通常 < 1MB，长会话留有余地）。集合计算主路径已改 jq 全量直读。
     local raw_tail
     raw_tail=$(timeout 3 tail -c 4194304 "$transcript" 2>/dev/null) || return 1
     [ -n "$raw_tail" ] || return 1
 
-    # 丢弃首行：tail -c 在字节边界切，首行几乎必然是半截 JSON 行（实测）。
-    # v3.66.0 条件化丢行（S1.P3/C10a 根因修复，qa-reviewer 四组实验证实）：
-    # 仅当文件 > 窗口上限（真截断）时首行才可能是半截 JSON；<4MB 时 tail -c
-    # 返回完整文件、首行是合法完整条目，无条件丢弃 = 纯数据丢失（C10a 夹具
-    # async launched 恰在第 1 行被吞 → pending 漏检，fail-unsafe）。
-    # 边界 case：若丢首行后为空但原始非空（极短 transcript），回退原始数据，
-    # 让 jq 或 grep fail-safe 自己处理。
-    local tail_data file_size
-    file_size=$(wc -c < "$transcript" 2>/dev/null) || file_size=0
-    [[ "$file_size" =~ ^[0-9]+$ ]] || file_size=0
-    if [[ "$file_size" -gt 4194304 ]]; then
-        tail_data=$(echo "$raw_tail" | tail -n +2)
-    else
-        tail_data="$raw_tail"
-    fi
-    [ -n "$tail_data" ] || tail_data="$raw_tail"
-
     local pending_count
     # shellcheck disable=SC2016
-    pending_count=$(echo "$tail_data" | timeout 3 jq -rs '
+    # -R 逐行读取 + map(fromjson?) 逐行容错解析：单条损坏行（如并发写入的撕裂末行、
+    # 半截 JSON）只被跳过、不再使整条 jq 精确路径失效退 fail-safe（fail-safe 是窗口
+    # 限定的弱检测，单坏行致整路失效 = D1 类属缺陷，红队 P1/P2 契约测试锁定）。
+    pending_count=$(timeout 10 jq -Rs 'split("\n") | map(fromjson?) |
         # 路径 A — 同步 Agent
         ([.[] | select(.isSidechain == false or .isSidechain == null)
               | .message.content[]?
@@ -231,7 +235,7 @@ has_pending_subagents() {
         ($bash_launched - $async_completed) as $bash_pending
         |
         ($sync_pending | length) + ($async_pending | length) + ($bash_pending | length)
-    ' 2>/dev/null)
+    ' "$transcript" 2>/dev/null)
     local jq_exit=$?
 
     # 成功路径
@@ -248,8 +252,8 @@ has_pending_subagents() {
     # 用 raw_tail（含首行）扫文本字面量。launched/completed 计数差 > 0 才视为 pending，
     # 避免已完成场景（两边计数相等）触发不必要的 silent block。
     local launched_count completed_count
-    launched_count=$(echo "$raw_tail" | grep -c '"status":"async_launched"' 2>/dev/null || echo 0)
-    completed_count=$(echo "$raw_tail" | grep -c '<status>completed</status>' 2>/dev/null || echo 0)
+    launched_count=$(echo "$raw_tail" | grep -ac '"status":"async_launched"' 2>/dev/null || echo 0)
+    completed_count=$(echo "$raw_tail" | grep -ac '<status>completed</status>' 2>/dev/null || echo 0)
     # 防御非数字
     [[ "$launched_count" =~ ^[0-9]+$ ]] || launched_count=0
     [[ "$completed_count" =~ ^[0-9]+$ ]] || completed_count=0
@@ -263,8 +267,8 @@ has_pending_subagents() {
     # 差集非空 → pending（对齐既有 fail-safe 朝 pending 哲学）。通知集与路径 B 共用
     # <task-id> 字面量，启动集用 backgroundTaskId 字面量。sort -u 去重 + 空集防御。
     local bash_launched_ids bash_completed_ids
-    bash_launched_ids=$(echo "$raw_tail" | grep -o '"backgroundTaskId":"[^"]*"' 2>/dev/null | sed 's/^"backgroundTaskId":"//; s/"$//' | sort -u)
-    bash_completed_ids=$(echo "$raw_tail" | grep -o '<task-id>[^<]*</task-id>' 2>/dev/null | sed 's|<task-id>||; s|</task-id>||' | sort -u)
+    bash_launched_ids=$(echo "$raw_tail" | grep -ao '"backgroundTaskId":"[^"]*"' 2>/dev/null | sed 's/^"backgroundTaskId":"//; s/"$//' | sort -u)
+    bash_completed_ids=$(echo "$raw_tail" | grep -ao '<task-id>[^<]*</task-id>' 2>/dev/null | sed 's|<task-id>||; s|</task-id>||' | sort -u)
     if [ -n "$bash_launched_ids" ] && [ -n "$(comm -23 <(printf '%s\n' "$bash_launched_ids") <(printf '%s\n' "$bash_completed_ids"))" ]; then
         echo "[has_pending_subagents] jq 失败，fail-safe 文本检测到未完成后台 Bash 任务（启动 id − 完成通知 id 非空）→ pending" >&2
         return 0
