@@ -1,39 +1,117 @@
-plugins/autopilot/README.md
-  aa74cecdeda2d7b9 3-4
-plugins/autopilot/scripts/stop-hook.sh
-  aa74cecdeda2d7b9 293,949,951-973
-.autopilot/knowledge/patterns.md
-  aa74cecdeda2d7b9 3-9
-plugins/autopilot/skills/autopilot/references/contract-protocol.md
-  aa74cecdeda2d7b9 5,12
-plugins/autopilot/.claude-plugin/plugin.json
-  aa74cecdeda2d7b9 3-4
-plugins/autopilot/skills/autopilot/SKILL.md
-  aa74cecdeda2d7b9 348,362
-plugins/autopilot/skills/autopilot/references/anti-rationalization.md
-  aa74cecdeda2d7b9 47,51-52,55
 plugins/autopilot/tests/acceptance/skill-shrinkage-invariants.acceptance.test.sh
   aa74cecdeda2d7b9 15-19,85-86,114,116,165-167,171-173
-plugins/autopilot/skills/autopilot/references/auto-fix-phase.md
-  aa74cecdeda2d7b9 4,18,75,78,82,84-105,112-119,121,123
+.autopilot/knowledge/decisions.md
+  aa74cecdeda2d7b9 3-10
+plugins/autopilot/skills/autopilot/references/anti-rationalization.md
+  aa74cecdeda2d7b9 47,51-52,55
+plugins/autopilot/.claude-plugin/plugin.json
+  aa74cecdeda2d7b9 3-4
+package.json
+  aa74cecdeda2d7b9 8,20
+CLAUDE.md
+  aa74cecdeda2d7b9 14
+plugins/autopilot/README.md
+  aa74cecdeda2d7b9 3-4
 .autopilot/knowledge/index.md
   aa74cecdeda2d7b9 15-16,63-64
 plugins/autopilot/scripts/lib.sh
   aa74cecdeda2d7b9 367-408
+plugins/autopilot/skills/autopilot/references/auto-fix-phase.md
+  aa74cecdeda2d7b9 4,18,75,78,82,84-105,112-119,121,123
+plugins/autopilot/skills/autopilot/references/contract-protocol.md
+  aa74cecdeda2d7b9 5,12
 .claude-plugin/marketplace.json
-  aa74cecdeda2d7b9 31-32
-CLAUDE.md
-  aa74cecdeda2d7b9 14
-package.json
-  aa74cecdeda2d7b9 8,20
-.autopilot/knowledge/decisions.md
-  aa74cecdeda2d7b9 3-10
+  aa74cecdeda2d7b9 31-32,59
+plugins/autopilot/skills/autopilot/SKILL.md
+  aa74cecdeda2d7b9 348,362
+.autopilot/knowledge/patterns.md
+  aa74cecdeda2d7b9 3-9
 ---
 {
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.2.8-ntes.9",
-  "base_commit_sha": "a906f6c8b4791efcac3fb37c9b7a276cb5470e2a",
+  "base_commit_sha": "819fab2052d1197b57d166036e99244bf7bf0344",
   "prompts": {
+    "16f965fc5f19d441": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4227ba42-fc5e-451f-9bc5-c8f97f86f8c5",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 36,
+      "total_deletions": 10,
+      "accepted_lines": 20,
+      "overriden_lines": 0
+    },
+    "2afbf010302192de": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "97dad07d-a238-430b-9ad3-0c0d1f430e30",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 6,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "38376d06a06dba8d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5ba362f2-730e-4c2b-9a53-23c7163dca74",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 511,
+      "total_deletions": 63,
+      "accepted_lines": 55,
+      "overriden_lines": 0
+    },
+    "3f2c50a6e17b4496": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4a30f798-12e8-4d2b-9411-c0e8d8fb9ed9",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 3,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    },
+    "694f0ffba59fcf1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "15aeb66f-639f-46ba-abe1-292d1b33498e",
+        "model": "glm-5.2"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 19,
+      "total_deletions": 2,
+      "accepted_lines": 111,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        ".autopilot/knowledge/domains/bash-shell-pitfalls.md": {
+          "additions": 6,
+          "accepted_lines": 6
+        },
+        ".autopilot/knowledge/decisions.md": {
+          "additions": 10,
+          "accepted_lines": 10
+        },
+        ".autopilot/knowledge/index.md": {
+          "additions": 3,
+          "deletions": 2,
+          "accepted_lines": 3
+        }
+      }
+    },
     "6f8175efdf272c68": {
       "agent_id": {
         "tool": "claude",
@@ -44,7 +122,7 @@ package.json
       "messages": [],
       "total_additions": 5,
       "total_deletions": 121,
-      "accepted_lines": 5,
+      "accepted_lines": 3,
       "overriden_lines": 0,
       "per_file_stats": {
         "HANDOFF-验证方案单点强化.md": {
@@ -56,6 +134,42 @@ package.json
         }
       }
     },
+    "971ed437f1354eb2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa080700-a311-4897-b18e-f378a0f462ab",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 18,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "claude.md": {
+          "accepted_lines": 12,
+          "overriden_lines": 1
+        },
+        "plugins/autopilot/skills/autopilot/skill.md": {
+          "accepted_lines": 12,
+          "overriden_lines": 7
+        }
+      }
+    },
+    "a941ce84fa1f8c6a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ef3d038d-1550-489d-a35d-e1dd75f94a01",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 30,
+      "total_deletions": 12,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
     "aa74cecdeda2d7b9": {
       "agent_id": {
         "tool": "claude",
@@ -64,20 +178,25 @@ package.json
       },
       "human_author": "赵桂雄",
       "messages": [],
-      "total_additions": 158,
-      "total_deletions": 50,
-      "accepted_lines": 157,
+      "total_additions": 165,
+      "total_deletions": 56,
+      "accepted_lines": 132,
       "overriden_lines": 0,
       "per_file_stats": {
-        "package.json": {
-          "additions": 2,
-          "deletions": 2,
-          "accepted_lines": 2
+        "plugins/autopilot/tests/acceptance/skill-shrinkage-invariants.acceptance.test.sh": {
+          "additions": 15,
+          "deletions": 25,
+          "accepted_lines": 15
         },
-        ".claude-plugin/marketplace.json": {
-          "additions": 2,
+        "plugins/autopilot/skills/autopilot/references/auto-fix-phase.md": {
+          "additions": 39,
+          "deletions": 7,
+          "accepted_lines": 39
+        },
+        "plugins/autopilot/README.md": {
+          "additions": 4,
           "deletions": 2,
-          "accepted_lines": 2
+          "accepted_lines": 3
         },
         "plugins/autopilot/skills/autopilot/SKILL.md": {
           "additions": 2,
@@ -89,58 +208,218 @@ package.json
           "deletions": 2,
           "accepted_lines": 2
         },
-        "plugins/autopilot/skills/autopilot/references/contract-protocol.md": {
-          "additions": 2,
-          "deletions": 1,
-          "accepted_lines": 2
-        },
         "CLAUDE.md": {
           "additions": 2,
           "deletions": 2,
           "accepted_lines": 1
         },
-        "plugins/autopilot/README.md": {
-          "additions": 2,
-          "accepted_lines": 2
-        },
-        ".autopilot/knowledge/decisions.md": {
-          "additions": 8,
-          "accepted_lines": 8
-        },
-        ".autopilot/knowledge/patterns.md": {
-          "additions": 7,
-          "accepted_lines": 7
-        },
-        "plugins/autopilot/skills/autopilot/references/auto-fix-phase.md": {
-          "additions": 39,
-          "deletions": 7,
-          "accepted_lines": 39
-        },
-        ".autopilot/knowledge/index.md": {
-          "additions": 4,
+        "plugins/autopilot/scripts/stop-hook.sh": {
+          "additions": 25,
           "deletions": 2,
-          "accepted_lines": 4
-        },
-        "plugins/autopilot/tests/acceptance/skill-shrinkage-invariants.acceptance.test.sh": {
-          "additions": 15,
-          "deletions": 25,
-          "accepted_lines": 15
-        },
-        "plugins/autopilot/scripts/lib.sh": {
-          "additions": 42,
-          "accepted_lines": 42
+          "accepted_lines": 25
         },
         "plugins/autopilot/skills/autopilot/references/anti-rationalization.md": {
           "additions": 4,
           "deletions": 3,
           "accepted_lines": 4
         },
-        "plugins/autopilot/scripts/stop-hook.sh": {
-          "additions": 25,
+        ".autopilot/knowledge/index.md": {
+          "additions": 4,
           "deletions": 2,
-          "accepted_lines": 25
+          "accepted_lines": 4
+        },
+        ".claude-plugin/marketplace.json": {
+          "additions": 7,
+          "deletions": 6,
+          "accepted_lines": 6
+        },
+        ".autopilot/knowledge/decisions.md": {
+          "additions": 8,
+          "accepted_lines": 8
+        },
+        "plugins/autopilot/skills/autopilot/references/contract-protocol.md": {
+          "additions": 2,
+          "deletions": 1,
+          "accepted_lines": 2
+        },
+        "package.json": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 2
+        },
+        ".autopilot/knowledge/patterns.md": {
+          "additions": 7,
+          "accepted_lines": 7
+        },
+        "plugins/autopilot/scripts/lib.sh": {
+          "additions": 42,
+          "accepted_lines": 42
         }
       }
+    },
+    "b37854591f1bacaf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "35140631-e6fa-4328-a713-ae0c18c7e5e5",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 2,
+      "accepted_lines": 15,
+      "overriden_lines": 0
+    },
+    "bad92d70ff04b594": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fec15d39-75ce-4fc1-bab8-92b0cf425636",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 1334,
+      "total_deletions": 614,
+      "accepted_lines": 326,
+      "overriden_lines": 0
+    },
+    "c315f445daa27719": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "59c4affa-8b5c-45ad-81f1-b8548a291e7b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 3,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "cd15883710e47ffb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "97753dcc-577c-49c0-8f78-1be513c82274",
+        "model": "glm-5.2"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 10,
+      "total_deletions": 0,
+      "accepted_lines": 197,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        ".autopilot/knowledge/index.md": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        ".autopilot/knowledge/domains/skill-authoring.md": {
+          "additions": 9,
+          "accepted_lines": 9
+        }
+      }
+    },
+    "d0d3aa1396628e02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "25fa255b-86ef-4693-9216-2f9cb772df28",
+        "model": "glm-5.2"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 11,
+      "total_deletions": 1,
+      "accepted_lines": 13,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        ".autopilot/knowledge/index.md": {
+          "additions": 2,
+          "deletions": 1,
+          "accepted_lines": 2
+        },
+        ".autopilot/knowledge/decisions.md": {
+          "additions": 9,
+          "accepted_lines": 9
+        }
+      }
+    },
+    "dbbbd47493e9e999": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "278a4453-fcea-435a-835f-b8627d647661",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "e5fb4360e35ab949": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "44ccab8a-6ecb-4288-85bb-7952c6efec6e",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "e6184f41be6fab86": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a6b16cb4-591b-4378-b0e9-4031ae801022",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄 <zhaoguixiong@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "faab370c5162d9f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d36a02a7-da3f-4217-95b1-149f789f5675",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "fbae0a0cea84a364": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "20d9620e-5ad0-4fcc-a415-2e44afad932d",
+        "model": "glm-5.1"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "fdca0da3e4bd4443": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f889855-7f67-4edd-8cbc-f66825c0375d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
     }
   }
 }
