@@ -633,6 +633,8 @@ fi
 # stop-hook 的 create_brief_state_file / create_project_qa_state_file 会写 true，
 # 单任务模式默认 false，是 auto-chain 流的充分指标）。
 # v3.68.0 分级短路：追加达标条件 e2e_status=verified ∧ leftover_critical=0。
+# v3.69.0 执行面闭环：达标条件扩为四 ∧（+ unexecuted_core_paths=0），治决策卡执行面清单
+#   点名了未执行核心链路（leftover_critical「普通遗留不计入」不点名不算账）却自动 merge。
 #   - 字段有效但未达标 → 不自动推进、**保持 gate**（本通道清 gate 后本应落 §9 merge 注入
 #     唤醒 commit-agent，分级不满足路径绝不能清 gate），设 _GRADE_MSG 落 §6 既有放行链，
 #     systemMessage 携带「分级未达标」可见化（放行交回用户，非 block，依据 [2026-05-31]）。
@@ -646,6 +648,9 @@ if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]] && \
     # trim 前后空白（load_state 尾随空格 quirk 容错）后机械校验有效性
     _grade_leftover="${_grade_leftover#"${_grade_leftover%%[![:space:]]*}"}"
     _grade_leftover="${_grade_leftover%"${_grade_leftover##*[![:space:]]}"}"
+    _grade_unexec="${unexecuted_core_paths:-}"
+    _grade_unexec="${_grade_unexec#"${_grade_unexec%%[![:space:]]*}"}"
+    _grade_unexec="${_grade_unexec%"${_grade_unexec##*[![:space:]]}"}"
     _grade_fields_valid=1
     case "${_grade_e2e}" in
         verified|partial|unverified) : ;;
@@ -654,8 +659,11 @@ if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]] && \
     case "${_grade_leftover}" in
         ''|*[!0-9]*) _grade_fields_valid=0 ;;
     esac
+    case "${_grade_unexec}" in
+        ''|*[!0-9]*) _grade_fields_valid=0 ;;
+    esac
     if [[ "${_grade_fields_valid}" -eq 1 ]]; then
-        if [[ "${_grade_e2e}" == "verified" ]] && [[ "${_grade_leftover}" -eq 0 ]]; then
+        if [[ "${_grade_e2e}" == "verified" ]] && [[ "${_grade_leftover}" -eq 0 ]] && [[ "${_grade_unexec}" -eq 0 ]]; then
             set_field "gate" '""'
             set_field "phase" '"merge"'
             # 同 run 读回链（C9）：set_field 后重新 eval load_state，§5.6/§9 的
@@ -666,7 +674,7 @@ if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]] && \
             echo "🔗 auto-approve: review-accept → merge (auto-chain subtask)" >&2
         else
             # 字段有效但未达标 → 保持 gate 落 §6 停等，systemMessage 可见化（§6 输出）
-            _GRADE_MSG="分级未达标：e2e_status=${_grade_e2e}, leftover_critical=${_grade_leftover}（达标条件 = e2e_status=verified ∧ leftover_critical=0）。auto-approve 不自动推进，gate=review-accept 保持停等，请查看验收决策卡后决策。"
+            _GRADE_MSG="分级未达标：e2e_status=${_grade_e2e}, leftover_critical=${_grade_leftover}, unexecuted_core_paths=${_grade_unexec}（达标条件 = e2e_status=verified ∧ leftover_critical=0 ∧ unexecuted_core_paths=0）。auto-approve 不自动推进，gate=review-accept 保持停等，请查看验收决策卡后决策。"
         fi
     fi
 fi
@@ -795,20 +803,25 @@ if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]]; then
 fi
 
 # ── 5.7b 分级判定字段校验（照 §5.6 block 模式；位于 §5.7 后保证其前置守卫先命中自己的信号） ──
-# 治 AI 漏写/越界写分级判定字段：e2e_status / leftover_critical 由编排器在 QA 结果判定轮
-# 与验收决策卡同轮写入（语义见 references/state-file-guide.md），是 §5.5 分级自动推进的
-# 唯一判定依据。gate=review-accept ∧ phase=qa ∧ auto_approve=true 时（分级判定唯一消费方）
-# 机械校验，缺失/越界 → 清 gate + block 回 qa 补判（不耗 retry_count）。
+# 治 AI 漏写/越界写分级判定字段：e2e_status / leftover_critical / unexecuted_core_paths 由
+# 编排器在 QA 结果判定轮与验收决策卡同轮写入（语义见 references/state-file-guide.md），
+# 是 §5.5 分级自动推进的唯一判定依据。gate=review-accept ∧ phase=qa ∧ auto_approve=true 时
+# （分级判定唯一消费方）机械校验，缺失/越界 → 清 gate + block 回 qa 补判（不耗 retry_count）。
 #   - fail-safe 宁卡不放：字段缺失 ≠ 豁免（对齐 §5.6 tier5_status 先例与 [2026-05-30] 枚举容错）
 #   - 单 JSON 铁律：本段 block 的 systemMessage 携带「分级未达标」文案；§5.5 对字段缺失/非法
 #     不发独立 systemMessage，杜绝 double JSON
 #   - auto_approve=false 不触发（字段不强制，向后兼容旧 state）
+#   - v3.69.0 校验顺序硬约束：unexecuted_core_paths 检查**追加在 e2e_status/leftover_critical
+#     之后**，block reason 取首个坏字段（既有 tiered-approve TA-4.P1c 断言 reason 含 e2e_status 依赖此序）
 if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]] && \
    [[ "$(normalize_enum_value "${auto_approve:-}")" == "true" ]]; then
     _ac_e2e=$(normalize_enum_value "${e2e_status:-}")
     _ac_leftover="${leftover_critical:-}"
     _ac_leftover="${_ac_leftover#"${_ac_leftover%%[![:space:]]*}"}"
     _ac_leftover="${_ac_leftover%"${_ac_leftover##*[![:space:]]}"}"
+    _ac_unexec="${unexecuted_core_paths:-}"
+    _ac_unexec="${_ac_unexec#"${_ac_unexec%%[![:space:]]*}"}"
+    _ac_unexec="${_ac_unexec%"${_ac_unexec##*[![:space:]]}"}"
     _ac_bad_field=""
     case "${_ac_e2e}" in
         verified|partial|unverified) : ;;
@@ -819,8 +832,13 @@ if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]] && \
             ''|*[!0-9]*) _ac_bad_field="leftover_critical" ;;
         esac
     fi
+    if [[ -z "${_ac_bad_field}" ]]; then
+        case "${_ac_unexec}" in
+            ''|*[!0-9]*) _ac_bad_field="unexecuted_core_paths" ;;
+        esac
+    fi
     if [[ -n "${_ac_bad_field}" ]]; then
-        _ac_reason="分级判定字段缺失或非法（${_ac_bad_field}）[AC-FIELD-INVALID]。合法值：e2e_status ∈ {verified, partial, unverified}（canonical 小写）；leftover_critical = 非负整数（遗留问题中用户可感知/影响核心链路的条数）。请对照 QA 报告与验收决策卡（### 端到端真实验证结论 / ### 遗留问题）补判两个字段后重设 gate=review-accept。此 block 不耗 max_retries（非 auto-fix 路径）。"
+        _ac_reason="分级判定字段缺失或非法（${_ac_bad_field}）[AC-FIELD-INVALID]。合法值：e2e_status ∈ {verified, partial, unverified}（canonical 小写）；leftover_critical = 非负整数（遗留问题中用户可感知/影响核心链路的条数）；unexecuted_core_paths = 非负整数（执行面清单中未执行核心链路的条数）。请对照 QA 报告与验收决策卡（### 端到端真实验证结论 / ### 遗留问题）补判三个字段后重设 gate=review-accept。此 block 不耗 max_retries（非 auto-fix 路径）。"
         set_field "gate" '""'
         GATE=""
         jq -n --arg reason "${_ac_reason}" \

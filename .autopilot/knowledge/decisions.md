@@ -1,5 +1,13 @@
 # Architecture Decisions（热区：近 30 天活跃决策）
 
+### [2026-09-09] 真实验收执行面闭环——执行面清单 + unexecuted_core_paths 第三字段 + real-process 强制（v3.69.0）
+<!-- tags: autopilot, execution-surface, unexecuted-core-paths, real-process, acceptance-card, tunnel-smoke, tiered-approve, reviewer-independence, scenario-generator, v3.69.0 -->
+**Background**: v3.68.0 dogfood 实证 tunnel 详审链路从未真实执行（纯文档锚点交付）却 verified+0 自动 merge。根因一般化：**验证边界 = 谓词集边界，无任何一层审计谓词集覆盖面**——场景生成器无 real-process 强制规则、qa-reviewer 充分性反查枚举源是 git diff 风险面（文档型交付物声明的可执行工作流不可见）、决策卡诚实点名未实证但 leftover_critical「普通遗留不计入」让点名不算账（信息→决策传动轴断裂）。qa-reviewer 独立性失效：复核的是「判定与证据一致」而非「范围圈定是否合理」，共享词汇让独立审查 blessing 同一窄圈定。
+**Choice**: 四层闭环接同一执行面闭集——①生成层：scenario-generator 强制规则（目标含 CLI/API/服务/部署/外部系统语义交付物 → 至少 1 条 real-process 谓词，禁全 Config 锚点）；②收口层：决策卡端到端区块升级执行面清单（`- 链路 ｜ 已执行/未执行 ｜ 证据`，默认全核心+降级行内留理由，纯文档「无可执行链路」豁免）+ frontmatter 第三字段 `unexecuted_core_paths`（与 leftover_critical 完全同构）+ verified 硬判据（清单有未执行核心 → 最多 partial）；③消费层：§5.5 分级四∧ / §5.7b 三字段校验（第三字段追加在后保 reason 首坏字段）/ qa-reviewer 执行面一致性反查升 **Critical**（清单漏列 Important、三方矛盾 Critical）；④tunnel 首次交付冒烟制度化（deploy → drops results → rm，artifact 留痕）。
+**Alternatives rejected**: AI 自由圈定核心——共享词汇 independence 失效，本次 tunnel 即被圈出；机械字面规则表（CLI/API 字眼 grep）——规则列不全新形态漏网；零新字段纯语义——v3.42 前语义自律失效历史教训，未执行恰是 AI 最有动机模糊化的信号。
+**Lesson**: ①**验证边界 = 执行面闭集非谓词集**——真实验收要审计「该验的都验了吗」而非「验的都过了吗」；②**按需 ≠ 免验证——首次交付的可执行链路必须冒烟一次**，否则『能用』只是文档声明；③**reviewer 独立性须复核范围圈定而非仅证据一致性**；④real-process 不可伪造自证：tunnel 真跑当场抓出红队自己样例 md 的 radio id DSL 违规；⑤plan-reviewer 自指悖论拦截有效——治「跳过真实验收」的任务第 1 轮审查就因自己缺 tunnel 真跑谓词 FAIL（brainstorm 决策 10 遗漏被当场击穿）。
+**Evidence**: execution-surface 74/74（16 场景含 tunnel 真跑，artifact exec-surface-16*.out 真实 URL+body）+ run-all 47/47；§5.5 四∧自动推进实证（第三字段首跑即 dogfood）；qa-reviewer 执行面一致性反查首跑独立判定与编排器一致。关联 [[2026-09-09 分级自动 approve]]（直接演进）。
+
 ### [2026-09-09] 分级自动 approve——机器可读分级字段 + stop-hook 机械分级 + 验收决策卡（消费视角收口，v3.68.0）
 <!-- tags: autopilot, approve, tiered-approve, e2e-status, leftover-critical, acceptance-card, deterministic-signal, stop-hook, §5.5, §5.7b, single-json, dogfood, user-experience, tunnel-review, v3.68.0 -->
 **Background**: martin/little-bee 实证 approve 环节信息偏向过程审计（变更日志单条 300-500 字 / tree_sig 哈希 / Tier 全表），三类决策关键信息缺失降格：端到端真实验证结论（build 跳过埋表格格、推送未实证埋 250 字段落第 3 项、首跑推迟到 approve 后无顶格声明）、遗留（四种叫法散落一律「不阻断」）、风险（模板空壳零行数据）。用户已常态预授权 auto_approve，真痛点 = 信息质量 + 分级边界。
@@ -212,5 +220,14 @@
 **Alternatives rejected**: (1) 客观 bash 信号清单——命脉项目特异，硬编码信号难通用；(2) liveness vs readiness 单点——覆盖窄，dev-prod 异构/build 固化不覆盖；(3) 多要素分别打分——复杂违反最小机制，要素重叠；(4) 硬质量门 stop-hook——范式变更拖慢每次。
 **Lesson**: ① doctor 维度扩展先区分 liveness vs readiness——既有维度评工程健康，命脉 readiness 是正交新轴（治「高分假绿」结构性盲区）。② 纯 AI 语义维符合 Dim 13 哲学：判据是「判断对象本质有无客观存在性可下沉」，命脉穿透审计全语义，故零 bash（非偏离而是恰好全语义）。③ High freedom 写法（认知框架非检查清单）对齐 skill best practice 开放田野——AI 据 reference 授权「不限于此」自主扩展，但可能自创 CP 编号（如 CP-04），是设计授权内的自由发挥（reference 未明示可否自创编号，观察点）。
 **Evidence**: commit bf50346 v3.59.0。权重 14 维 awk sum=1.000000（6 维匀权：Dim1/2/3/4/5/10 各降，Dim14=0.07）；红队 17 断言全 PASS；claude -p 在 little-bee 真实工程验证 Dim 14 识别媒体命脉 + 逐层判定 + 判 pass（因 next.config build 期 fail-fast 断言）+ 引用 CP-02/CP-04 锚点（CP-04 为 AI 自主扩展，reference 实际仅 CP-01/02/03）（核对锚点：2026-07-23 v3.59.0 SKILL.md :398/:432 + references/critical-path-readiness-principles.md :18/:30/:42）。关联 [[2026-07-19]] [[2026-05-05]]。
+
+
+### [2026-09-09] v3.69.0 knowledge 扇出五节化——红队知识绝缘断层经 context.md 既有通道扇出（零新机制）+ dogfood 自指三教训
+<!-- tags: autopilot, knowledge-fanout, context-md, red-team, artifact-self-describing, pred-artifact-dup, worktree-env, skill-shrinkage, net-zero-lines, ai-first, dogfood, self-referential, v3.69.0 -->
+**Background**: 用户实证：红队拿不到历史教训导致测试用例重蹈历史踩坑。链路断层：知识止步于 design 文档引用 + plan-reviewer 维度 9 反查，红队输入只有设计文档+谓词+context.md（四节技术信息），implement 环节知识绝缘。
+**Choice**: context.md 扩第五节 `## 相关历史知识`（写侧 = design 步骤 1 与探针结论同轮写，≤3 条一句话摘要，无则 N/A），红队 prompt 行尾追加读侧义务（非 N/A 时用例设计必须显式避开所列历史模式，条件+动作共行绑定）。蓝队/qa-reviewer 零 prompt 改动（context.md 是既有输入）。节名与 knowledge-engineering.md 同名（一概念一名）；同源契约（context.md 为设计文档节的同轮转抄，以设计文档为权威）；>180 天时效核对由步骤 0 既有纪律承担不重复。SKILL.md/red-team/blue-team 三文件单行内替换净 0 行；版本 3.67.0→3.69.0（v3.68.0 已被并行 session 占用，撞号规避）。
+**Alternatives rejected**: (1) 红/蓝/QA 各自扫库——三次重复加载 + 子 agent 绕过时效核对 + 蓝队诱导越界（回归 v3.46.0 边界）+ prompt 膨胀；(2) 下沉 bash 执法——知识消费是语义判断，机械活下沉不适用。
+**Lesson**: ① 知识绝缘的治法是「复用既有扇出通道」而非「新增加载点」——context.md 本来就是蓝/红/qa-reviewer 必读件，加一节 = 扇出零成本（同构 [2026-05-08] 复用 flag 优于新增）。② Tier 1.5 artifact 必须自描述（pred+cmd+真实输出+verdict），严禁 cp 复制/裸数字——本次 QA 编排器自己 cp 复制 s4-p2 被自家 PRED-ARTIFACT-DUP 抓（MD5 撞车）；底事实真 ≠ 证据链真。③ worktree 是 acceptance 测试的隐藏执行环境——9 个测试 `-d .git` 守卫恒假环境性假 FAIL（详见 domains/bash-shell-pitfalls.md [2026-09-09]），主仓库永远测不出。④ 自指闭环：本任务给红队接知识，QA 抓编排器 artifact 冒充靠的正是知识库条目（[2026-07-01] + [2026-09-08]）——知识消费链路在自己身上验证有效；bash 域 [2026-06-24] 全角条目虽入库仍复现（红队 sub-agent 不加载 knowledge），恰证本机制必要性。⑤ 红队铁律例外两批 9 文件环境性修复均 E1-E3 自决 + 留痕，零用户打断（v3.67.0 双层决策树按设计工作）。
+**Evidence**: commit v3.69.0（本仓）。plan-review 两轮（第 1 轮 BLOCKER 版本同步漏 README）；run-all 46/46 rc=0；红队 10 断言 HEAD 基线红灯；13 谓词 artifact MD5 重复 0；qa-reviewer 独立复跑全部命令。核对锚点：v3.69.0 SKILL.md:79 五节契约行 / red-team-prompt.md:45 消费义务行 / knowledge-context-fanout.acceptance.test.sh 10 断言。关联 [[2026-09-08]] [[2026-07-01]] [[2026-05-08]]。
 
 > 历史归档（< 2026-05-17）按主题迁移至 domains/，详见 index.md

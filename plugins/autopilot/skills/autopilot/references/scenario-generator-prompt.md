@@ -40,6 +40,7 @@
      - `observe:` 观测什么 —— 按技术栈选：GUI→可达性树节点属性 / CLI→exit code、stdout / API→响应字段 / 文件→stat。
      - `assert:` DbC 谓词（`== / >= / contains / exists`，禁"约/大概"等自然语言）。
      - `channel:` `det-machine`（数字/exit/文件/AX 属性，零主观）｜ `real-process`（真子进程或真 API 一次冒烟）｜ `visual-residue`（仅 AX 表达不了的纯视觉，写成二值清单项）。
+     - **real-process 强制规则**：目标/设计文档含 **CLI / API / 服务 / 部署 / 外部系统**语义的交付物（如「提供 xxx 命令」「暴露 xxx 接口」「部署后可访问」「对接 xxx 服务」），对应场景**至少 1 条** `real-process` 谓词——真跑一次该可执行链路并留 artifact，**禁止全 Config 锚点**（纯文档说明类交付物——只改说明文字、无可执行语义——才允许全 Config）。治「文档声明了可执行工作流却从未真实执行」的验收边界盲区：验证边界 = 执行面闭集，声明了就必须冒烟。
      - `negate:` 可选，用于"不执行 / 状态不变"类反向谓词。
      - `driver:` 驱动类型与目标，格式 `<type>:<target>`。type 枚举：`curl`（HTTP/API）/ `playwright`（浏览器/AX）/ `node-script`（纯 Node 逻辑，禁网络/外部依赖）/ `fs-grep`（文件内容匹配）/ `freshness`（产物新鲜度）。**反向约束**：`node-script` 不得用于 `curl|fetch|playwright|overmind|pylon|mysql` 类观测（须改用对应真实驱动类型），stop-hook §5.7 机械校验。
      - `artifact:` 真实驱动输出的确定性路径，格式 `/tmp/autopilot-artifacts/<pred-id>.out`。QA 求值时编排器写入，stop-hook §5.7 校验存在性（文件存在且非空），不依赖 ## QA 报告。

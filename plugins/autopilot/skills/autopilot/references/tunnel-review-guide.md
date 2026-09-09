@@ -75,3 +75,18 @@ tunnel drops results autopilot-review-<slug>
 ## 降级路径
 
 tunnel 不可用 / 部署失败 / `tunnel drops results` 收不到结论 → 回退 `AskUserQuestion`，复用三选项字面（与 SKILL.md 结果判定段收口点名问一致）：**补验证后合入 / 带遗留合入 / 回炉修复**。不因部署失败阻塞任务。
+
+## 首次交付冒烟
+
+成文原则：**首次交付的可执行链路必须冒烟一次**——按需 ≠ 免验证，tunnel 能力（或任何本次任务首次交付的 CLI/API/服务链路）不能只靠文档锚点就算交付。
+
+交付 tunnel 能力（或 tunnel 链路本身有改动）的任务，QA 收口时用一份样例 review md 真跑三步并留 artifact 留痕：
+
+```bash
+tunnel deploy <样例 review.md 路径> --name autopilot-smoke-<slug>   # 第 1 步：真部署一次
+tunnel drops results autopilot-smoke-<slug>                         # 第 2 步：确认结论可读（返回 rc=0 且输出非空）
+tunnel rm autopilot-smoke-<slug>                                    # 第 3 步：清理样例页
+```
+
+- artifact 留痕：三步各写一条「证据一行链」记录（`tunnel deploy ... ｜ 页面可访问 ｜ exit=0` 等），不满足 `### 端到端真实验证结论` 执行面清单「已执行」判定的证据要求则该链路记「未执行」
+- 三步任一失败且非 tunnel 服务不可用 → 该链路不得标已执行，`e2e_status` 据实降级（分级语义见 `references/state-file-guide.md`）；tunnel 服务本身不可用 → 走上方降级路径，不阻塞任务

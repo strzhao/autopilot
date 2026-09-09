@@ -8,11 +8,13 @@
 - [qa-testing](domains/qa-testing.md) — QA 判定 / red-team / mutation / contract / 量化门禁（15 entry）
 - [worktree-git](domains/worktree-git.md) — worktree 检测 / symlink / git porcelain / 文件管理（7 entry）
 - [knowledge-token-arch](domains/knowledge-token-arch.md) — progressive disclosure / token / sub-agent / 架构 / doctor（11 entry）
-- [bash-shell-pitfalls](domains/bash-shell-pitfalls.md) — bash 陷阱 / exit-code / trap-err / set-u / macOS / awk-单词边界（5 entry）
+- [bash-shell-pitfalls](domains/bash-shell-pitfalls.md) — bash 陷阱 / exit-code / trap-err / set-u / macOS / awk-单词边界 / worktree-gitdir（6 entry）
 - [2026-07-19] 减法/重构任务复刻 [2026-05-25]——claude-p 独立验证关键 step + 既有断言语义化适配减法（净非增/after>=1/net 章节）+ 补 scene 5 双重 grep 守护（v3.58.1） | tags: autopilot, skill, shrink, refactor, claude-p, independent-verification, double-grep, assertion-adaptation, predicate-coverage, scene-5, borderline-rollback, dogfood, v3.58.1 | → domains/skill-authoring.md
 - [2026-07-08] skill md 减行硬约束下新守卫全部下沉 bash，skill md 删散文净减行（v3.52.0 §5.7 谓词守卫） | tags: autopilot, skill, shrink-only, enforce-bash, stop-hook, predicate-guard, mock-cheating, trust-chain, v3.52.0 | → domains/skill-authoring.md
 
-## Decisions（44）
+## Decisions（46）
+- [2026-09-09] 真实验收执行面闭环——执行面清单 + unexecuted_core_paths 第三字段 + real-process 强制 + tunnel 首次交付冒烟（验证边界=执行面闭集非谓词集；按需≠免验证；reviewer 独立性须复核范围圈定） | tags: autopilot, execution-surface, unexecuted-core-paths, real-process, acceptance-card, tunnel-smoke, tiered-approve, reviewer-independence, v3.69.0 | → decisions.md
+- [2026-09-09] v3.69.0 knowledge 扇出五节化——红队知识绝缘经 context.md 既有通道扇出（零新机制）+ dogfood 自指三教训（artifact 自描述 / worktree 环境 / 知识自指闭环） | tags: autopilot, knowledge-fanout, context-md, red-team, artifact-self-describing, pred-artifact-dup, worktree-env, skill-shrinkage, net-zero-lines, ai-first, dogfood, v3.69.0 | → decisions.md
 - [2026-09-09] 分级自动 approve——机器可读分级字段 + stop-hook 机械分级 + 验收决策卡（消费视角收口 + §5.5/§5.7b 双段分工 + tunnel 按需详审；dogfood 自指闭环实证） | tags: autopilot, approve, tiered-approve, e2e-status, leftover-critical, acceptance-card, deterministic-signal, stop-hook, single-json, dogfood, user-experience, v3.68.0 | → decisions.md
 - [2026-09-08] 红队铁律仲裁点迁移——v3.53.0 人审升级为 AI 证据门槛自决 + 事后留痕审计（双层决策树 E1-E3/U1-U4 + 逐字一致锚点 + C6b hook backstop index 基线） | tags: autopilot, red-team, iron-law, evidence-gate, self-decision, audit-trail, hook-backstop, escape-hatch-evolution, decision-tree, verbatim-anchor, v3.66.0 | → decisions.md
 - [2026-08-09] 独立 brainstorm 产物主流程发现机制——编排器语义扫描复用（智力活留 AI 不塞 bash，对齐 [2026-07-08]；治三断点 slug 双轨/active.ptr/无条件重跑） | tags: autopilot, brainstorm, independent-skill, reuse, semantic-scan, high-freedom, mechanical-vs-intellectual, skill-shrinkage, claude-p, v3.61.0 | → decisions.md

@@ -55,6 +55,7 @@ next_task: ""
 auto_approve: $auto_approve
 e2e_status: "verified"
 leftover_critical: "0"
+unexecuted_core_paths: "0"
 tier5_status: "na"
 knowledge_extracted: ""
 task_dir: "$dir/.autopilot/runtime/requirements/test-task"

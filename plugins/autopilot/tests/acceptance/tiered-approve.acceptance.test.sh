@@ -308,7 +308,7 @@ echo "════════ 行为场景 1-6 / 11：fixture 真跑 stop-hook 
 # ─────────────────────────────────────────────────────────────────────────────
 echo "--- 场景 1：verified + leftover=0 → 分级放行 ---"
 
-d1="$(build_fixture $'e2e_status: "verified"\nleftover_critical: "0"')"
+d1="$(build_fixture $'e2e_status: "verified"\nleftover_critical: "0"\nunexecuted_core_paths: "0"')"
 out1="$(run_hook "$d1")"
 sf1="$(state_file "$d1")"
 save_art "tiered-approve-1P1.out" "$out1"
@@ -345,8 +345,8 @@ assert_in "TA-1.P3" "$out1" "systemMessage"
 # ─────────────────────────────────────────────────────────────────────────────
 echo "--- 场景 2：unverified / partial → 不放行 ---"
 
-d2a="$(build_fixture $'e2e_status: "unverified"\nleftover_critical: "0"')"
-d2b="$(build_fixture $'e2e_status: "partial"\nleftover_critical: "0"')"
+d2a="$(build_fixture $'e2e_status: "unverified"\nleftover_critical: "0"\nunexecuted_core_paths: "0"')"
+d2b="$(build_fixture $'e2e_status: "partial"\nleftover_critical: "0"\nunexecuted_core_paths: "0"')"
 r2a_before="$(get_state_field "$d2a" retry_count)"
 r2b_before="$(get_state_field "$d2b" retry_count)"
 out2a="$(run_hook "$d2a")"
@@ -369,7 +369,7 @@ assert_retry_unchanged "TA-2.P4b" "$d2b" "$r2b_before"
 # ─────────────────────────────────────────────────────────────────────────────
 echo "--- 场景 3：verified + leftover=2 → 不放行 ---"
 
-d3="$(build_fixture $'e2e_status: "verified"\nleftover_critical: "2"')"
+d3="$(build_fixture $'e2e_status: "verified"\nleftover_critical: "2"\nunexecuted_core_paths: "0"')"
 r3_before="$(get_state_field "$d3" retry_count)"
 out3="$(run_hook "$d3")"
 sf3="$(state_file "$d3")"
