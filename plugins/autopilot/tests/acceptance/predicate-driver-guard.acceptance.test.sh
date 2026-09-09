@@ -83,7 +83,7 @@ _log_fail() {
 [[ -f "$SHRINKAGE_TEST" ]] || { echo "[FAIL] R_PRED_GUARD: shrinkage 测试不存在: $SHRINKAGE_TEST" >&2; exit 1; }
 
 # 仓库根可识别为 git 仓库（ACC-GUARD-40 子测试依赖 git diff）
-[[ -d "$REPO_ROOT/.git" ]] || {
+[[ -d "$REPO_ROOT/.git" || -f "$REPO_ROOT/.git" ]] || {
     echo "[FAIL] R_PRED_GUARD: REPO_ROOT 非 git 仓库: $REPO_ROOT" >&2
     exit 1
 }

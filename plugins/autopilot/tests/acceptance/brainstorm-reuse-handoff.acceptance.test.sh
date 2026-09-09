@@ -53,7 +53,7 @@ fail() {
 }
 
 # ── 前置：仓库根可识别为 git 仓库 ─────────────────────────────────────────────
-[[ -d "$REPO_ROOT/.git" ]] || fail "REPO_ROOT 非 git 仓库: ${REPO_ROOT}（无法 git diff）"
+[[ -d "$REPO_ROOT/.git" || -f "$REPO_ROOT/.git" ]] || fail "REPO_ROOT 非 git 仓库: ${REPO_ROOT}（无法 git diff）"
 
 # ── 前置：关键文件存在性检查 ──────────────────────────────────────────────────
 [[ -f "$SKILL_FILE" ]] || fail "SKILL.md 不存在: $SKILL_FILE"
