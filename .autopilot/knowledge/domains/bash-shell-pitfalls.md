@@ -38,3 +38,9 @@
 **Lesson**: worktree 环境兼容判据：`.git` 存在性检查用 `-d || -f` 双态（`[[ -d "$R/.git" || -f "$R/.git" ]]`），或改用 `git rev-parse --is-inside-work-tree`（lib.sh tree_sig 同款，语义最准）。判据：任何会被 worktree 执行的脚本，凡以 `.git` 目录存在性为前置的守卫都是潜在环境性假 FAIL。修复后必须验证「守卫放过 + 后续断言仍真」双条件，防借机放宽。审计入口：`grep -rn 'REPO_ROOT/.git' tests/`。
 **Evidence**: v3.69.0 QA：skill-shrinkage-invariants:66 等 9 文件修复（每文件 1-2 行，零断言语义变化，qa-reviewer 逐一核 diff）；`ls -la .git` 实测 87 字节常规文件；HEAD 基线同坏（E1 证据）。关联 [[2026-06-24]] [[2026-05-07]]。
 
+
+### [2026-09-09] macOS 三连陷阱：`wc -c <` 前导空格 / jq `-Rs` slurp 单字符串 / BSD grep 二进制计数空输出
+<!-- tags: bash, macos, bsd, wc, leading-space, jq, raw-slurp, fromjson, grep-binary, -a-flag, stop-hook, jsonl -->
+**Scenario**: v3.70.1 修 stop-hook pending 检测时三处同时踩中：① `file_size=$(wc -c < f)` 后正则 `^[0-9]+$` 恒假——BSD wc 的 stdin 模式输出带前导空格（实测 `" 6874127"`），导致「按文件大小条件化」的逻辑在生产从未执行；② jq `-R -s` 组合把**整个输入 slurp 成单个字符串**而非行数组（`-s` 对 `-R` 的语义是 whole-input one string），`map(fromjson?)` 直接作用在字符串上失败、jq 静默返回空集（fixture 全灭）；③ fail-safe `grep -c` 对含 NUL 的 tail 输出返回**空**而非 0（BSD grep 二进制判定抑制计数），归一化防御虽兜住但信号丢失。
+**Lesson**: (1) macOS 下数值化命令输出先 `tr -d '[:space:]'` 再正则/数值比较——BSD wc（stdin 模式）与 GNU 的空白行为静默不同，且失败形态是「条件恒假」而非报错，最难察觉；(2) jq 逐行容错解析 JSONL 的唯一正确姿势：`jq -Rs 'split("\n") | map(fromjson?) | ...'`——-Rs 拿到全文字符串后手动 split，fromjson? 把坏行跳过而非整个查询失败（比 `-s` 严格解析强：单条撕裂行不再拖垮精确路径）；(3) grep 处理可能含 NUL 的输入一律加 `-a`。
+**Evidence**: 真实 6.9MB transcript 复现三者：`wc -c <` 输出 " 6874127"；`jq -Rs 'map(fromjson?)'` 静默全灭（红队套件 5 FAIL）→ 加 split("\n") 后 7/7；`grep -c` 空输出 vs `grep -ac` 0。核对锚点：2026-09-09 v3.70.1 stop-hook.sh has_pending_subagents。
