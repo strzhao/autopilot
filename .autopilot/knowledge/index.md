@@ -64,7 +64,10 @@
 - [2026-03-26] doctor Dim 1 测试金字塔分层评估优于文件计数 | tags: autopilot, doctor, testing, test-pyramid, scoring | → domains/knowledge-token-arch.md
 - [2026-03-21] 知识工程采用三层 Progressive Disclosure 而非单层扩展 | tags: knowledge, architecture, progressive-disclosure | → domains/knowledge-token-arch.md
 
-## Patterns（60）
+## Patterns（62）
+- [2026-09-10] headless 机制上线（v3.71.0）——设计期 plan-reviewer 沙箱实测谓词杀伤力（零修复全 PASS 的 contains 污染锚 + 正确实现必假失败的引号格式锚）+ fixture 前缀精确性（sess- vs sess_ 一字之差假红）+ flag-asymmetry 全边矩阵 | tags: autopilot, headless, flag-asymmetry, mutation-killing, predicate-design, plan-reviewer, sandbox-probe, fixture-precision, v3.71.0 | → patterns.md
+- [2026-09-10] bash 接受 CJK 函数名但 ShellCheck 拒之（SC1036）——lint 门禁在 bash -n 之外；函数名 ASCII、谓词 id 进描述、directive 行只留代码 | tags: bash, shellcheck, cjk, function-name, sc1036, lint-gate, macos, acceptance-test | → domains/bash-shell-pitfalls.md
+- [2026-09-10] autopilot headless（zcode runtime）标准用法——模式自判偏 fast（不加 --fast ≠ standard）+ 预授权话术确定性跳审批 + env 剥离红线（session 归属放行 = 闭环静默卡死） | tags: autopilot, headless, zcode, fast-mode, standard-mode, auto-approve, preauthorization, session-claim, env-leak, mode-self-judgment, v3.70.1 | → patterns.md
 - [2026-09-08] Tier 1.5 谓词 artifact 两个机械陷阱——裸数字跨谓词 MD5 撞车（PRED-ARTIFACT-DUP 拦截正确）+ staged 状态字面 git diff 为空须按约束本质选基线 | tags: autopilot, tier-1.5, predicate, artifact, md5-collision, pred-artifact-dup, git-staged, numstat, baseline, stop-hook, §5.7, dogfood, v3.66.0 | → patterns.md
 - [2026-09-07] 平价谓词 vs 更严格新契约——边界 fixture 必然互斥，平价比对显式排除被收紧的边界（p3 21.P1 实证；quirk 清单显式成文 + 新行为独立谓词锁定） | tags: autopilot, acceptance-test, parity-predicate, contract-migration, legacy-quirk, assertion-vs-contract, red-team-iron-law, v3.65.0 | → patterns.md
 - [2026-09-07] 新机制上线的「自适用盲区」——编排器执行新 prompt 机制时自己也会漏执行（p2 dogfood 漏 context.md 实证；降级优雅化 + 自指检查 + hook 兜底三对策） | tags: autopilot, dogfood, mechanism-rollout, self-applicability, context-md, execution-drift, v3.64.0 | → patterns.md

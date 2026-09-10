@@ -130,10 +130,11 @@ autopilot — AI 自动驾驶工程套件
   /autopilot next                        查找就绪任务
   /autopilot cancel                      取消并清理
 
-选项:
+选项（须置于目标描述之前；目标描述之后的 token 一律视为目标文本）:
   --deep                    已废弃（行为同默认）。旧版深度设计模式的兼容保留。
   --fast                    强制快速模式（跳过 brainstorm + 审批 + qa-reviewer，红蓝/QA 核心保留）
   --standard                强制完整模式（覆盖 AI 自适应判断，走完整 6-Agent 链路）
+  --headless                无人值守档位（交互点全部确定性化，正交于 --fast/--standard；语义见 references/headless-protocol.md）
   --project                 强制项目模式（跳过复杂度检测）
   --single                  强制单任务模式（跳过复杂度检测）
   --max-iterations <n>      最大迭代次数 (默认: 30)
@@ -394,6 +395,8 @@ MODE_OVERRIDE=""
 PLAN_MODE_OVERRIDE=""
 # 状态字段 fast_mode: false 为默认值，--fast flag 时改写为 true。
 FAST_MODE_OVERRIDE=""
+# headless 档位（无人值守确定性运行）：仅 --headless 显式传入时发射 headless: true 字段。
+HEADLESS_OVERRIDE=""
 BRIEF_FILE=""
 
 while [[ $# -gt 0 ]]; do
@@ -435,9 +438,20 @@ while [[ $# -gt 0 ]]; do
             FAST_MODE_OVERRIDE="false"
             shift
             ;;
+        --headless)
+            HEADLESS_OVERRIDE="true"
+            shift
+            ;;
         *)
+            # 第一个 positional token = 目标描述起点：其后所有 token（含 --fast/--standard/--headless
+            # 等 flag 形态字面量）一律归入目标文本并收尾——显式 flag 仅在目标描述之前生效（shell 惯例）。
+            # 根治目标 prose 中的档位字面量被误识别为 flag（v3.71.0，live specimen 误报）。
             PROMPT_PARTS+=("$1")
             shift
+            if [[ $# -gt 0 ]]; then
+                PROMPT_PARTS+=("$@")
+            fi
+            break
             ;;
     esac
 done
@@ -469,7 +483,12 @@ mkdir -p "$PROJECT_ROOT/.autopilot/runtime"
 
 # session_id：与 ralph 一致，直接使用环境变量（可能为空）。
 # 空值时由 stop-hook 首次触发时认领真实 session_id，建立隔离。
+# headless 档位一律写空：宿主 harness 的 CLAUDE_CODE_SESSION_ID 可能泄漏进无人值守环境
+# （stop-hook Guard 2 会按泄漏 id 归属放行 → 闭环静默卡死），交由 stop-hook 首轮认领真实 runtime session。
 SESSION_ID="${CLAUDE_CODE_SESSION_ID:-}"
+if [[ "$HEADLESS_OVERRIDE" == "true" ]]; then
+    SESSION_ID=""
+fi
 
 # 迁移检测：旧路径 .claude/knowledge/ → 新路径 .autopilot/knowledge/
 # 注意：检查 .autopilot/knowledge/index.md 而非 .autopilot/ 目录，因为上面 mkdir -p 已创建该目录
@@ -545,6 +564,12 @@ $KNOWLEDGE_HINT
 ## 变更日志
 - [$(now_iso)] autopilot 初始化，目标: $GOAL
 EOF
+fi
+
+# headless 档位字段：仅显式 --headless 传入时发射（写入者=setup.sh 唯一；非 headless 模板零字面量，
+# 防「默认值发射」掩盖漏传）。set_field upsert 在 frontmatter 闭合 --- 前追加 `headless: true` 行。
+if [[ "$HEADLESS_OVERRIDE" == "true" ]]; then
+    set_field "headless" "true"
 fi
 
 # 输出信息

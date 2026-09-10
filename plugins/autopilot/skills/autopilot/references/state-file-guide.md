@@ -30,7 +30,8 @@
 - `plan_mode`: **已弃用**，新代码不读。旧值 `"deep"` 兼容期保留（行为同默认 `""`，均触发 brainstorm 探索流程）。真正的开关是 `fast_mode`
 - `brief_file`: 项目子任务简报文件路径（项目模式自动设置）
 - `task_dir`: 需求管理文件夹路径
-- `session_id`: 会话 ID
+- `session_id`: 会话 ID（`--headless` 时 setup.sh 写空，由 stop-hook Guard 1 首轮认领真实 runtime session）
+- `headless`: 无人值守确定性运行档位。**合法值：canonical `true`；空 = 交互模式（不设 false，非 headless 模板零字面量）**。写入者=setup.sh（唯一）：仅 `--headless` 传入时发射 `headless: true` 行，幂等、与 `--fast`/`--standard` 可组合；读者=编排器 AI（交互点确定性化判定），stop-hook 不读此字段。行为矩阵 / 留痕契约 / 组合语义见 [references/headless-protocol.md](headless-protocol.md)
 - `started_at`: 启动时间戳（ISO 8601）
 - `contract_required`: 是否启用契约规约校验（plan-reviewer 维度 7 + qa-reviewer Section D）。setup.sh 新建时写入 `true`，旧 state.md 无此字段视为 `false`，自动豁免。
 

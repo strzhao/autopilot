@@ -430,6 +430,15 @@ fi
 
 # Guard 2: 非空且不匹配 → 不同会话，放行
 if [[ -n "$STATE_SESSION" ]] && [[ "$STATE_SESSION" != "$HOOK_SESSION" ]]; then
+    # v3.71.0 泄漏告警（可观测性，行为仍放行）：signature = state session 非 `sess_` 前缀
+    # ∧ 运行时 session 是 `sess_` 前缀 → 宿主 harness 的 CLAUDE_CODE_SESSION_ID 泄漏进
+    # 无人值守环境（headless 闭环静默卡死的根因）。追加 stderr + systemMessage 后照旧 exit 0
+    # 放行；signature 不命中零输出（防误报）。本分支不读 headless 字段、不改其余会话语义。
+    if [[ "$STATE_SESSION" != sess_* ]] && [[ "$HOOK_SESSION" == sess_* ]]; then
+        LEAK_MSG="autopilot: 疑似宿主 CLAUDE_CODE_SESSION_ID 泄漏——state session_id='${STATE_SESSION}' 与运行时 session '${HOOK_SESSION}' 前缀不符，本次 Stop 按会话归属放行（headless 闭环将因此静默卡死）。请清理宿主环境变量 CLAUDE_CODE_SESSION_ID 后重试。"
+        echo "$LEAK_MSG" >&2
+        jq -n --arg msg "$LEAK_MSG" '{"systemMessage":$msg}'
+    fi
     exit 0
 fi
 

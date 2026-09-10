@@ -11,7 +11,7 @@ String 维护的 Claude Code 插件集合。
 
 | 插件 | 版本 | 类型 | 一句话 |
 |------|------|------|--------|
-| [autopilot](plugins/autopilot/) | v3.70.1 | Skill + Hook | AI 自动驾驶工程套件：目标→合并全流程闭环（fast/standard 自适应）+ QA 谓词闸门 + 红蓝分层验收 + worktree 自动初始化。版本演进史见 README 与 git log |
+| [autopilot](plugins/autopilot/) | v3.71.0 | Skill + Hook | AI 自动驾驶工程套件：目标→合并全流程闭环（fast/standard 自适应）+ QA 谓词闸门 + 红蓝分层验收 + worktree 自动初始化。版本演进史见 README 与 git log |
 | [writer-skill](plugins/writer-skill/) | v1.12.0 | Skill | 写作技能包：博客向 / 技术文档向 / 专业技术博客向 / 阮一峰风格 / 文章评价 |
 | [summarizer](plugins/summarizer/) | v1.0.0 | Skill | 多模态内容摘要（文章/视频/音频 → flomo） |
 | [task-notifier](plugins/task-notifier/) | v1.0.0 | Hook | 任务完成系统提示音 |

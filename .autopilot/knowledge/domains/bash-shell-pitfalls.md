@@ -44,3 +44,10 @@
 **Scenario**: v3.70.1 修 stop-hook pending 检测时三处同时踩中：① `file_size=$(wc -c < f)` 后正则 `^[0-9]+$` 恒假——BSD wc 的 stdin 模式输出带前导空格（实测 `" 6874127"`），导致「按文件大小条件化」的逻辑在生产从未执行；② jq `-R -s` 组合把**整个输入 slurp 成单个字符串**而非行数组（`-s` 对 `-R` 的语义是 whole-input one string），`map(fromjson?)` 直接作用在字符串上失败、jq 静默返回空集（fixture 全灭）；③ fail-safe `grep -c` 对含 NUL 的 tail 输出返回**空**而非 0（BSD grep 二进制判定抑制计数），归一化防御虽兜住但信号丢失。
 **Lesson**: (1) macOS 下数值化命令输出先 `tr -d '[:space:]'` 再正则/数值比较——BSD wc（stdin 模式）与 GNU 的空白行为静默不同，且失败形态是「条件恒假」而非报错，最难察觉；(2) jq 逐行容错解析 JSONL 的唯一正确姿势：`jq -Rs 'split("\n") | map(fromjson?) | ...'`——-Rs 拿到全文字符串后手动 split，fromjson? 把坏行跳过而非整个查询失败（比 `-s` 严格解析强：单条撕裂行不再拖垮精确路径）；(3) grep 处理可能含 NUL 的输入一律加 `-a`。
 **Evidence**: 真实 6.9MB transcript 复现三者：`wc -c <` 输出 " 6874127"；`jq -Rs 'map(fromjson?)'` 静默全灭（红队套件 5 FAIL）→ 加 split("\n") 后 7/7；`grep -c` 空输出 vs `grep -ac` 0。核对锚点：2026-09-09 v3.70.1 stop-hook.sh has_pending_subagents。
+
+### [2026-09-10] bash 接受 CJK 函数名但 ShellCheck 拒之（SC1036）——lint 门禁在 bash -n 之外
+<!-- tags: bash, shellcheck, cjk, function-name, sc1036, lint-gate, macos, acceptance-test -->
+**Scenario**: v3.71.0 红队新套件把谓词 id 直接编码进测试函数名（`test_场景1_P1_headless_init()`），bash 3.2 正常执行 36/36；全量回归时 red-team-self-decision-tree 套件的 `npm run lint`（shellcheck --severity=warning 全 plugins *.sh）exit 1——SC1036 "'(' is invalid here" 解析直接停止，连带 HOOK_RC SC2034 等级联告警。
+**Lesson**: `bash -n` 与 ShellCheck 是两个解析器：bash 对函数名字符集宽松（CJK 可跑），shellcheck 按 POSIX 标识符解析直接拒。lint 门禁（本仓 self-dec 8.P2）跑的是 shellcheck——「语法正确」不等于「过 lint」。仓惯例本就是 ASCII 函数名 + 中文描述（`R_SELFDEC: 场景1.P1: ...`），谓词 id 放描述字符串而非标识符。
+**How to apply**: 新验收套件函数名一律 ASCII（谓词 id 映射 `test_s1_p1_<slug>`，场景 id 进 pass/fail 描述文案）；交付前跑 `npm run lint` 而非只 `bash -n`；shellcheck directive 行只留代码（`# shellcheck disable=SC2034`），中文理由写在 directive 上一行——SC1125 会把非 `key=value` 尾注当非法键。
+**Evidence**: 核对锚点 2026-09-10。headless-mode 套件 36 函数 CJK 名全改 ASCII 后 shellcheck 全绿、bash 3.2.57 行为不变（36/36 仍过）；关联 [[2026-07-23]]（awk 单词边界同族：工具解析器差异）。

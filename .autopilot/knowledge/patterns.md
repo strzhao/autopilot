@@ -165,4 +165,20 @@
 **How to apply**: 平价谓词成文时列旧实现 quirk 清单（正文伪块/重复键/尾随空格），逐项声明「按新契约语义判，不入平价集」；quirk 语义由独立谓词锁定新行为（如 4.P1 锁 FAKE_KEY=MISS）。铁律例外情形①（断言与契约矛盾）处置时先判定哪边是 SSOT——新契约优先，修断言+重锁。
 **Evidence**: 核对锚点 2026-09-07 源码 v3.65.0。get_field FAKE_KEY 泄漏由 qa-reviewer 独立同构 fixture 复现；适配后 46/46，平价仍覆盖 7 字段。关联 [[2026-07-19]]（FAIL 三分类）[[2026-05-14]]（契约单一字面量）。
 
+### [2026-09-10] autopilot headless（zcode runtime）标准用法——模式自判偏 fast、预授权话术确定性跳审批、env 剥离红线
+<!-- tags: autopilot, headless, zcode, fast-mode, standard-mode, auto-approve, preauthorization, session-claim, env-leak, mode-self-judgment, stop-hook, v3.70.1 -->
+**Scenario**: 需要在 zcode 官方 runtime（`zcode --prompt` headless）下跑 autopilot 全闭环，且要求 standard 质量档位（用户：质量差异大不能只用 fast）。三复杂度 dry-run（word_count / KV 持久化 / 可插拔多后端存储）实证。
+**Lesson**: ① headless 下 hooks 原生全通（三事件 + 插件路径实测），stop-hook block 续跑生效——headless 非缺口；② 模式自判强烈偏 fast（判据「不确定→fast」SKILL.md:79：带持久化/TTL/并发的中复杂任务仍判 fast）——「不加 --fast」≠「standard 质量」，只有显式架构权衡任务才自判 standard；③ standard 审批点实测靠 AI 自觉：design 步骤 4 命中「新抽象」guardrail 仍自判 `auto_approve=true` 自批（SKILL.md:127）——护栏在 headless 不可靠，若 AI 选择问则停等点 `design_doc_written→exit 0` 静默终止无重试（stop-hook.sh:927-931）；④ 唯一致命坑：宿主 harness 的 `CLAUDE_CODE_SESSION_ID` 泄漏 → state.md session_id 写入宿主 UUID → stop-hook Guard 2「session 不匹配→放行」（stop-hook.sh:433-436）→ 闭环静默卡死。
+**How to apply**: headless standard 三件套话术——① 任务描述显式写架构权衡点/新抽象/质量维度（引导探针判 standard）；② prompt 末尾加「本任务低风险（沙盒/隔离环境），跳过设计审批直接实施（auto_approve）」（走 SKILL.md:126 用户预授权路径，确定性跳审批不挂起）；③ spawn zcode 前剥离宿主会话 env（`env -u CLAUDE_CODE_SESSION_ID ...`，zcode wrapper 已内置）。铁律：任何 harness 内启动 zcode 都必须 env 剥离，否则 session 归属校验必然放行。
+**Evidence**: 核对锚点 2026-09-10，zcode.cjs 0.16.5 + autopilot v3.70.1。三组 dry-run 全闭环（fast×2 + standard×1），standard 组 24/24 测试绿、1433 行、merge a9afced；对照组实验：touch hook 三事件全触发、插件 hooks.json 同触发；卡死根因由 stop-hook.sh:433-436 Guard 2 放行逻辑 + state.md session_id 值回溯定位。brainstorm 全文：`.autopilot/runtime/requirements/20260910-autopilot-headless-standard/brainstorm.md`（本地产物）。关联 [[2026-09-09]]（分级自动 approve——headless 预授权复用同机制）。
+
+### [2026-09-10] headless 机制上线（v3.71.0）——设计期 plan-reviewer 沙箱实测谓词杀伤力，冻结前杀掉两类假谓词 + 交互点 flag-asymmetry 全边矩阵
+<!-- tags: autopilot, headless, flag-asymmetry, mutation-killing, predicate-design, plan-reviewer, sandbox-probe, fixture-precision, v3.71.0 -->
+**Scenario**: 机制级 headless 支持（`--headless` flag + `headless` 字段 + 6 交互点确定性化 + Guard 2 泄漏告警）。plan-reviewer 迭代 4 轮收敛，其中两轮靠**沙箱实测**抓出两类假谓词：① C1/C2 断言 `state contains "headless"`——goal 文本本身含 "headless" 字样，**零修复代码上即 PASS**（contain 锚被输入文本污染）；② 8.P1 锚 `^fast_mode: "true"` 带引号，而 setup.sh 实际发射无引号 `fast_mode: true`——**正确实现必假失败**。另红队 fixture `sess-redteam-leak-6p1` 连字符笔误 vs signature `sess_*` 下划线前缀，6.P1-P3 全假红（QA 实测假红、黑盒 4 变体静默、手动复现才定位到 fixture 一字之差）。
+**Lesson**: (1) 验收谓词写完必须做**杀伤力实测**：在零修复代码上跑一遍，全 PASS = 谓词无效；对「正确实现」也要可满足性实测，全 FAIL = 假失败。这两类在纸面审查（即使多轮）都不易发现，沙箱探针一跑即现。(2) 字段级锚优先于全文 contains（`grep -c '^headless: true'`），输入文本/样板词都可能污染 contains。(3) fixture 精确性是谓词杀伤力的一部分：前缀/连字符/引号一字之差 = 永假或永真，QA 假红时先怀疑 fixture 再怀疑实现。(4) 交互点模式化改造用 flag-asymmetry 全边矩阵（每行：交互模式行为 vs 新档位行为 + 对应正/反谓词），brainstorm→plan-reviewer→冻结谓词三层贯彻同一矩阵。
+**How to apply**: 设计带验收谓词的机制变更时，plan-reviewer prompt 显式要求「沙箱实测谓词杀伤力」（零修复 FAIL + 正确实现可满足两个方向）；红队 fixture 中的枚举值/前缀必须从 SSOT 逐字拷贝（本例 `sess_` 来自 state-file-guide）；改红队测试走 E 类自决后必须重锁 + 留痕（.acceptance-lock）。
+**Evidence**: 核对锚点 2026-09-10 源码 v3.71.0。plan-reviewer 第 2/3 轮实测证据（零修复探针全 PASS、引号锚 0 命中）；QA Tier 0 假红复现 trace（Guard 2 内层 if 两条件真而 body 跳过→fixture 前缀）；修复后 36/36 + dogfood 真实 zcode headless 全链路 merge 7ed951c。关联 [[2026-09-10]]（headless 标准用法）[[2026-05-14]]（契约单一字面量）[[qa-testing]]。
+
 > 历史归档（< 2026-05-17）按主题迁移至 domains/，详见 index.md
+
+

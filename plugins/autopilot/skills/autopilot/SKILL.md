@@ -48,13 +48,13 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 1. `auto_approve: true` → Auto-Approve 快速路径
 2. `fast_mode: true` → Fast Mode 快速路径
-3. 其他（默认）→ Standard Design 模式
+3. 其他（默认）→ Standard Design 模式。`headless: true`（`--headless`）正交于此表：全部 AskUserQuestion 交互点确定性化，SSOT 见 [references/headless-protocol.md](references/headless-protocol.md)
 
-三模式完整步骤 diff 见 [references/design-modes.md](references/design-modes.md)。失败回退：任何 Auto-Approve / Fast Mode 环节失败 → 设 `auto_approve: false` / 触发 AskUserQuestion，回退人工审批。
+三模式完整步骤 diff 见 [references/design-modes.md](references/design-modes.md)。失败回退：任何 Auto-Approve / Fast Mode 环节失败 → 设 `auto_approve: false` / 触发 AskUserQuestion，回退人工审批；`headless: true` 不问——按显式失败出口处置并 `[headless]` 留痕（headless-protocol.md 矩阵行 4）。
 
 ### Standard Design 模式（默认，含 brainstorm）
 
-先查复用：扫描 `.autopilot/runtime/requirements/*/brainstorm.md`，Read 候选「## 探索的目的与约束」段判定与当前目标相关性——相关则搬入 `$TASK_DIR/brainstorm.md` 跳过 Q&A 直接接力；无相关产物再委托 `Skill: "autopilot-brainstorm"`。
+先查复用：扫描 `.autopilot/runtime/requirements/*/brainstorm.md`，Read 候选「## 探索的目的与约束」段判定与当前目标相关性——相关则搬入 `$TASK_DIR/brainstorm.md` 跳过 Q&A 直接接力；无相关产物再委托 `Skill: "autopilot-brainstorm"`。`headless: true` 且未命中复用 → 不委托，编排器自答（推演关键问题与假设写入 `$TASK_DIR/brainstorm.md`，`[headless]` 留痕）。
 
 接力：读 brainstorm.md → 写设计文档+实现计划 → plan-reviewer Agent 审查 → AskUserQuestion 审批（详见 references/design-modes.md §3）。
 
@@ -82,7 +82,7 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 - **`mode: "project"`** → 跳过检测，直接走 [项目模式设计](#项目模式设计内容)
 - **`mode: ""` (空)** → 进行复杂度评估：
   1. 快速探索（复用上面的探针）估算范围
-  2. 如果任务你认为太复杂，通过一次 autopilot 无法高质量完成 → 使用 `AskUserQuestion` 确认：
+  2. 如果任务你认为太复杂，通过一次 autopilot 无法高质量完成 → 使用 `AskUserQuestion` 确认（`headless: true` 不问：按单任务继续，分流假设写入设计文档并 `[headless]` 留痕）：
      - 选项 1: 「项目模式」— 生成架构设计 + 任务 DAG，每个任务独立执行
      - 选项 2: 「单任务模式」— 在当前会话一次性完成
   3. 用户选择项目模式 → 走 [项目模式设计](#项目模式设计内容)
@@ -125,7 +125,7 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 2. `html_review: true`（env `AUTOPILOT_HTML_REVIEW=1` 或 frontmatter 设置）→ HTML 评审：前台同步调 `bash ${CLAUDE_PLUGIN_ROOT}/scripts/visual-companion/launch-plan-review.sh "$task_dir"`（timeout 600000，禁 run_in_background），解析 stdout JSON `choice`，详见 [html-review-guide.md](references/html-review-guide.md)
 3. AI 风险判断（默认跳过审批 + QA gate）：
    - 低风险 → 设 `auto_approve: true` + `phase: "implement"`（同轮）
-   - 命任一高风险标准 → AskUserQuestion（preview 模板见 html-review-guide.md）：不可逆操作(删数据/迁移/schema) / 大半径(跨模块或>5文件) / 新抽象新架构 / 外部副作用(API契约/部署/发版) / 安全敏感(auth/权限/支付/密钥)
+   - 命任一高风险标准 → AskUserQuestion（preview 模板见 html-review-guide.md）：不可逆操作(删数据/迁移/schema) / 大半径(跨模块或>5文件) / 新抽象新架构 / 外部副作用(API契约/部署/发版) / 安全敏感(auth/权限/支付/密钥)；`headless: true` 不问——预授权放行 + `[headless]` 留痕（guardrail 类别+理由），`auto_approve: true` 照设
 
 > 高风险标准是闭合 guardrail（命任一即必须问），非开放提示，复用步骤 1 fast_mode 探针信号辅助判断。`auto_approve` 仅在步骤 4 设置；revise 回 design（用户给修改意见）须重置 `auto_approve: false`。
 
@@ -345,7 +345,7 @@ qa-reviewer 完成后：收集 Section A/B/C/D 审查结果合并为 QA 报告�
 读取 QA 失败项，批量分析根因并统一修复（max 3 次重试）。
 
 ### ⚠️ 红队测试铁律
-**默认不允许修改红队验收测试**——问题在实现，不在测试。红队铁律唯一例外：明确属红队测试本身问题（断言与契约矛盾 / 引用未声明私有 seam / 断言机制错）且证据链闭合（E1-E3）→ AI 自决改测试 + 重锁 + 留痕，无需打断用户；证据链不闭合（U1-U4）→ `AskUserQuestion` 升级。双层决策树与判据详见 references/auto-fix-phase.md §6。
+**默认不允许修改红队验收测试**——问题在实现，不在测试。红队铁律唯一例外：明确属红队测试本身问题（断言与契约矛盾 / 引用未声明私有 seam / 断言机制错）且证据链闭合（E1-E3）→ AI 自决改测试 + 重锁 + 留痕，无需打断用户；证据链不闭合（U1-U4）→ `AskUserQuestion` 升级（`headless: true` 不问：`[headless]` 留痕 + 保守处置——不改红队测试、实现修复优先，记入 QA 报告遗留）。双层决策树与判据详见 references/auto-fix-phase.md §6。
 
 ### 工作流程
 
@@ -359,7 +359,7 @@ qa-reviewer 完成后：收集 Section A/B/C/D 审查结果合并为 QA 报告�
 ##### 红队验收测试失败（Tier 0）— 最高优先级
 - **含义**：实现不符合设计要求
 - **修复目标**：修改实现代码使其满足设计文档的要求
-- 修改红队测试文件（`.acceptance.test.*`）：仅铁律例外三情形允许——证据链闭合 AI 自决 + 重锁 + 留痕；证据不足 / 边缘情形走 `AskUserQuestion` 升级（详见 references/auto-fix-phase.md §6）
+- 修改红队测试文件（`.acceptance.test.*`）：仅铁律例外三情形允许——证据链闭合 AI 自决 + 重锁 + 留痕；证据不足 / 边缘情形走 `AskUserQuestion` 升级（`headless: true` 不问，同上保守处置留痕；详见 references/auto-fix-phase.md §6）
 - **修复方式**：
   1. 阅读失败的验收测试，理解它期望的行为
   2. 对照设计文档确认期望是正确的
