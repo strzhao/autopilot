@@ -1,0 +1,209 @@
+plugins/autopilot/scripts/setup.sh
+  23dda9cd39352991 593
+.autopilot/knowledge/patterns.md
+  23dda9cd39352991 3-9
+plugins/autopilot/skills/autopilot-project/SKILL.md
+  23dda9cd39352991 91
+plugins/autopilot/skills/autopilot/references/headless-protocol.md
+  23dda9cd39352991 5,23,25-26,36
+plugins/autopilot/skills/autopilot/references/state-file-guide.md
+  23dda9cd39352991 22
+plugins/autopilot/tests/acceptance/headless-approval-points.driver.sh
+  23dda9cd39352991 5,16,102,105
+.claude-plugin/marketplace.json
+  23dda9cd39352991 32
+plugins/autopilot/skills/autopilot/references/html-review-guide.md
+  23dda9cd39352991 3,7,11,64
+CLAUDE.md
+  23dda9cd39352991 14
+plugins/autopilot/tests/acceptance/plan-review-html.acceptance.test.sh
+  23dda9cd39352991 41-50,602-603,605-609,729-733
+plugins/autopilot/skills/autopilot/SKILL.md
+  23dda9cd39352991 59,67,93,124,126,128,470
+plugins/autopilot/skills/autopilot-brainstorm/SKILL.md
+  23dda9cd39352991 101
+plugins/autopilot/skills/autopilot/references/phase-checklists.md
+  23dda9cd39352991 10
+plugins/autopilot/tests/acceptance/brainstorm-reuse-handoff.acceptance.test.sh
+  23dda9cd39352991 21-22,199-210,212-213,215-219
+plugins/autopilot/tests/acceptance/headless-mode.acceptance.test.sh
+  23dda9cd39352991 295,319,809
+plugins/autopilot/skills/autopilot/references/design-modes.md
+  23dda9cd39352991 11,19,52,68-85
+plugins/autopilot/tests/acceptance/run-all.sh
+  23dda9cd39352991 13,29-32,40-51
+plugins/autopilot/.claude-plugin/plugin.json
+  23dda9cd39352991 3-4
+plugins/autopilot/scripts/stop-hook.sh
+  23dda9cd39352991 1203
+plugins/autopilot/skills/autopilot/references/auto-chain-guide.md
+  23dda9cd39352991 45
+.autopilot/knowledge/decisions.md
+  23dda9cd39352991 3-9
+plugins/autopilot/tests/acceptance/headless-full-loop.driver.sh
+  23dda9cd39352991 96
+.autopilot/knowledge/index.md
+  23dda9cd39352991 5-7
+plugins/autopilot/README.md
+  23dda9cd39352991 3-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "ee572f8971426009f425427e6769f6e12f3d751f",
+  "prompts": {
+    "23dda9cd39352991": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6fb56c96-ad82-4048-beab-68b48a5a2bf1",
+        "model": "deepseek-flash"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 156,
+      "total_deletions": 70,
+      "accepted_lines": 137,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "plugins/autopilot/skills/autopilot/SKILL.md": {
+          "additions": 8,
+          "deletions": 10,
+          "accepted_lines": 7
+        },
+        ".autopilot/knowledge/index.md": {
+          "additions": 3,
+          "accepted_lines": 3
+        },
+        "plugins/autopilot/tests/acceptance/plan-review-html.acceptance.test.sh": {
+          "additions": 32,
+          "deletions": 16,
+          "accepted_lines": 24
+        },
+        "plugins/autopilot/tests/acceptance/headless-full-loop.driver.sh": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/skills/autopilot/references/design-modes.md": {
+          "additions": 22,
+          "deletions": 4,
+          "accepted_lines": 21
+        },
+        "CLAUDE.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/scripts/visual-companion/launch-plan-review.sh": {
+          "additions": 5
+        },
+        "plugins/autopilot/skills/autopilot/references/html-review-guide.md": {
+          "additions": 4,
+          "deletions": 4,
+          "accepted_lines": 4
+        },
+        "plugins/autopilot/skills/autopilot/references/state-file-guide.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/skills/autopilot-brainstorm/SKILL.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/scripts/stop-hook.sh": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        ".autopilot/knowledge/decisions.md": {
+          "additions": 7,
+          "accepted_lines": 7
+        },
+        "plugins/autopilot/tests/acceptance/headless-approval-points.driver.sh": {
+          "additions": 4,
+          "deletions": 4,
+          "accepted_lines": 4
+        },
+        "plugins/autopilot/skills/autopilot-project/SKILL.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/.claude-plugin/plugin.json": {
+          "additions": 3,
+          "deletions": 3,
+          "accepted_lines": 2
+        },
+        "plugins/autopilot/skills/autopilot/references/auto-chain-guide.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        ".autopilot/knowledge/patterns.md": {
+          "additions": 7,
+          "accepted_lines": 7
+        },
+        "plugins/autopilot/tests/acceptance/run-all.sh": {
+          "additions": 19,
+          "deletions": 2,
+          "accepted_lines": 17
+        },
+        "plugins/autopilot/scripts/setup.sh": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        ".claude-plugin/marketplace.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/README.md": {
+          "additions": 2,
+          "accepted_lines": 2
+        },
+        "plugins/autopilot/skills/autopilot/references/headless-protocol.md": {
+          "additions": 6,
+          "deletions": 6,
+          "accepted_lines": 5
+        },
+        "plugins/autopilot/tests/acceptance/headless-mode.acceptance.test.sh": {
+          "additions": 3,
+          "deletions": 3,
+          "accepted_lines": 3
+        },
+        "plugins/autopilot/tests/acceptance/brainstorm-reuse-handoff.acceptance.test.sh": {
+          "additions": 21,
+          "deletions": 8,
+          "accepted_lines": 21
+        },
+        "plugins/autopilot/skills/autopilot/references/phase-checklists.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        }
+      }
+    },
+    "aa74cecdeda2d7b9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f681703-2ef6-4b91-ac72-f934023c31cd",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        ".claude/settings.json": {
+          "additions": 5,
+          "accepted_lines": 5
+        }
+      }
+    }
+  }
+}
