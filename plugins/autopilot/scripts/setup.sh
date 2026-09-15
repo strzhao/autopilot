@@ -590,7 +590,7 @@ elif [[ "$FAST_MODE_OVERRIDE" == "true" ]]; then
     PHASE_FLOW="design (fast，跳过审批) → implement → qa (smoke) → merge"
 elif [[ "$FAST_MODE_OVERRIDE" == "false" ]]; then
     DISPLAY_GOAL="$GOAL"
-    PHASE_FLOW="design → 审批 → implement → qa → 审批 → merge"
+    PHASE_FLOW="design → implement → qa → 证据达标自动 merge / 不达标停等"
 else
     DISPLAY_GOAL="$GOAL"
     PHASE_FLOW="AI 自适应判断 fast/standard → design → ..."

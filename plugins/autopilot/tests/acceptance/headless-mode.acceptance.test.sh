@@ -292,7 +292,7 @@ test_s1_p4_hook_json_protocol() {
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 场景 2：交互点确定性放行并留痕（design 审批点 + 高风险 guardrail + 分流 + :53 回退）
+# 场景 2：交互点确定性放行并留痕（design 审批点 + 步骤 4 例外征询 + 分流 + :53 回退）
 # ═══════════════════════════════════════════════════════════════════════════
 
 run_approval_points_driver() {
@@ -316,12 +316,12 @@ test_s2_p1_design_approval_deterministic() {
 }
 
 test_s2_p2_guardrail_deterministic() {
-    # 场景2.P2：高风险 guardrail（5 类闭合标准任一）触发 → 确定性放行 + guardrail 留痕
+    # 场景2.P2：步骤 4 例外征询（结论级判据：不可逆且无证据门禁可兜底）触发 → 确定性放行 + guardrail 点位留痕
     local art="$ART_DIR/场景2.P2.out"
     [[ -f "$art" ]] || fail "场景2.P2: guardrail 留痕产物 $art 不存在"
     grep -qF 'guardrail' "$art"   || fail "场景2.P2: 留痕不含 guardrail 标识"
     grep -qF '[headless]' "$art"  || fail "场景2.P2: 留痕不含 [headless] 锚点词"
-    pass "场景2.P2: guardrail 命中确定性放行留痕完整（guardrail + [headless]）"
+    pass "场景2.P2: 例外征询确定性放行留痕完整（guardrail-step4 点位 + [headless]）"
 }
 
 test_s2_p4_complexity_split_no_ask() {
@@ -806,7 +806,7 @@ test_C3_skill_pointers() {
     skill_win_has 53  'headless' || missing="${missing} 环节失败回退(:53)"
     skill_win_has 58  'headless' || missing="${missing} brainstorm委托(:57-59)"
     skill_win_has 85  'headless' || missing="${missing} 复杂度分流(:85)"
-    skill_win_has 127 'headless' || missing="${missing} guardrail必问(:127-128)"
+    skill_win_has 127 'headless' || missing="${missing} 步骤4例外征询(:127-128)"
     if ! skill_win_has 348 'headless' && ! skill_win_has 362 'headless'; then
         missing="${missing} U1-U4指针(:348,:362)"
     fi

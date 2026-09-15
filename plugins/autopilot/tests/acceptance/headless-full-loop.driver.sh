@@ -93,7 +93,7 @@ log "HEADLESS_FIELD=hit SESSION_BLANKED=yes"
 # 2) design 阶段交互点确定性处置（行为矩阵；语义活按矩阵模拟，证据=指针+指令存在性）
 resolve_point "complexity-split(step1)"  85  '单任务'
 resolve_point "brainstorm-delegation"    58  '自答|自行回答|推演关键问题'
-resolve_point "guardrail-step4"          127 '预授权'
+resolve_point "guardrail-step4"          127 '预授权'   # 步骤 4 例外征询点位（headless 下例外不征询 → 预授权放行；点 id 保留）
 # 模拟编排器落盘：设计文档 + 步骤 4 同轮 auto_approve=true + phase=implement（§7.6 行：停等不触发）
 printf '\n## 设计文档\nheadless 冒烟设计文档（确定性处置假设：单任务模式）\n\n## 实现计划\n冒烟实现计划\n' >> "$STATE"
 state_set_fm "$STATE" auto_approve "true"

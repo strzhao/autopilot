@@ -38,6 +38,16 @@ fail() {
     exit 1
 }
 
+# 本测试会实际执行 launch-plan-review.sh（C9c/C11 为拿渲染产物），必须阻断其自动打开浏览器：
+# 用 PATH 前置桩把 open / xdg-open 替换为 exit 1，使脚本走自带的「请手动访问」降级分支——
+# 既不再弹窗干扰本地工作，又**不修改被测脚本本身**（保 C5 机械层零改动）。
+# [2026-09-15] 用户反馈修复。
+_NOBROWSER_STUB="$(mktemp -d)"
+printf '#!/bin/sh\necho "[no-browser stub] open $*" >> /tmp/autopilot-no-browser-hits.log\nexit 1\n' > "$_NOBROWSER_STUB/open"
+printf '#!/bin/sh\necho "[no-browser stub] xdg-open $*" >> /tmp/autopilot-no-browser-hits.log\nexit 1\n' > "$_NOBROWSER_STUB/xdg-open"
+chmod +x "$_NOBROWSER_STUB/open" "$_NOBROWSER_STUB/xdg-open"
+export PATH="$_NOBROWSER_STUB:$PATH"
+
 # ── 前置：关键文件存在性检查 ──────────────────────────────────────────────────
 echo "---- 前置检查：文件存在性 ----"
 [[ -f "$WAIT_DECISION_SH" ]]   || fail "wait-decision.sh 不存在: $WAIT_DECISION_SH"
@@ -589,11 +599,14 @@ mock test plan review
 mock design content for C9c test
 EOF
 
-# 清理函数：kill server 进程
+# 清理函数：只 kill 本次测试启动的 server（读它自己的 server.pid），
+# 不再 blanket pkill / 按端口 kill——原写法会误杀用户正在使用的评审 server
 _c9c_cleanup() {
-    pkill -f "visual-companion/server.cjs" 2>/dev/null || true
-    lsof -ti:7654 2>/dev/null | xargs kill -9 2>/dev/null || true
-    rm -rf "$tmp_home_c9c" "$tmp_state_c9c" "$tmp_content_c9c"
+    _c9c_pidf="$(find "$tmp_state_c9c" -name server.pid 2>/dev/null | head -1)"
+    if [[ -n "$_c9c_pidf" && -f "$_c9c_pidf" ]]; then
+        kill "$(cat "$_c9c_pidf")" 2>/dev/null || true
+    fi
+    rm -rf "$tmp_home_c9c" "$tmp_state_c9c" "$tmp_content_c9c" "$_NOBROWSER_STUB"
 }
 trap '_c9c_cleanup' EXIT
 
@@ -713,8 +726,11 @@ phase: "design"
 STATEEOF
 
 _c11_cleanup() {
-    pkill -f "visual-companion/server.cjs" 2>/dev/null || true
-    rm -rf "$c11_tmp_dir" "$c11_tmp_home"
+    _c11_pidf="$(find "$c11_tmp_dir" -name server.pid 2>/dev/null | head -1)"
+    if [[ -n "$_c11_pidf" && -f "$_c11_pidf" ]]; then
+        kill "$(cat "$_c11_pidf")" 2>/dev/null || true
+    fi
+    rm -rf "$c11_tmp_dir" "$c11_tmp_home" "$_NOBROWSER_STUB"
 }
 trap _c11_cleanup EXIT
 

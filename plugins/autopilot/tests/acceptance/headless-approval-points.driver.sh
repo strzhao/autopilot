@@ -2,7 +2,7 @@
 # headless-approval-points.driver.sh —— 场景 2.P1 / 2.P2 / 2.P4 / 2.P5 驱动器
 # headless 任务中的四个 AskUserQuestion 交互点确定性处置走查：
 #   2.P1 design 审批点（步骤 4 审批问）→ 不问、放行、留痕
-#   2.P2 高风险 guardrail（5 类闭合标准任一：不可逆操作/删数据）→ 不问、放行、留痕
+#   2.P2 例外征询（步骤 4 结论级判据：不可逆且无证据门禁可兜底——删数据）→ 不问、放行、留痕
 #   2.P4 design 步骤 1 复杂度分流（mode 空）→ 不问、按单任务继续 + 假设留痕
 #   2.P5 SKILL.md:53 Auto-Approve/Fast 环节失败回退点 → 不问、显式失败出口留痕
 #
@@ -13,7 +13,7 @@
 # 隔离契约：headless 任务在 mktemp -d 沙盒内以真实 setup.sh --headless 创建，
 # 绝不触碰仓库真实 .autopilot/runtime/active.ptr。
 # 产物：/tmp/autopilot-artifacts/场景2.P1.out（design 审批点留痕，含时间戳）
-#       /tmp/autopilot-artifacts/场景2.P2.out（guardrail 留痕）
+#       /tmp/autopilot-artifacts/场景2.P2.out（例外征询留痕）
 #       /tmp/autopilot-artifacts/场景2.P4.out（复杂度分流驱动日志 + 留痕）
 #       /tmp/autopilot-artifacts/场景2.P5.out（:53 回退驱动日志 + 留痕）
 set -uo pipefail
@@ -99,10 +99,10 @@ else
     printf 'ASK AskUserQuestion at design-approval-step4 (headless 指针/指令缺失)\n' > "$A1"
 fi
 
-# ── 2.P2 高风险 guardrail（5 类闭合标准之一：不可逆操作——删数据）──
+# ── 2.P2 例外征询（步骤 4 结论级判据之一：不可逆且无证据门禁可兜底——删数据）──
 if resolved "guardrail-step4" 127 '预授权'; then
     {
-        printf '[headless] guardrail 触发（类别：不可逆操作——删数据） 确定性处置：放行，依据：guardrail 类别=不可逆操作，headless 预授权放行 + 变更日志留痕\n'
+        printf '[headless] 例外征询（点位 guardrail-step4；风险点：不可逆且无证据门禁可兜底——删数据） 确定性处置：放行，依据：风险点=删数据，headless 预授权放行 + 变更日志留痕\n'
         printf 'POINT guardrail-step4 resolution=deterministic (no-ask)\n'
         printf 'TIMESTAMP=%s\n' "$TS"
     } > "$A2"

@@ -98,4 +98,4 @@ description: autopilot design 阶段需求探索专用。在写设计文档前�
 - **独立调用（无 state.md，如 `/autopilot:autopilot-brainstorm` 直接调用）时**：`task_dir` 必须落项目根下 `.autopilot/runtime/requirements/<slug>`——slug 用 `YYYYMMDD-<任务关键词>`（参考 `runtime/requirements/` 下已有目录命名）。**严禁**写到顶层 `.autopilot/requirements/`：那是 v3.35 前旧路径，已被 `.gitignore` 拦截，落那里等于丢失产物（不入库、主流程读不到）。
 - **禁止**修改 state.md 的 frontmatter（`phase`、`gate` 等字段由主 skill 控制）
 - **禁止**写入 state.md 的 `## 设计文档` 或 `## 实现计划` 区域
-- brainstorm.md 写入完成后，本 skill 职责结束，主 SKILL 接力：读取 brainstorm.md → 写设计文档 → plan-reviewer → AskUserQuestion 审批
+- brainstorm.md 写入完成后，本 skill 职责结束，主 SKILL 接力：读取 brainstorm.md → 写设计文档 → plan-reviewer → 步骤 4（自治默认 / 例外征询）

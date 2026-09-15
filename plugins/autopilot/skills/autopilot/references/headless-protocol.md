@@ -2,7 +2,7 @@
 
 `--headless`（setup.sh flag）开启的档位：编排器在无人值守环境（如 zcode `--prompt` / CI）下运行时，
 全部 AskUserQuestion 交互点确定性化——不问、不挂起、必留痕。**本文件是 headless 行为的唯一权威源（SSOT）**：
-SKILL.md 六处点位指针（优先级表 / :53 环节失败回退 / brainstorm 委托 / 复杂度分流 / guardrail 必问 / U1-U4，共 7 行替换）皆指向此处。
+SKILL.md 六处点位指针（优先级表 / :53 环节失败回退 / brainstorm 委托 / 复杂度分流 / 例外征询 / U1-U4，共 7 行替换）皆指向此处。
 
 ## 字段五元组（frontmatter `headless`）
 
@@ -20,10 +20,10 @@ SKILL.md 六处点位指针（优先级表 / :53 环节失败回退 / brainstorm
 |---|--------|------------------------|---------------|
 | 1 | design 步骤 1 复杂度分流问（SKILL.md :85） | AskUserQuestion 项目/单任务 | 不问：按单任务继续，分流假设记入设计文档 |
 | 2 | brainstorm 委托（SKILL.md :57-59） | 复用命中即用；未命中→委托 Q&A | 复用命中即用；未命中→编排器自答（推演关键问题与假设写入 brainstorm.md 留痕） |
-| 3 | design 步骤 4 guardrail 必问（SKILL.md :127-128） | AskUserQuestion 三选 | 不问：预授权放行 + 变更日志留痕（guardrail 类别+理由）；auto_approve=true 照设 |
+| 3 | design 步骤 4 例外征询（SKILL.md :126） | AskUserQuestion 三选 | 不问：预授权放行 + 变更日志留痕（风险点+理由）；auto_approve=true 照设 |
 | 4 | SKILL.md :53 环节失败回退（Auto-Approve/Fast 环节失败） | AskUserQuestion 回退人工审批 | 不问：按显式失败出口处置（交互通道不可用），gate/systemMessage 可见 |
-| 5 | 红队 U1-U4 升级（SKILL.md :348/:362） | AskUserQuestion 升级 | 不问：留痕 + 保守处置（不改红队测试，实现修复优先），记入 QA 报告遗留 |
-| 6 | qa 收口点名问（SKILL.md :331） | auto_approve=false 时问 | 不触发：点位 3 已设 auto_approve=true → 既有「预授权不问」豁免，零新增 |
+| 5 | 红队 U1-U4 升级（SKILL.md :346/:360） | AskUserQuestion 升级 | 不问：留痕 + 保守处置（不改红队测试，实现修复优先），记入 QA 报告遗留 |
+| 6 | qa 收口点名问（SKILL.md :329） | auto_approve=false 时问 | 不触发：点位 3（例外征询）已设 auto_approve=true → 既有「预授权不问」豁免，零新增 |
 | 7 | §5.5 自动 merge（分级达标） | 机械自动 | 不变 |
 | 8 | §6 gate 停等（分级未达标） | 停等 | **不变 = headless 显式失败出口**（绝不自动合入未验证代码；gate 保留、不 merge） |
 | 9 | §7.6 design 停等 | 放行交用户 | 不触发（headless 下点位 3 同轮 auto_approve + phase=implement，与既有 auto_approve 路径同） |
@@ -33,7 +33,7 @@ SKILL.md 六处点位指针（优先级表 / :53 环节失败回退 / brainstorm
 每个确定性处置必须在 state.md `## 变更日志` 写一行，锚点词 `[headless]` 机械可 grep（对齐 §8.5.1b 留痕守卫惯例）：
 
 ```
-[headless] <点位> 确定性处置：<放行/保守处置/显式失败>，依据：<guardrail 类别 / E 编号 / 假设要点>
+[headless] <点位> 确定性处置：<放行/保守处置/显式失败>，依据：<风险点 / E 编号 / 假设要点>
 ```
 
 - 点位 1/2/3/5/6 → 处置 = 放行（3）或保守处置（1/2/5）；点位 4/8 → 处置 = **显式失败**

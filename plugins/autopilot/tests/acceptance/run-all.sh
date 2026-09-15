@@ -10,6 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 #               → R6 (stop-hook-prompt-routing) → R7 (skill-fast-mode-doc) → R8 (version-sync)
 #               → R9 (brainstorm-default) → R10 (plan-review-html)
 #               → R_FRESH (freshness-check) → R_TAMPER (acceptance-tamper-guard)
+#               → R_STEP4 (design-step4 自治判据守护四件套，v3.72.0：guard / region / mech-invariants / integration)
 ORDERED_TESTS=(
     "compress-qa-report.acceptance.test.sh"
     "qa-reviewer-prompt.acceptance.test.sh"
@@ -25,12 +26,28 @@ ORDERED_TESTS=(
     "knowledge-extracted-normalize.acceptance.test.sh"
     "freshness-check.acceptance.test.sh"
     "acceptance-tamper-guard.acceptance.test.sh"
+    "design-step4-autonomy-guard.acceptance.test.sh"
+    "design-step4-autonomy-region.acceptance.test.sh"
+    "design-step4-mech-invariants.acceptance.test.sh"
+    "design-step4-autonomy-integration.acceptance.test.sh"
 )
 
 total=0
 passed=0
 failed=0
 failed_names=()
+
+# ── 套件级防干扰：阻断任何测试触发「自动打开浏览器」─────────────────────────
+# 用 PATH 前置桩把 open / xdg-open 替换为 exit 1（不修改被测脚本本身）。
+# 背景：plan-review-html 的 C9c/C11 会实际执行 launch-plan-review.sh 拿渲染产物，
+# 其在 macOS 下调 `open "$url"` 会弹窗，反复干扰本地工作（[2026-09-15] 用户反馈）。
+# 桩让脚本走自带的「请手动访问」降级分支；被测脚本行为对真实用户不变。
+_NOBROWSER_STUB="$(mktemp -d)"
+printf '#!/bin/sh\necho "[no-browser stub] open $*" >> /tmp/autopilot-no-browser-hits.log\nexit 1\n' > "$_NOBROWSER_STUB/open"
+printf '#!/bin/sh\necho "[no-browser stub] xdg-open $*" >> /tmp/autopilot-no-browser-hits.log\nexit 1\n' > "$_NOBROWSER_STUB/xdg-open"
+chmod +x "$_NOBROWSER_STUB/open" "$_NOBROWSER_STUB/xdg-open"
+export PATH="$_NOBROWSER_STUB:$PATH"
+trap 'rm -rf "$_NOBROWSER_STUB"' EXIT
 
 echo "=========================================="
 echo " 红队 autopilot v3.17.0 验收测试"

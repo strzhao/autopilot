@@ -56,7 +56,7 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 先查复用：扫描 `.autopilot/runtime/requirements/*/brainstorm.md`，Read 候选「## 探索的目的与约束」段判定与当前目标相关性——相关则搬入 `$TASK_DIR/brainstorm.md` 跳过 Q&A 直接接力；无相关产物再委托 `Skill: "autopilot-brainstorm"`。`headless: true` 且未命中复用 → 不委托，编排器自答（推演关键问题与假设写入 `$TASK_DIR/brainstorm.md`，`[headless]` 留痕）。
 
-接力：读 brainstorm.md → 写设计文档+实现计划 → plan-reviewer Agent 审查 → AskUserQuestion 审批（详见 references/design-modes.md §3）。
+接力：读 brainstorm.md → 写设计文档+实现计划 → plan-reviewer Agent 审查 → 步骤 4（自治默认 / 例外征询）（详见 references/design-modes.md §3）。
 
 ### Fast Mode 快速路径（仅 fast_mode=true 时）
 
@@ -64,7 +64,7 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 ### Auto-Approve 快速路径（仅 auto_approve=true 时）
 
-跳过 AskUserQuestion 审批，plan-reviewer Agent 审查 PASS 即推进，FAIL 设 `auto_approve: false` 回退正常审批。`auto_approve: true` 来源：auto-chain 子任务（stop-hook 设）或 **standard 单任务 design 步骤 4 AI 据低风险判断设置**（详见步骤 4）。完整 6 步见 references/design-modes.md §2。
+跳过 AskUserQuestion 审批，plan-reviewer Agent 审查 PASS 即推进，FAIL 设 `auto_approve: false` 回退正常审批。`auto_approve: true` 来源：auto-chain 子任务（stop-hook 设）或 **standard 单任务 design 步骤 4 自治默认设置**（详见步骤 4）。完整 6 步见 references/design-modes.md §2。
 
 ### 工作流程
 
@@ -90,7 +90,7 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 ##### 项目模式设计内容
 
-将项目级内容（Context / 整体架构设计 / 任务 DAG 概览 / 跨任务设计约束 / Handoff 策略）写入状态文件 `## 设计文档` 区域。完整 markdown 模板参见 [references/state-file-guide.md](references/state-file-guide.md)。完成后执行步骤 3（Plan 审查）和步骤 4（AskUserQuestion 审批）。审批通过后走 [步骤 5b. 项目模式文件创建](#步骤-5b-项目模式文件创建)。
+将项目级内容（Context / 整体架构设计 / 任务 DAG 概览 / 跨任务设计约束 / Handoff 策略）写入状态文件 `## 设计文档` 区域。完整 markdown 模板参见 [references/state-file-guide.md](references/state-file-guide.md)。完成后执行步骤 3（Plan 审查）和步骤 4（审批）。审批通过后走 [步骤 5b. 项目模式文件创建](#步骤-5b-项目模式文件创建)。
 
 #### 步骤 2. 代码探索与设计文档编写
 
@@ -121,13 +121,11 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 #### 步骤 4. 审批（AI 判断是否需要用户确认）
 
 按优先级判断：
-1. 用户上下文明确「跳过/直接做」→ 设 `auto_approve: true` + `phase: "implement"`（必须同轮，跳过审批 + QA gate）
+1. 用户上下文明确「跳过/直接做」→ 设 `auto_approve: true` + `phase: "implement"`（必须同轮，跳过审批 + QA gate）；明确「先看方案/先给我审」→ AskUserQuestion（preview 模板见 html-review-guide.md）
 2. `html_review: true`（env `AUTOPILOT_HTML_REVIEW=1` 或 frontmatter 设置）→ HTML 评审：前台同步调 `bash ${CLAUDE_PLUGIN_ROOT}/scripts/visual-companion/launch-plan-review.sh "$task_dir"`（timeout 600000，禁 run_in_background），解析 stdout JSON `choice`，详见 [html-review-guide.md](references/html-review-guide.md)
-3. AI 风险判断（默认跳过审批 + QA gate）：
-   - 低风险 → 设 `auto_approve: true` + `phase: "implement"`（同轮）
-   - 命任一高风险标准 → AskUserQuestion（preview 模板见 html-review-guide.md）：不可逆操作(删数据/迁移/schema) / 大半径(跨模块或>5文件) / 新抽象新架构 / 外部副作用(API契约/部署/发版) / 安全敏感(auth/权限/支付/密钥)；`headless: true` 不问——预授权放行 + `[headless]` 留痕（guardrail 类别+理由），`auto_approve: true` 照设
+3. 默认（AI 自治）：完成风险评估后同轮设 `auto_approve: true` + `phase: "implement"`，并在 `## 变更日志` 留痕一行 `[design-auto] <风险点与依据> → 放行`；**仅当 AI 自判命中例外才 AskUserQuestion**——例外 =「存在不可逆且无证据门禁可兜底的动作」或「含必须由用户裁决的取舍」（`headless: true` 时例外不征询——自答假设 + `[headless]` 留痕）；判据与正反例见 [design-modes.md](references/design-modes.md)
 
-> 高风险标准是闭合 guardrail（命任一即必须问），非开放提示，复用步骤 1 fast_mode 探针信号辅助判断。`auto_approve` 仅在步骤 4 设置；revise 回 design（用户给修改意见）须重置 `auto_approve: false`。
+> `auto_approve` 仅在步骤 4 设置；revise 回 design（用户给修改意见）须重置 `auto_approve: false`；复用步骤 1 fast_mode 探针信号辅助判断。
 
 #### 步骤 5. 审批通过后
 - 检查 frontmatter `mode` 字段：如果步骤 1 中选择了项目模式（或 `mode: "project"`），走步骤 5b
@@ -469,7 +467,7 @@ qa-reviewer 完成后：收集 Section A/B/C/D 审查结果合并为 QA 报告�
 
 **Read 操作精简**：每个阶段开始时 Read 一次状态文件获取全局信息，后续操作使用 Edit 精确修改。不需要在每次 Edit 前重复 Read 整个文件。
 
-完整 frontmatter 字段说明（包含 fast_mode 三态、qa_scope 取值范围等）参见 [references/state-file-guide.md](references/state-file-guide.md)。AI 可写字段：`phase` / `gate` / `retry_count` / `mode` / `qa_scope` / `next_task` / `knowledge_extracted` / `fast_mode`（仅在 design 步骤 1 探针后自适应判断时，且当前为空字符串才写）/ `auto_approve`（仅 design 步骤 4 据风险判断设 true，或 revise 回 design 重置 false；其余由 stop-hook auto-chain 设置）/ `e2e_status` / `leftover_critical`（仅 QA 结果判定轮与决策卡同轮写）。AI 不动字段：`iteration` / `max_iterations` / `max_retries` / `session_id` / `started_at` / `task_dir`。（各枚举字段合法值见 references/state-file-guide.md 闭合枚举；shell 仅认 canonical，越界会被 stop-hook 退回纠正）
+完整 frontmatter 字段说明（包含 fast_mode 三态、qa_scope 取值范围等）参见 [references/state-file-guide.md](references/state-file-guide.md)。AI 可写字段：`phase` / `gate` / `retry_count` / `mode` / `qa_scope` / `next_task` / `knowledge_extracted` / `fast_mode`（仅在 design 步骤 1 探针后自适应判断时，且当前为空字符串才写）/ `auto_approve`（仅 design 步骤 4 自治默认设 true（例外征询时不设），或 revise 回 design 重置 false；其余由 stop-hook auto-chain 设置）/ `e2e_status` / `leftover_critical`（仅 QA 结果判定轮与决策卡同轮写）。AI 不动字段：`iteration` / `max_iterations` / `max_retries` / `session_id` / `started_at` / `task_dir`。（各枚举字段合法值见 references/state-file-guide.md 闭合枚举；shell 仅认 canonical，越界会被 stop-hook 退回纠正）
 
 ### 内容区域更新
 - `## 设计文档`：design 阶段写入，后续不修改（除非 revise 回到 design）

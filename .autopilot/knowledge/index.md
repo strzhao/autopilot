@@ -2,6 +2,9 @@
 
 > 三层 Progressive Disclosure：本索引（≤5s 扫描）→ 全局 decisions/patterns（热区）→ domains/（历史归档按主题）。
 
+- [2026-09-15] design 步骤 4 审批域 AI-First 落地——删闭合 guardrail 清单 + 机械门禁为安全真源 + 反向注入指令同轮清理（v3.72.0） | tags: autopilot, design, approval-gate, auto-approve, ai-first, guardrail-vs-overfitting, degrees-of-freedom, default-plus-escape-hatch, mechanical-gate, reverse-injection, v3.72.0 | → decisions.md
+- [2026-09-15] 验证链的三处"假绿"（artifact 同名覆盖 / 校验器恒真 / 解析崩溃回落空值）+ 全局 env 干扰源（AUTOPILOT_HTML_REVIEW）与 PATH 桩隔离法 | tags: autopilot, qa, false-green, artifact-collision, harness-bug, bsd-grep, env-global, browser-popup, path-stub, test-isolation | → patterns.md
+
 ## Domains 导航（历史归档，按主题）
 - [stop-hook-state-machine](domains/stop-hook-state-machine.md) — stop-hook 兜底 / 状态机 / flag-asymmetry / pending-subagent（9 entry）
 - [skill-authoring](domains/skill-authoring.md) — SKILL.md 改动纪律 / 命名 / best-practice / 版本同步（17 entry）

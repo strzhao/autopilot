@@ -1,5 +1,7 @@
 # autopilot — AI 自动驾驶工程套件
 
+> **v3.72.0**：**design 步骤 4 从「闭合 guardrail 必问」改为 AI-First 自治**——默认完成风险评估后同轮 `auto_approve: true` + `phase: "implement"` 并在 `## 变更日志` 留痕一行 `[design-auto] <风险点与依据> → 放行`，仅结论级例外（① 存在不可逆且无证据门禁可兜底的动作 ② 含必须由用户裁决的取舍）才 AskUserQuestion（`headless: true` 时例外不征询——自答假设 + `[headless]` 留痕）；用户「先看方案 / 先给我审」反向通道保留；原五类风险清单与「闭合 guardrail（命任一即必须问）」彻底删除，判据与正反例下沉 `references/design-modes.md §5`；QA→merge 证据门禁（stop-hook §5.5 四∧）零改动，安全网不变；SKILL.md 478→476 净减 2 行。
+
 > **v3.71.0**：**机制级 headless 档位**——`--headless` flag（setup.sh）+ frontmatter `headless` 字段（写入者=setup.sh 唯一、幂等、正交于 fast/standard 可组合；headless 时 session_id 写空，由 stop-hook Guard 1 首轮认领真实 runtime session），复杂度分流 / brainstorm 委托 / guardrail 必问 / :53 环节失败回退 / U1-U4 升级 / qa 收口问六个交互点全部确定性化且必落 `[headless]` 变更日志留痕（行为矩阵 SSOT：references/headless-protocol.md）；stop-hook Guard 2 加宿主 CLAUDE_CODE_SESSION_ID 泄漏告警（signature 不命中零输出，行为仍放行，交互模式零变化）。
 > **v3.71.0 flag 解析修正**：首个目标文本 token 出现后其余 argv 全部归入目标描述——显式 flag 仅在目标描述之前生效（shell 惯例），根治目标 prose 中的 `--fast`/`--standard`/`--headless` 字面量被误识别为档位 flag（live specimen 误报）。
 

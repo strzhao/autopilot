@@ -8,7 +8,7 @@
 
 | 模式 | 触发条件 | 跳过的节点 | 失败回退 |
 |------|----------|-----------|----------|
-| Auto-Approve | `auto_approve: true`（auto-chain 设置 / design 步骤 4 AI 据低风险判断设置） | AskUserQuestion 审批；qa 通过后跳过 `gate: "review-accept"` 直接 merge | 设 `auto_approve: false`，回到 Standard 人工审批 |
+| Auto-Approve | `auto_approve: true`（auto-chain 设置 / design 步骤 4 AI 自治默认设置（例外征询时不设）） | AskUserQuestion 审批；qa 通过后跳过 `gate: "review-accept"` 直接 merge | 设 `auto_approve: false`，回到 Standard 人工审批 |
 | Fast Mode | `fast_mode: true`（启动 `--fast` 或自适应判断） | brainstorm Q&A、scenario-generator、plan-reviewer Agent、design 自审、qa-reviewer Agent；Tier 1.5 必做 | 无（fast 信任 AI 判断，直进 implement 或 HTML 评审） |
 | Standard | 其他（默认） | 无（全节点保留） | — |
 
@@ -16,7 +16,7 @@
 
 ## §2. Auto-Approve 完整工作流
 
-`auto_approve: true` 来源：(1) stop-hook auto-chain（项目子任务）；(2) standard 单任务 design 步骤 4 AI 据低风险判断（brainstorm/设计已完成，直接 `phase: implement`，不走下面 1-6 步）。下面流程针对来源 (1)：
+`auto_approve: true` 来源：(1) stop-hook auto-chain（项目子任务）；(2) standard 单任务 design 步骤 4 AI 自治默认（例外征询时不设）（brainstorm/设计已完成，直接 `phase: implement`，不走下面 1-6 步）。下面流程针对来源 (1)：
 
 1. 执行知识上下文加载（主 SKILL.md 步骤 0）
 2. 1 个 Explore agent 快速分析任务相关代码
@@ -29,7 +29,7 @@ qa 阶段差异：
 
 | 阶段 | 正常行为 | auto_approve=true |
 |------|----------|-------------------|
-| design | AskUserQuestion 审批 | 跳过审批，写设计文档 + plan-reviewer 审查 → 通过推进 |
+| design | 自治默认 / 例外征询 | 跳过审批，写设计文档 + plan-reviewer 审查 → 通过推进 |
 | qa | 全部 ✅ → `gate: "review-accept"` | 全部 ✅ → 直接 `phase: "merge"`（跳过 gate） |
 
 **失败回退总则**：任何环节失败 → 设 `auto_approve: false`，回退到正常人工审批。
@@ -49,7 +49,7 @@ qa 阶段差异：
 2. 主 SKILL 接力：按主 SKILL.md「步骤 2. 代码探索与设计文档编写」执行（按需 1 个或多个 Explore agent + 并行启动 scenario-generator）
 3. 设计文档写入状态文件 `## 设计文档` 和 `## 实现计划` 区域
 4. 主 SKILL.md「步骤 3. Plan 审查」：plan-reviewer Agent 审查（最多 2 轮）
-5. 主 SKILL.md「步骤 4. 请求审批」：AskUserQuestion + 3 选项（通过 / 修改 / 放弃）
+5. 主 SKILL.md「步骤 4. 请求审批」：自治默认放行；例外或用户要求审阅时 AskUserQuestion 三选项
 6. 审批通过 → 主 SKILL.md「步骤 5. 审批通过后」
 
 **兼容性**：历史 state.md 中的 `plan_mode: "deep"` 同样走此分支；`plan_mode` 字段已弃用，新代码不读。
@@ -64,6 +64,24 @@ qa 阶段差异：
 | implement | blue-team / red-team 双 Agent 保留不变 |
 | qa | `qa_scope=smoke`（详见主 SKILL.md 「Phase: qa 前置：选择性重跑判断」），不启动 qa-reviewer Agent，编排器自行 Read git diff 后 inline 做 3 项自审（设计符合性 / OWASP 关键 / 代码质量明显问题）。Tier 1.5 必做铁律不变 |
 | merge | commit-agent 保留不变 |
+
+## §5. AI 自治判据与留痕契约
+
+**自由度两分法**（为什么这里 AI 自己判、那里必须机械）：design 的风险判断是「开阔地」——多种方案都成立、依赖上下文、启发式引导 → 高自由度，给方向不给清单；QA→merge 的证据门禁是「窄桥」——必须按固定条件判定 → 低自由度，由 stop-hook §5.5 四∧ 机械裁决。
+
+**默认**：AI 完成风险评估 → 同轮 `auto_approve: true` + `phase: "implement"`，并在状态文件 `## 变更日志` 留痕一行：
+
+`[design-auto] <风险点与依据> → 放行`
+
+**例外（唯一征询条件，结论级判断而非类别清单）**：AI 自判命中以下之一才 AskUserQuestion——① 存在不可逆且无证据门禁可兜底的动作；② 含必须由用户裁决的取舍。
+
+正例（均属放行）：
+- 改动跨 8 个文件但全是文本同步 → 放行（范围大 ≠ 风险高；下游证据门禁兜底）
+- 引入新表 / 新接口但 QA 有谓词与真实执行面验证 → 放行
+
+反例（属征询）：
+- 未经用户确认即更改对外接口契约语义 / 触发发版 → 征询
+- 目标本身存在多种合理解读且代价不同 → 征询（意图类）
 
 ——
 跨引用：`plan-reviewer-prompt.md`（standard / auto-approve 模式 plan-reviewer Agent 模板）、`scenario-generator-prompt.md`（标准模式并行启动的验收场景生成器）、`html-review-guide.md`（步骤 4 HTML 评审路径）。

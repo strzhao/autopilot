@@ -1,5 +1,12 @@
 # Patterns & Lessons（热区：近 30 天活跃决策）
 
+### [2026-09-15] 验证链的三处"假绿" + 全局 env 隐性干扰源（PATH 桩隔离法）
+<!-- tags: autopilot, qa, false-green, artifact-naming-collision, harness-bug, multibyte, awk, bsd-grep, env-global, autopilot-html-review, browser-popup, path-stub, test-isolation, dogfood -->
+**Scenario**: 一次 QA 连踩三个"看起来通过"的假信号，全部出在**验证工具自身**而非被测实现：① **artifact 同名覆盖**——SSOT 约定的 `/tmp/autopilot-artifacts/场景N.M.out` 被多个测试共用，后跑者覆盖前者，24 条谓词中 16 条的 artifact 内容实为别的测试产物（「无 artifact 的 PASS 自动判 FAIL」险些被绕过）；② **校验器恒真**——校验脚本 `sig()` 漏写 `echo`，签名变量恒空，`grep -qF ""` 对任何文件都命中 → 16/24 失败被判 0 失败；③ **解析器崩溃回落空值**——`awk` 在含非法字节序列的日志上崩溃，`${nb:-0}` 把"没解析出"变成"0 失败" → 未经证据的 PASS。
+**Lesson**: ① **验证脚本必须"失败会喊"**——签名/期望值为空或解析失败必须显式 FAIL，不得用默认值兜底（空值兜底 = 假绿生成器）；② **artifact 路径按任务命名空间隔离**（本仓既有 `design-step4/`、`design-step4-qa/` 惯例），跨测试共用顶层命名必然互相覆盖；③ **macOS 工具链陷阱**：`awk` / BSD `grep` 对非法字节序列与含 CJK 的 ERE 会静默不匹配或崩溃（同日三次），计数类断言的模式串尽量纯 ASCII、解析用容忍非法字节方式（python `errors='replace'`）。
+**Bonus（干扰源定位）**: 用户反馈"测试一直在弹浏览器"——真凶两层：**测试**（`plan-review-html` 的 C9c/C11 实跑 `launch-plan-review.sh`，其 `open_browser()` 在 macOS 调 `open`；一次全量跑弹 8 次）+ **全局 env**（`~/.claude/settings.json` env 里的 `AUTOPILOT_HTML_REVIEW=1` 让每个 session 的每个 autopilot 任务都被写成 `html_review: true`）。修法：**PATH 前置桩**（把 `open`/`xdg-open` 换成 exit 1 的脚本，套件级 `run-all.sh` + 测试级双层，**不改被测脚本**，桩带调用日志作证据）+ 全局 env 改按需（per-task `html_review: true` 或临时 export）。
+**Why**: 与 [2026-06-02]「QA 假阳性根治」、[2026-07-01]「删 baseline 重录 = 污染 oracle」同族——**验证链自身的可信度必须先被验证**。
+
 ### [2026-09-08] Tier 1.5 谓词 artifact 两个机械陷阱——裸数字跨谓词 MD5 撞车 + staged 状态字面 diff 为空
 <!-- tags: autopilot, tier-1.5, predicate, artifact, md5-collision, pred-artifact-dup, git-staged, numstat, baseline, stop-hook, §5.7, dogfood, v3.66.0 -->
 **Scenario 1**: 多条谓词 artifact 用 `| wc -l` 产裸数字（两条都输出 `6\n`）——路径不同但 MD5 相同，stop-hook §5.7 PRED-ARTIFACT-DUP 守卫按「复制冒充独立产物」拦截（本轮 s2p2/s6p2 实证 block）。

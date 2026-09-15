@@ -18,7 +18,8 @@
 #   SC2.P1: awk SKILL.md「### Standard Design」段 + grep -F「先查复用」命中≥1
 #   SC2.P2: grep -F 'Skill: "autopilot-brainstorm"' SKILL.md 命中≥1（不破坏既有契约9/C3）
 #   SC3.P1: awk design-modes.md「## §3」段 + grep -F「先查复用」命中≥1
-#   SC4.P1: git diff --name-only 不含 autopilot-brainstorm/SKILL.md（brainstorm skill 零改）
+#   SC4.P1: brainstorm skill 交回语与步骤 4 口径一致（语义断言；[2026-09-15] 用户批准适配，
+#           原「brainstorm skill 零改」为 v3.61.0 一次性自证，见该段注释证据链）
 #   SC4.P2: git diff --name-only 不含 setup.sh / lib.sh / stop-hook.sh（脚本零改）
 #   SC4.P2: scripts/ 不含 brainstorm 复用扫描逻辑（内容断言，环境无关）
 #   SC5.P1: awk Standard 段 + grep -F brainstorm.md AND grep -F 先查复用 双重命中
@@ -195,15 +196,27 @@ fi
 pass "SC3.P1: design-modes.md §3 段含「先查复用」详细步骤（命中数=${reuse_dm_hits}）"
 
 # ════════════════════════════════════════════════════════════════════════════
-# 谓词 SC4.P1 [det-machine]: git diff --name-only 不含 autopilot-brainstorm/SKILL.md
-# observe: git diff --name-only
-# assert:  不含 $BRAINSTORM_SKILL_REL（brainstorm skill 零改，方案 A' 不依赖）
+# 谓词 SC4.P1 [det-machine]: brainstorm skill 交回语与 design 步骤 4 口径一致（语义断言）
+# observe: grep $BRAINSTORM_SKILL_REL 的交接协议行
+# assert:  含「plan-reviewer」（既有接力链不变）∧ 含「步骤 4」（口径同步到步骤 4 判据）
+# [2026-09-15] 断言机制适配（用户批准，配 §8.5.1b 留痕）：
+#   原断言「git diff --name-only 不含 autopilot-brainstorm/SKILL.md（brainstorm skill 零改）」
+#   是 v3.61.0 那一次任务的自我证明（断言文本自述「方案 A' 要求 brainstorm skill 零改」），
+#   任何后续任务同步该 skill 文案即假阳性——与同文件已两次按同类理由适配的 SC4.P2/P3 同构
+#   （[2026-09-07] 用户批准）。本次任务（design 步骤 4 AI 自治重写）需把该 skill 交回语
+#   「→ AskUserQuestion 审批」同步为「→ 步骤 4（自治默认 / 例外征询）」（原表述在新默认下失真），
+#   故改为环境无关的内容断言：接力链与步骤 4 口径必须同时在场。
+# 证据链：E1 断言文本自述任务范围（「方案 A' 要求」= v3.61.0 一次性证明）
+#         E3 同族先例（SC4.P2/P3 已按同一理由语义化适配，用户批准）
 # ════════════════════════════════════════════════════════════════════════════
-changed_files=$(git -C "$REPO_ROOT" diff --name-only "$DIFF_REF" 2>/dev/null || true)
-if echo "$changed_files" | grep -F -q "$BRAINSTORM_SKILL_REL"; then
-    fail "SC4.P1: autopilot-brainstorm/SKILL.md 改动违规（$BRAINSTORM_SKILL_REL 出现在 git diff，方案 A' 要求 brainstorm skill 零改）"
+if [[ ! -f "$REPO_ROOT/$BRAINSTORM_SKILL_REL" ]]; then
+    fail "SC4.P1: $BRAINSTORM_SKILL_REL 不存在（brainstorm skill 缺失）"
 fi
-pass "SC4.P1: autopilot-brainstorm/SKILL.md 零改（方案 A' 不依赖）"
+handoff_line=$(grep -F 'plan-reviewer' "$REPO_ROOT/$BRAINSTORM_SKILL_REL" | grep -F '步骤 4' || true)
+if [[ -z "$handoff_line" ]]; then
+    fail "SC4.P1: brainstorm skill 交回语未同步到步骤 4 口径（应含 plan-reviewer ∧ 步骤 4）"
+fi
+pass "SC4.P1: brainstorm skill 交回语与步骤 4 口径一致（语义断言）"
 
 # ════════════════════════════════════════════════════════════════════════════
 # 谓词 SC4.P2 [det-machine]: brainstorm 复用语义扫描不下沉 bash（standing invariant）

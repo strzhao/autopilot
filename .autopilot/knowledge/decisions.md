@@ -1,5 +1,12 @@
 # Architecture Decisions（热区：近 30 天活跃决策）
 
+### [2026-09-15] design 步骤 4 审批域 AI-First 落地——闭合 guardrail 删除 + 机械门禁为安全真源 + 反向注入指令同轮清理（v3.72.0）
+<!-- tags: autopilot, design, approval-gate, auto-approve, ai-first, overfitting, guardrail-vs-overfitting, degrees-of-freedom, default-plus-escape-hatch, mechanical-gate, stop-hook-prompt, reverse-injection, dogfood, v3.72.0 -->
+**Background**: design 步骤 4 的「五类高风险清单 + 命任一即必须问」（v3.62.0 引入）在真实负载下命中率 ≈100%——扫描本机 100 个 state.md + 20 个有 transcript 的 session（144 次 AskUserQuestion）：16 次设计/方案审批**每一次 AI 都自述命中 guardrail**（新抽象 / 大半径 / schema 迁移 / API 契约 / 发版 / 认证），而全盘 transcript 中 AI 主动写 `auto_approve: true` 仅 5 次 → 「低风险→自治」路径等价死代码。用户诉求：AI 很强大，规则清单是限制而非护栏。
+**Choice**: ① 删五类清单与闭合声明，判据改**结论级例外**（「不可逆且无证据门禁可兜底的动作」/「必须由用户裁决的取舍」），默认自治（同轮 `auto_approve: true` + `phase: implement` + 变更日志 `[design-auto]` 留痕）；② **安全真源 = 机械门禁**（stop-hook §5.5 四∧ `auto_approve ∧ verified ∧ leftover=0 ∧ unexecuted=0`）——删清单不损失任何结构保证；③ 保留反向通道（用户「先看方案」仍 AskUserQuestion）与失败回退（plan-reviewer FAIL → `auto_approve: false`）；④ **同轮清理机械层反向注入**：stop-hook §9 standard 兜底 PROMPT 在 brainstorm 接力点（`design_doc_written=false`）可达，注入「审查通过后使用 AskUserQuestion 请求用户审批」——与本目标反向的高权重指令必须一并改（1 行散文，零测试破坏）。
+**Evidence**: SKILL.md 478→476（净 -2）∧ 7 契约词计数不变 ∧ 无新增顶层章节；`run-all.sh` 49/53（4 项失败在 d45e899 基线同样 rc=1）；4 个新红队测试（guard 带 REVERSE-CHECK 反向验证，基线 rc=1）+ 24 条谓词求值全 PASS；plan-reviewer 两轮（第 2 轮抓出上述反向注入 BLOCKER）；qa-reviewer Critical 0 / 契约 C1-C10 逐条落地。
+**Lesson**: [2026-05-30] AI-First 判据在**审批域**的形态 = **删清单 + 留客观门禁 + default + escape hatch**（与 Anthropic 官方 best practice「避免给太多选项 → 用 default + escape hatch」同构；`>5文件` 这类阈值即官方点名的 voodoo constant）。判别关键：**风险判断（开阔地：AI 能自判 + 下游有证据门禁兜底）可交 AI；意图判断（只有用户知道）仍须问人**。硬教训：**改流程方向时必须 grep 机械层的"注入指令"**——hook 注入的 PROMPT 优先级高于 skill 散文，漏改则目标只实现一半。
+
 ### [2026-09-09] 真实验收执行面闭环——执行面清单 + unexecuted_core_paths 第三字段 + real-process 强制（v3.69.0）
 <!-- tags: autopilot, execution-surface, unexecuted-core-paths, real-process, acceptance-card, tunnel-smoke, tiered-approve, reviewer-independence, scenario-generator, v3.69.0 -->
 **Background**: v3.68.0 dogfood 实证 tunnel 详审链路从未真实执行（纯文档锚点交付）却 verified+0 自动 merge。根因一般化：**验证边界 = 谓词集边界，无任何一层审计谓词集覆盖面**——场景生成器无 real-process 强制规则、qa-reviewer 充分性反查枚举源是 git diff 风险面（文档型交付物声明的可执行工作流不可见）、决策卡诚实点名未实证但 leftover_critical「普通遗留不计入」让点名不算账（信息→决策传动轴断裂）。qa-reviewer 独立性失效：复核的是「判定与证据一致」而非「范围圈定是否合理」，共享词汇让独立审查 blessing 同一窄圈定。

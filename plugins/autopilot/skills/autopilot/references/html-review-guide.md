@@ -1,16 +1,16 @@
 # Plan 审批 HTML 评审路径指南
 
-详细描述 design 阶段步骤 4 的两条审批路径（4b 默认 / 4c 可选 HTML）。SKILL.md 步骤 4 仅放决策树，详细工作流走本文。
+详细描述 design 阶段步骤 4 的两条审批路径（4b AskUserQuestion / 4c 可选 HTML）。4b 不再是默认路径：默认路径中，用户明确要求审阅或 AI 判定例外时才走 4b。SKILL.md 步骤 4 仅放决策树，详细工作流走本文。
 
 ## 路径选择（4a）
 
-唯一开关：state.md frontmatter `html_review: true` → 走 4c HTML 评审，否则走 4b 默认 AskUserQuestion。
+唯一开关：state.md frontmatter `html_review: true` → 走 4c HTML 评审；否则在默认路径中，用户明确要求审阅或 AI 判定例外时走 4b 向用户征询，其余由 AI 自治放行。
 
 环境变量 `AUTOPILOT_HTML_REVIEW=1` 由 setup.sh 在创建任务时一次性同步到 frontmatter；用户视角仍是「export 完启动 autopilot 即可开 HTML 评审」。已存在的任务想中途切换：直接编辑 state.md 的 `html_review` 字段。
 
-## 4b. 默认 AskUserQuestion + preview 路径
+## 4b. AskUserQuestion + preview 路径（用户要求审阅 / AI 判定例外时）
 
-使用 `AskUserQuestion` 请求审批，3 个选项：
+当走 4b（用户明确要求审阅 / AI 判定例外）时，使用 `AskUserQuestion` 请求审批，3 个选项：
 - **通过，开始实现** — preview 字段填入设计摘要（≤40 行），结构：目标 / 范围 / 关键决策 / 取舍
 - **有修改意见** — 用户在 free-text 框输入反馈
 - **放弃本次任务**
@@ -61,7 +61,7 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/visual-companion/launch-plan-review.sh "$task
 
 | 场景 | 行为 |
 |------|------|
-| stdout 为空 / 解析失败 / 超时 | fallback 到 4b 默认路径 |
+| stdout 为空 / 解析失败 / 超时 | fallback 到 4b 征询路径 |
 | 浏览器打不开（headless / SSH） | launch-plan-review.sh stderr 打印 URL，wait-decision 仍工作；用户手动打开即可 |
 | visual-companion server 启动失败 | stderr 报错 → fallback 到 4b |
 
