@@ -29,14 +29,14 @@
 
 使用 Agent 工具启动 commit-agent（model: "sonnet"），**不要使用 `Skill: "autopilot-commit"`**（会继承完整父上下文，导致 3-5M token 开销）。
 
-预收集 Agent 输入（编排器启动 Agent 前通过 Bash 获取）：
-- `git diff --stat` 输出（变更概况）
-- `git diff` 完整 diff（供分析具体改动）
+预收集 Agent 输入：
 - 设计文档的目标一句话（从状态文件 `## 设计文档` 提取）
 - commit type 判断依据（根据变更性质判断 feat/fix/refactor 等）
 - 项目根目录路径
 
-启动 Agent：prompt 参考 `references/commit-agent-prompt.md` 模板，填入上述输入。Agent 执行：分析变更 → 生成 commit message（中文） → `git add -A` → `git commit` → 版本号升级 → CLAUDE.md 更新。
+**diff 不预收集**——commit Agent 在项目根自行执行 `git diff --stat` + `git diff`，编排器不把 diff 生成进 prompt。
+
+启动 Agent：prompt 短桩——指示 Agent 先 Read `references/commit-agent-prompt.md` 按模板执行，填入上述输入。Agent 执行：分析变更 → 生成 commit message（中文） → `git add -A` → `git commit` → 版本号升级 → CLAUDE.md 更新。
 
 > `git add -A` 会自动包含步骤 1 写入的知识库文件和步骤 2 写入的 handoff/dag.yaml（普通模式一次 commit）。
 

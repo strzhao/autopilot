@@ -76,7 +76,7 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 #### 步骤 1. 模式检测与分流
 
-读取状态文件 frontmatter 的 `mode` 和 `brief_file` 字段。**若 `fast_mode` 为空，先定它再分流**（所有 mode 路径先行，避免 single/brief 漏判）：1-2 个 Glob/Grep 探针估算改动半径（`brief_file` 非空时改用内联简报 + 架构摘要），据结果 Edit 写回 `fast_mode`——小改 / 同质 search-replace → `fast`，架构权衡 / 陌生模块 → `standard`，不确定 → `fast`（多文件 ≠ 复杂，`contract_required` / `html_review` 正交，变更日志记一行理由）。探针结论写入 `$TASK_DIR/context.md`——固定五节 `## 技术栈` / `## 测试框架` / `## 测试命令` / `## 构建命令` / `## 相关历史知识`（步骤 0 加载到的相关条目一句话摘要 ≤3 条；无则 N/A），节内 bullet、空节写 `N/A`，供蓝队/红队/qa-reviewer 复用。然后按 `mode` 分流：
+读取状态文件 frontmatter 的 `mode` 和 `brief_file` 字段。**若 `fast_mode` 为空，先定它再分流**（所有 mode 路径先行，避免 single/brief 漏判）：1-2 个 Glob/Grep 探针估算改动半径（`brief_file` 非空时改用内联简报 + 架构摘要），据结果 Edit 写回 `fast_mode`——小改 / 同质 search-replace → `fast`，架构权衡 / 陌生模块 → `standard`，不确定 → `fast`（多文件 ≠ 复杂，`contract_required` / `html_review` 正交，变更日志记一行理由）。探针结论写入 `$TASK_DIR/context.md`——固定五节 `## 技术栈` / `## 测试框架` / `## 测试命令` / `## 构建命令` / `## 相关历史知识`（步骤 0 加载到的相关条目一句话摘要 ≤3 条；无则 N/A），节内 bullet、空节写 `N/A`；`## 测试命令` / `## 构建命令` 必须写**实测过（exit=0）的完整可执行命令行**（含环境加载前缀），供下游直接复制执行，禁止描述性文字——下游蓝队/QA 据此免除重复环境探测。然后按 `mode` 分流：
 
 - **`mode: "single"` 或 `brief_file` 非空** → 跳过检测，继续步骤 2（标准单任务流程）。brief 模式下，目标区域已内联任务简报 + 依赖 handoff + 架构摘要，优先使用这些上下文。
 - **`mode: "project"`** → 跳过检测，直接走 [项目模式设计](#项目模式设计内容)
@@ -95,7 +95,7 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 #### 步骤 2. 代码探索与设计文档编写
 
 - 根据任务涉及的代码面**自行决定** Explore agent 数量：聚焦的小改动 1 个通常足够，跨多个模块 / 范围不确定时可并行多个。每个 agent 指定具体搜索目标。
-- **并行启动验收场景生成器**：在同一轮 Agent 调用中，与 Explore agent 一起启动验收场景生成器（model: "sonnet"），prompt 参考 `references/scenario-generator-prompt.md` 模板，填入目标描述和项目技术栈。该 Agent 从纯目标视角（不看代码和设计文档）生成 e2e 验收场景含预注册验收谓词（EARS-OST + 观测绑定）。**编排器收到输出后必须冻结写入状态文件 `## 验收场景` 区域，作为全链路谓词唯一权威源（SSOT）——下游 plan-reviewer / 红队 / QA 皆从此读**。降级：生成器失败时 Plan 审查照常执行（详见验收场景降级）。
+- **并行启动验收场景生成器**：在同一轮 Agent 调用中，与 Explore agent 一起启动验收场景生成器（model: "sonnet"），prompt 短桩——指示 Agent 先 Read `references/scenario-generator-prompt.md` 按模板执行，prompt 内只内联两个小字段（目标描述原文 + 技术栈摘要，信息隔离铁律要求内联，不走路径）。该 Agent 从纯目标视角（不看代码和设计文档）生成 e2e 验收场景含预注册验收谓词（EARS-OST + 观测绑定）。**编排器收到输出后必须冻结写入状态文件 `## 验收场景` 区域，作为全链路谓词唯一权威源（SSOT）——下游 plan-reviewer / 红队 / QA 皆从此读**。降级：生成器失败时 Plan 审查照常执行（详见验收场景降级）。
 - 查找可复用的代码和工具函数
 - **范围控制**：如果任务你认为太复杂，通过一次 autopilot 无法高质量完成，应在步骤 1 中选择项目模式拆分为独立任务
 - **Skill 识别**：检查系统 prompt 中列出的可用 skill，如果有 skill 与目标高度匹配（用户提到了 skill 名称，或 skill 的触发描述与目标吻合），在设计文档中声明委托
@@ -110,7 +110,7 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 **执行流程**：
 
-1. **启动 plan-reviewer Agent**（model: "sonnet"，prompt 参考 `references/plan-reviewer-prompt.md`），填入：目标描述（`## 目标`）/ 设计文档（`## 设计文档` + `## 实现计划`）/ 项目根目录路径 / 验收场景（`## 验收场景`，N/A 则省略）
+1. **启动 plan-reviewer Agent**（model: "sonnet"）：prompt 短桩——指示 Agent 先 Read `references/plan-reviewer-prompt.md` 按模板执行；输入路径传递（大块内容不内联复制，Agent 自行 Read）：state.md 路径（Read `## 目标` / `## 设计文档` + `## 实现计划` / `## 验收场景`，N/A 则省略）+ 项目根目录路径
 2. **结果**：**PASS**（无 BLOCKER）→ 继续步骤 4 | **FAIL**（有 BLOCKER）→ 修改状态文件设计文档后重审
 3. **重审控制**：最多 2 轮（初审 + 1 次重审）；第 2 轮仍 FAIL → 附未解决 BLOCKER 标注 `[审查未通过，交由用户判断]` 后继续步骤 4；重要问题（80-89）不阻断，作为改进建议附设计文档末尾
 
@@ -165,15 +165,15 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 ##### 蓝队 Agent（实现者）
 
-使用 Agent 工具启动蓝队（model: "sonnet"），prompt 参考 `references/blue-team-prompt.md` 模板，填入：
-- 设计文档和实现计划（从状态文件复制）
+使用 Agent 工具启动蓝队（model: "sonnet"）：prompt 短桩——指示 Agent 先 Read `references/blue-team-prompt.md` 按模板执行；输入路径传递（不内联复制）：
+- state.md 路径（Agent 自行 Read `## 设计文档` + `## 实现计划` 两节）
 - 项目目录路径和 `$TASK_DIR/context.md` 路径
 
 ##### 红队 Agent（验证者）
 
-使用 Agent 工具启动红队（model: "sonnet"），prompt 参考 `references/red-team-prompt.md` 模板，填入：
-- 目标描述和设计文档（**仅**设计，不含实现计划）
-- 验收场景（从状态文件 `## 验收场景` 读取预注册谓词，N/A 则省略）
+使用 Agent 工具启动红队（model: "sonnet"）：prompt 短桩——指示 Agent 先 Read `references/red-team-prompt.md` 按模板执行；输入路径传递（不内联复制）：
+- state.md 路径（Agent 自行 Read，**仅限** `## 目标` / `## 设计文档` / `## 验收场景` 三节）
+- 信息隔离：禁读 `## 实现计划` 与蓝队相关区域，实现代码绝不读（红队铁律）
 - `$TASK_DIR/context.md` 路径（测试框架信息；命名约定从现有测试文件提取）
 
 **⚠️ 红队铁律**：红队**绝对不能**读取蓝队新写的实现代码。红队测试代表设计意图，是验收标准的代码化表达。
@@ -295,13 +295,13 @@ Tier 5 ❌ 数字达不到阈值 → 与 Tier 0/1 ❌ 同权重计数
 
 #### Wave 2 — qa-reviewer Agent 审查（单 Agent，合并两类审查）
 
-使用 Agent 工具启动 qa-reviewer（model: "sonnet"），prompt 参考 `references/qa-reviewer-prompt.md` 模板，填入：
-- 设计文档（从状态文件 `## 设计文档` 复制）
-- `## 契约规约` 章节（contract_required=true 时填入；缺失 → Section D 输出 N/A）+ `$TASK_DIR/context.md` 路径
-- Wave 1 + Wave 1.5 各 Tier 通过/失败状态摘要
-- Tier 1.5 中所有 ⚠️/❌ 场景的原始命令输出（完整 stdout/stderr 片段，不是摘要）
+使用 Agent 工具启动 qa-reviewer（model: "sonnet"）：prompt 短桩——指示 Agent 先 Read `references/qa-reviewer-prompt.md` 按模板执行；输入路径传递（Agent 自行 Read）：
+- state.md 路径（Read `## 设计文档`；contract_required=true 时同读 `## 契约规约`，缺失 → Section D 输出 N/A）
+- `$TASK_DIR/context.md` 路径（技术栈/测试框架/测试命令/构建命令/相关历史知识五节）
+- Wave 1 + Wave 1.5 各 Tier 通过/失败状态摘要（对话内小字段，内联）
+- Tier 1.5 中所有 ⚠️/❌ 场景的原始命令输出（完整 stdout/stderr 片段，不是摘要；仅异常项，内联）
 - 项目根目录路径
-- CLAUDE.md 内容或关键项目约定
+- CLAUDE.md 路径（存在时给路径，Agent 自行 Read）
 
 **核心原则**：
 - Section A: 不信任，独立验证 — 必须读取实际代码逐项比对设计要求
@@ -438,9 +438,9 @@ qa-reviewer 完成后：收集 Section A/B/C/D 审查结果合并为 QA 报告�
 
 使用 Agent 工具启动 commit-agent（model: "sonnet"），**不要使用 `Skill: "autopilot-commit"`**（会继承完整父上下文，导致 3-5M token 开销）。
 
-**预收集 Agent 输入**（编排器启动 Agent 前通过 Bash 获取）：`git diff --stat`（变更概况）+ `git diff`（完整 diff）+ 设计文档目标一句话（`## 设计文档`）+ commit type 判断依据（feat/fix/refactor 等）+ 项目根目录路径。
+**预收集 Agent 输入**：设计文档目标一句话（`## 设计文档`）+ commit type 判断依据（feat/fix/refactor 等）+ 项目根目录路径。**diff 不预收集**——commit Agent 在项目根自行执行 `git diff --stat` + `git diff`，编排器不把 diff 生成进 prompt。
 
-**启动 Agent**：prompt 参考 `references/commit-agent-prompt.md` 模板填入上述输入，Agent 执行分析变更 → 生成 commit message（中文） → `git add -A` → `git commit` → 版本号升级 → CLAUDE.md 更新。编排器收到结果后验证 `git log --oneline -1` 确认提交成功。
+**启动 Agent**：prompt 短桩——指示 Agent 先 Read `references/commit-agent-prompt.md` 按模板执行，填入上述输入，Agent 执行分析变更 → 生成 commit message（中文） → `git add -A` → `git commit` → 版本号升级 → CLAUDE.md 更新。编排器收到结果后验证 `git log --oneline -1` 确认提交成功。
 
 > `git add -A` 会自动包含步骤 1 写入的知识库文件和步骤 2 写入的 handoff/dag.yaml（普通模式一次 commit）。
 

@@ -15,13 +15,12 @@
 
 ## 输入
 
-- 设计文档（占位符，由编排器从状态文件 `## 设计文档` 复制填入）
-- 契约规约章节（`contract_required=true` 且设计文档有 `## 契约规约` 时由编排器填入；缺失 → Section D 输出 N/A）
+- state.md 路径（编排器 prompt 提供；自行 Read `## 设计文档`；`contract_required=true` 时同读 `## 契约规约` 章节，缺失 → Section D 输出 N/A）
 - 项目上下文文件路径（`$TASK_DIR/context.md`：技术栈/测试框架/测试命令/构建命令，先 Read；缺项再补充扫描）
 - Wave 1 + Wave 1.5 各 Tier 通过/失败状态摘要
 - Tier 1.5 中所有 ⚠️/❌ 场景的原始命令输出（完整 stdout/stderr 片段，供 Section A 检查 5 使用）
 - 项目根目录路径
-- CLAUDE.md 内容或关键项目约定（如果存在）
+- CLAUDE.md 路径（如果存在，自行 Read 作为审查标准补充）
 
 ## 工作流程
 

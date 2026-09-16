@@ -15,15 +15,15 @@
 
 ### 蓝队 Agent（实现者）
 
-使用 Agent 工具启动蓝队（model: "sonnet"），prompt 参考 `references/blue-team-prompt.md` 模板，填入：
-- 设计文档和实现计划（从状态文件复制）
-- 项目目录路径和技术栈信息
+使用 Agent 工具启动蓝队（model: "sonnet"）：prompt 短桩——指示 Agent 先 Read `references/blue-team-prompt.md` 按模板执行；输入路径传递（不内联复制）：
+- state.md 路径（Agent 自行 Read `## 设计文档` + `## 实现计划` 两节）
+- 项目目录路径和 `$TASK_DIR/context.md` 路径
 
 ### 红队 Agent（验证者）
 
-使用 Agent 工具启动红队（model: "sonnet"），prompt 参考 `references/red-team-prompt.md` 模板，填入：
-- 目标描述和设计文档（**仅**设计，不含实现计划）
-- 测试框架信息和约定（从现有测试文件中提取）
+使用 Agent 工具启动红队（model: "sonnet"）：prompt 短桩——指示 Agent 先 Read `references/red-team-prompt.md` 按模板执行；输入路径传递（不内联复制）：
+- state.md 路径（Agent 自行 Read，**仅限** `## 目标` / `## 设计文档` / `## 验收场景` 三节）
+- `$TASK_DIR/context.md` 路径（测试框架信息；命名约定从现有测试文件提取）
 
 **⚠️ 红队铁律**：红队**绝对不能**读取蓝队新写的实现代码。红队测试代表设计意图，是验收标准的代码化表达。
 
