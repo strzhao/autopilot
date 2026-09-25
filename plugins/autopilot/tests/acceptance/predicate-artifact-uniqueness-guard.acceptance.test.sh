@@ -186,7 +186,7 @@ if [[ "$HASH_CHECK" -ne 1 ]]; then
     H1=$(command -v md5sum >/dev/null && md5sum "$ART_DUP_PATH1" | awk '{print $1}' || md5 -q "$ART_DUP_PATH1")
     H2=$(command -v md5sum >/dev/null && md5sum "$ART_DUP_PATH2" | awk '{print $1}' || md5 -q "$ART_DUP_PATH2")
     if [[ "$H1" != "$H2" ]]; then
-        echo "[WARN] R_PRED_DUP: 测试脚手架自检 MD5 不一致（h1=$H1 h2=$H2），但 cp 同源文件理论必相同，继续"
+        echo "[WARN] R_PRED_DUP: 测试脚手架自检 MD5 不一致（h1=$H1 h2=${H2}），但 cp 同源文件理论必相同，继续"
     fi
 fi
 

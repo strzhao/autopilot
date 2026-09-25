@@ -22,9 +22,14 @@
 #   实现 B4.2：断言 scripts/ 变更集合 ⊆ 白名单 ∧ lib.sh 0 行 ∧ setup.sh ≤ 2 行——白名单外任一文件被改仍硬失败；
 #   并保留 B4.3 对 setup.sh 的 1 增 1 删硬约束。请补声明统一 C5 与 7.P3 口径。
 #
-# 变更基线解析（三步，防「diff 为空 → 断言恒真」的 no-op 假绿）：
-#   ① 工作区 vs HEAD（未提交改动）；② HEAD~1（改动已 commit 且落在 HEAD）；③ 最近一次触碰该路径的 commit 自身 diff。
-#   三步皆空 → 判 FAIL（无变更可归因 = 减法未发生 / 变更不可定位），绝不静默放行。
+# 变更基线解析（两种性质，勿混用）：
+#   ① 滚动契约（场景3.P1「SKILL.md 只减不增」）→ 三步 fallback：工作区 vs HEAD；
+#      HEAD~1；最近一次触碰该路径的 commit 自身 diff。约束的是"任何一次改动"，
+#      故每次运行都重新指向最新的那次改动，是正确语义。
+#   ② 一次性契约（场景7.P1/7.P3「v3.72.0 那次改动限于 C5 白名单」）→ **显式钉死 rev 区间**
+#      （CHANGE_PIN_SPEC）。期望值与 :1203 行号都是该次改动的历史事实，用 fallback 会被
+#      后续提交 latch 到新 commit 而恒红（[2026-09-25] 修复，详见场景7.P1 段注释）。
+#   两者皆空 / 取不到 → 判 FAIL（无变更可归因 = 减法未发生 / 变更不可定位），绝不静默放行。
 #
 # artifact: /tmp/autopilot-artifacts/场景{3.P1,6.P1,7.P1,7.P3}.out
 
@@ -114,29 +119,6 @@ resolve_change_spec() { # <relpath>
     return 1
 }
 
-# ── 目录级变更基线解析（同三步，用于 scripts/ 白名单闭集判定） ────────────────
-resolve_dir_spec() { # <reldir>
-    local dir="$1"
-    local c out
-    if [[ -n "$(git -C "$REPO_ROOT" diff --name-only HEAD -- "$dir" 2>/dev/null || true)" ]]; then
-        echo "HEAD"
-        return 0
-    fi
-    if [[ -n "$(git -C "$REPO_ROOT" diff --name-only HEAD~1 -- "$dir" 2>/dev/null || true)" ]]; then
-        echo "HEAD~1"
-        return 0
-    fi
-    c="$(git -C "$REPO_ROOT" log -n1 --format=%H -- "$dir" 2>/dev/null || true)"
-    if [[ -n "$c" ]]; then
-        out="$(git -C "$REPO_ROOT" diff --name-only "$c^" "$c" -- "$dir" 2>/dev/null || true)"
-        if [[ -n "$out" ]]; then
-            echo "$c^ $c"
-            return 0
-        fi
-    fi
-    return 1
-}
-
 # ── 在给定 rev spec 下取某路径的 numstat（added deleted）；无输出打印 "0 0" ──
 numstat_of() { # <revspec> <relpath>
     local spec="$1" rel="$2" line added deleted
@@ -217,7 +199,21 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════
 # 场景7.P1：stop-hook.sh 改动限于 1 行散文文案
 # ═══════════════════════════════════════════════════════════════════════════
-HOOK_SPEC="$(resolve_change_spec "$STOP_HOOK_REL" || true)"
+# 变更基线钉死（[2026-09-25] 修复）：场景7 是**针对 v3.72.0「design 步骤 4 自治」那次改动**的
+# 范围契约（期望值与 :1203 行号均逐字取自那次的契约规约 C4/C5），属一次性历史事实而非永久
+# 不变量——stop-hook.sh 后续必然要有逻辑修复（v3.73.1 的 TaskStop 修复即 +50/−8）。
+# 原三步 fallback（HEAD 工作区 / HEAD~1 / 最近触碰 commit）是「定位待测改动」的机制，只在
+# 该改动仍是最新改动时成立；一旦后续提交触碰 scripts/ 就 latch 到新 commit，使 C5 白名单恒红
+# （v3.73.0/v3.73.1 之后即如此，与本次改动无关）。故改为显式钉死的 rev 区间；区间取不到
+# （如历史被改写）仍判 FAIL——保留「无变更可归因即判红」的语义，不静默放行。
+# 注：场景3.P1（SKILL.md 只减不增）仍用 fallback 解析，因其契约是**滚动**的（约束"任何一次
+# 对 SKILL.md 的改动"），与场景7 的一次性契约性质不同。
+CHANGE_PIN_SPEC="e1af09c^ e1af09c"   # v3.72.0：design 步骤 4 改 AI-First 自治
+CHANGE_PIN_DESC="e1af09c (v3.72.0 design 步骤 4 自治)"
+HOOK_SPEC=""
+if [[ -n "$(git -C "$REPO_ROOT" diff --numstat $CHANGE_PIN_SPEC -- "$STOP_HOOK_REL" 2>/dev/null || true)" ]]; then
+    HOOK_SPEC="$CHANGE_PIN_SPEC"
+fi
 HOOK_ADDED=0
 HOOK_DELETED=0
 HOOK_PLUS_BODY=""
@@ -244,7 +240,7 @@ printf '%s\n' "$HOOK_PLUS_BODY" | grep -qF '步骤 4' && HOOK_PLUS_HAS_STEP4=1
 printf '%s\n' "$HOOK_PLUS_BODY" | grep -qF '请求用户审批' && HOOK_PLUS_HAS_OLD_PHRASE=1
 
 write_art "场景7.P1.out" "stop-hook.sh=$STOP_HOOK_REL
-diff 基线 spec = ${HOOK_SPEC:-(无)}
+diff 基线 spec = ${HOOK_SPEC:-(无)}  [钉死：${CHANGE_PIN_DESC}]
 added=${HOOK_ADDED} deleted=${HOOK_DELETED}  (期望 1 / 1)
 + 行数=${HOOK_PLUS_N}  - 行数=${HOOK_MINUS_N}  (期望各 1)
 新行含 PROMPT= : ${HOOK_PLUS_IS_PROMPT}
@@ -253,7 +249,7 @@ added=${HOOK_ADDED} deleted=${HOOK_DELETED}  (期望 1 / 1)
 旧行含 PROMPT= : ${HOOK_MINUS_IS_PROMPT}
 C5：仅允许 :1203 兜底 PROMPT 的 1 句文案变更（无逻辑/变量/分支改动）"
 
-[[ -n "$HOOK_SPEC" ]] || fails "场景7.P1: 无法定位 stop-hook.sh 变更（三步 diff 皆空）——C5 要求 :1203 兜底 PROMPT 文案必须改，未改判 FAIL"
+[[ -n "$HOOK_SPEC" ]] || fails "场景7.P1: 钉死区间取不到 stop-hook.sh 变更（${CHANGE_PIN_DESC}）——C5 要求 :1203 兜底 PROMPT 文案必须改，未改判 FAIL"
 [[ "$HOOK_ADDED" -eq 1 && "$HOOK_DELETED" -eq 1 ]] || fails "场景7.P1: stop-hook.sh diff 非 '1 added / 1 deleted'（实际 ${HOOK_ADDED} / ${HOOK_DELETED}）"
 [[ "$HOOK_PLUS_N" -eq 1 && "$HOOK_MINUS_N" -eq 1 ]] || fails "场景7.P1: diff 含其它 +/- 行（+ 行 ${HOOK_PLUS_N} / - 行 ${HOOK_MINUS_N}，期望各 1；C5 禁逻辑/变量/分支改动）"
 [[ "$HOOK_MINUS_IS_PROMPT" -eq 1 ]] || fails "场景7.P1: 被删除行不是 'PROMPT=' 文案行（改动越界 C5 白名单）"
@@ -268,7 +264,10 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════
 # 场景7.P3：lib.sh 逐字节不变 + scripts/ 变更白名单（C5 后半）
 # ═══════════════════════════════════════════════════════════════════════════
-SCOPE_SPEC="$(resolve_dir_spec "$SCRIPTS_REL" || true)"
+SCOPE_SPEC=""
+if [[ -n "$(git -C "$REPO_ROOT" diff --name-only $CHANGE_PIN_SPEC -- "$SCRIPTS_REL" 2>/dev/null || true)" ]]; then
+    SCOPE_SPEC="$CHANGE_PIN_SPEC"
+fi
 SCRIPTS_CHANGED=""
 LIB_STAT="(未解析)"
 LIB_ADDED=0
@@ -310,7 +309,7 @@ if [[ -n "$SCRIPTS_CHANGED" ]]; then
     N_SCRIPTS_CHANGED=$(printf '%s\n' "$SCRIPTS_CHANGED" | grep -c . || true)
 fi
 
-write_art "场景7.P3.out" "diff 基线 spec = ${SCOPE_SPEC:-(无)}
+write_art "场景7.P3.out" "diff 基线 spec = ${SCOPE_SPEC:-(无)}  [钉死：${CHANGE_PIN_DESC}]
 scripts/ 下变更文件（C5 白名单 = {${STOP_HOOK_REL} 1 行 PROMPT, ${SETUP_REL} 1 行 PHASE_FLOW}）:
 ${SCRIPTS_CHANGED:-(空)}
 白名单外变更 = ${WHITELIST_VIOLATION_N} 个 ${WHITELIST_VIOLATION:-(无)}
@@ -319,7 +318,7 @@ setup.sh numstat = added=${SETUP_ADDED} deleted=${SETUP_DELETED} (期望 1 / 1�
 C5：lib.sh 逐字节不变；scripts/ 另仅允许 setup.sh 的 PHASE_FLOW 横幅 1 行
 CONTRACT_AMBIGUOUS：场景7.P3「仅 setup.sh」与 C5/场景7.P1（stop-hook.sh 必改 1 行）字面互斥，本测试按 C5 白名单闭集实现"
 
-[[ -n "$SCOPE_SPEC" ]] || fails "场景7.P3: 无法定位 scripts/ 变更基线（三步 diff 皆空）"
+[[ -n "$SCOPE_SPEC" ]] || fails "场景7.P3: 钉死区间取不到 scripts/ 变更基线（${CHANGE_PIN_DESC}）"
 [[ "$LIB_ADDED" -eq 0 && "$LIB_DELETED" -eq 0 ]] || fails "场景7.P3(C5): lib.sh 被改动（added=${LIB_ADDED} deleted=${LIB_DELETED}，应 0/0 逐字节不变）"
 [[ "$N_SCRIPTS_CHANGED" -ge 1 ]] || fails "场景7.P3(C5): scripts/ 下无任何变更（预期至少 setup.sh 的 PHASE_FLOW 1 行）"
 [[ "$WHITELIST_VIOLATION_N" -eq 0 ]] || fails "场景7.P3(C5): scripts/ 白名单外仍有变更 x${WHITELIST_VIOLATION_N}（${WHITELIST_VIOLATION}）"

@@ -38,9 +38,9 @@ pass() {
 
 # 前置：两文件必须存在
 [[ -f "$BLUE_TEAM_FILE" ]] \
-    || fail "blue-team-prompt.md 不存在: $BLUE_TEAM_FILE（蓝队 prompt 源文件丢失，严重）"
+    || fail "blue-team-prompt.md 不存在: ${BLUE_TEAM_FILE}（蓝队 prompt 源文件丢失，严重）"
 [[ -f "$ANTI_RAT_FILE" ]] \
-    || fail "anti-rationalization.md 不存在: $ANTI_RAT_FILE（防合理化指南源文件丢失，严重）"
+    || fail "anti-rationalization.md 不存在: ${ANTI_RAT_FILE}（防合理化指南源文件丢失，严重）"
 
 # 提取 blue-team-prompt.md「## 工作规则」章节（规则 1-N 所在区，C1/C3 的字面契约都落在此章节内）
 #   锚点：从「## 工作规则」到下一个 H2 (## ) 之间。

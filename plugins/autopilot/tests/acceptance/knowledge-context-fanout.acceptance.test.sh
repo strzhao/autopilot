@@ -82,7 +82,7 @@ pass() {
 # 前置：目标文件存在
 for f in "$AUTOPILOT_SKILL" "$DOCTOR_SKILL" "$RED_TEAM_PROMPT" "$BLUE_TEAM_PROMPT" \
          "$PLUGIN_JSON" "$MARKETPLACE_JSON" "$ROOT_CLAUDE_MD" "$AUTOPILOT_README"; do
-    [[ -f "$REPO_ROOT/$f" ]] || fail "目标文件不存在: $REPO_ROOT/$f（蓝队可能尚未改动/文件路径漂移）"
+    [[ -f "$REPO_ROOT/$f" ]] || fail "目标文件不存在: $REPO_ROOT/${f}（蓝队可能尚未改动/文件路径漂移）"
 done
 
 # 辅助：grep -cE 计数（grep 无匹配 stdout="0"+rc=1，n 已捕获 "0" 再 || n=0 单值归一）
@@ -126,7 +126,7 @@ BLUE_PATH="$REPO_ROOT/$BLUE_TEAM_PROMPT"
 SKILL_HIST=$(count_lines "$SKILL_PATH" '相关历史知识')
 echo "  [scene1.P1] SKILL.md '相关历史知识' count=$SKILL_HIST" >> "$ARTIFACT_DIR/kctx-fan-anchors.out"
 [[ "$SKILL_HIST" -ge 1 ]] || \
-    fail "scene 1.P1: SKILL.md 缺「相关历史知识」字面锚点（count=$SKILL_HIST，节名字面禁变体）"
+    fail "scene 1.P1: SKILL.md 缺「相关历史知识」字面锚点（count=${SKILL_HIST}，节名字面禁变体）"
 pass "scene 1.P1: SKILL.md 含「相关历史知识」(count=$SKILL_HIST >= 1)"
 
 # ===========================================================================
@@ -136,7 +136,7 @@ pass "scene 1.P1: SKILL.md 含「相关历史知识」(count=$SKILL_HIST >= 1)"
 SKILL_COLINE=$(count_lines "$SKILL_PATH" '相关历史知识.*构建命令|构建命令.*相关历史知识')
 echo "  [scene1.P2] SKILL.md 共行(相关历史知识+构建命令) count=$SKILL_COLINE" >> "$ARTIFACT_DIR/kctx-fan-anchors.out"
 [[ "$SKILL_COLINE" -ge 1 ]] || \
-    fail "scene 1.P2: SKILL.md 无同行含「相关历史知识」+「构建命令」的契约行（count=$SKILL_COLINE，该节须绑定在 context.md 五节契约行内）"
+    fail "scene 1.P2: SKILL.md 无同行含「相关历史知识」+「构建命令」的契约行（count=${SKILL_COLINE}，该节须绑定在 context.md 五节契约行内）"
 pass "scene 1.P2: SKILL.md 五节契约行绑定（共行 count=$SKILL_COLINE >= 1）"
 
 # ===========================================================================
@@ -145,7 +145,7 @@ pass "scene 1.P2: SKILL.md 五节契约行绑定（共行 count=$SKILL_COLINE >=
 BLUE_FIVE=$(count_lines "$BLUE_PATH" '五节')
 echo "  [scene1.P3] blue-team-prompt.md '五节' count=$BLUE_FIVE" >> "$ARTIFACT_DIR/kctx-fan-anchors.out"
 [[ "$BLUE_FIVE" -ge 1 ]] || \
-    fail "scene 1.P3: blue-team-prompt.md 缺「五节」措辞（count=$BLUE_FIVE，术语四节→五节未同步）"
+    fail "scene 1.P3: blue-team-prompt.md 缺「五节」措辞（count=${BLUE_FIVE}，术语四节→五节未同步）"
 pass "scene 1.P3: blue-team-prompt.md 含「五节」(count=$BLUE_FIVE >= 1)"
 
 # ===========================================================================
@@ -154,7 +154,7 @@ pass "scene 1.P3: blue-team-prompt.md 含「五节」(count=$BLUE_FIVE >= 1)"
 RED_HIST=$(count_lines "$RED_PATH" '相关历史知识')
 echo "  [scene2.P1] red-team-prompt.md '相关历史知识' count=$RED_HIST" >> "$ARTIFACT_DIR/kctx-fan-anchors.out"
 [[ "$RED_HIST" -ge 1 ]] || \
-    fail "scene 2.P1: red-team-prompt.md 缺「相关历史知识」（count=$RED_HIST，读侧消费义务未接线）"
+    fail "scene 2.P1: red-team-prompt.md 缺「相关历史知识」（count=${RED_HIST}，读侧消费义务未接线）"
 pass "scene 2.P1: red-team-prompt.md 含「相关历史知识」(count=$RED_HIST >= 1)"
 
 # ===========================================================================
@@ -163,7 +163,7 @@ pass "scene 2.P1: red-team-prompt.md 含「相关历史知识」(count=$RED_HIST
 RED_AVOID=$(count_lines "$RED_PATH" '避开')
 echo "  [scene2.P2] red-team-prompt.md '避开' count=$RED_AVOID" >> "$ARTIFACT_DIR/kctx-fan-anchors.out"
 [[ "$RED_AVOID" -ge 1 ]] || \
-    fail "scene 2.P2: red-team-prompt.md 缺「避开」（count=$RED_AVOID，用例设计规避动作缺失）"
+    fail "scene 2.P2: red-team-prompt.md 缺「避开」（count=${RED_AVOID}，用例设计规避动作缺失）"
 pass "scene 2.P2: red-team-prompt.md 含「避开」(count=$RED_AVOID >= 1)"
 
 # ===========================================================================
@@ -173,7 +173,7 @@ pass "scene 2.P2: red-team-prompt.md 含「避开」(count=$RED_AVOID >= 1)"
 RED_COLINE=$(count_lines "$RED_PATH" '相关历史知识.*避开|避开.*相关历史知识')
 echo "  [scene2.P3] red-team-prompt.md 共行(相关历史知识+避开) count=$RED_COLINE" >> "$ARTIFACT_DIR/kctx-fan-anchors.out"
 [[ "$RED_COLINE" -ge 1 ]] || \
-    fail "scene 2.P3: red-team-prompt.md 无同一条款行同时含「相关历史知识」+「避开」（count=$RED_COLINE，条件与动作必须共行）"
+    fail "scene 2.P3: red-team-prompt.md 无同一条款行同时含「相关历史知识」+「避开」（count=${RED_COLINE}，条件与动作必须共行）"
 pass "scene 2.P3: red-team-prompt.md 条款行共行绑定（共行 count=$RED_COLINE >= 1）"
 
 # ===========================================================================
@@ -183,7 +183,7 @@ pass "scene 2.P3: red-team-prompt.md 条款行共行绑定（共行 count=$RED_C
 SKILL_NA=$(count_lines "$SKILL_PATH" '相关历史知识.*N/A|N/A.*相关历史知识')
 echo "  [scene3.P1] SKILL.md 共行(相关历史知识+N/A) count=$SKILL_NA" >> "$ARTIFACT_DIR/kctx-fan-anchors.out"
 [[ "$SKILL_NA" -ge 1 ]] || \
-    fail "scene 3.P1: SKILL.md 无同行含「相关历史知识」+「N/A」（count=$SKILL_NA，缺『无相关条目写 N/A』规约）"
+    fail "scene 3.P1: SKILL.md 无同行含「相关历史知识」+「N/A」（count=${SKILL_NA}，缺『无相关条目写 N/A』规约）"
 pass "scene 3.P1: SKILL.md N/A 语义共行绑定（共行 count=$SKILL_NA >= 1）"
 
 # ===========================================================================
@@ -194,7 +194,7 @@ SKILL_ADDED=${SKILL_STATS% *}
 SKILL_DELETED=${SKILL_STATS#* }
 echo "  [scene4.P1] autopilot/SKILL.md numstat added=$SKILL_ADDED deleted=$SKILL_DELETED" >> "$ARTIFACT_DIR/kctx-fan-numstat.out"
 [[ "$SKILL_DELETED" -ge "$SKILL_ADDED" ]] || \
-    fail "scene 4.P1: autopilot/SKILL.md 净增 (deleted=$SKILL_DELETED < added=$SKILL_ADDED，契约硬约束 deleted >= added)"
+    fail "scene 4.P1: autopilot/SKILL.md 净增 (deleted=$SKILL_DELETED < added=${SKILL_ADDED}，契约硬约束 deleted >= added)"
 pass "scene 4.P1: autopilot/SKILL.md 净非增 (deleted=$SKILL_DELETED >= added=$SKILL_ADDED)"
 
 # ===========================================================================
@@ -205,19 +205,25 @@ DOCTOR_ADDED=${DOCTOR_STATS% *}
 DOCTOR_DELETED=${DOCTOR_STATS#* }
 echo "  [scene4.P2] doctor/SKILL.md numstat added=$DOCTOR_ADDED deleted=$DOCTOR_DELETED" >> "$ARTIFACT_DIR/kctx-fan-numstat.out"
 [[ "$DOCTOR_DELETED" -ge "$DOCTOR_ADDED" ]] || \
-    fail "scene 4.P2: doctor/SKILL.md 净增 (deleted=$DOCTOR_DELETED < added=$DOCTOR_ADDED，本任务不触 doctor，出现净增即越界)"
+    fail "scene 4.P2: doctor/SKILL.md 净增 (deleted=$DOCTOR_DELETED < added=${DOCTOR_ADDED}，本任务不触 doctor，出现净增即越界)"
 pass "scene 4.P2: doctor/SKILL.md 净非增 (deleted=$DOCTOR_DELETED >= added=$DOCTOR_ADDED)"
 
 # ===========================================================================
-# 断言 10（场景5.P4）：版本四处各含「3.69.0」每处 >=1
+# 断言 10（场景5.P4）：版本四处各含**当前版本**（从 plugin.json 动态读取，SSOT）每处 >=1
 #   plugin.json / marketplace.json / 根 CLAUDE.md / README.md（顶部 30 行，契约规约）
+#   [2026-09-25] 修复：原实现硬编码 VER_PATTERN='3\.69\.0'，v3.70+ 后必然恒红——而这正是
+#   知识库 [2026-05-09]「acceptance test 中 TARGET_VERSION 硬编码是版本同步盲区」已根治的
+#   问题（v3.35.0 起改为从 plugin.json 动态读取，commit 651ba81），本条属该盲区回归。
+#   动态读取后本断言成为永久不变量：自动跟随 plugin.json 升级，不再需要随版本改测试。
 # ===========================================================================
-VER_PATTERN='3\.69\.0'
+TARGET_VERSION="$(grep -m1 '"version"' "$REPO_ROOT/$PLUGIN_JSON" | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
+[[ -n "$TARGET_VERSION" ]] || fail "scene 5.P4: 无法从 $PLUGIN_JSON 读出当前版本（SSOT 缺失，动态读取失败）"
+VER_PATTERN="$(printf '%s' "$TARGET_VERSION" | sed 's/\./\\./g')"
 declare -a VER_FILES=("$PLUGIN_JSON" "$MARKETPLACE_JSON" "$ROOT_CLAUDE_MD" "$AUTOPILOT_README")
 declare -a VER_LABELS=("plugin.json" "marketplace.json" "根 CLAUDE.md" "README.md(顶部30行)")
 
 {
-    echo "=== 版本 3.69.0 四处同步 grep ==="
+    echo "=== 版本 ${TARGET_VERSION} 四处同步 grep（SSOT=${PLUGIN_JSON}）==="
 } > "$ARTIFACT_DIR/kctx-fan-version.out"
 
 for i in 0 1 2 3; do
@@ -231,9 +237,9 @@ for i in 0 1 2 3; do
     fi
     echo "  [$label] count=$n" >> "$ARTIFACT_DIR/kctx-fan-version.out"
     [[ "$n" -ge 1 ]] || \
-        fail "scene 5.P4: $label 缺「3.69.0」（count=$n，版本四处同步缺失）"
+        fail "scene 5.P4: $label 缺「${TARGET_VERSION}」（count=${n}，版本四处同步缺失）"
 done
-pass "scene 5.P4: 版本四处均含 3.69.0 (plugin.json / marketplace.json / CLAUDE.md / README.md 顶部30行)"
+pass "scene 5.P4: 版本四处均含 ${TARGET_VERSION} (plugin.json / marketplace.json / CLAUDE.md / README.md 顶部30行)"
 
 echo "[OK ] KCTX_FAN knowledge-context-fanout — 全部断言通过"
 exit 0

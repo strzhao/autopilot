@@ -67,7 +67,7 @@ pass() {
 
 # 前置：目标文件存在
 for f in "$AUTOPILOT_SKILL" "$DOCTOR_SKILL" "$RED_TEAM_PROMPT" "$BLUE_TEAM_PROMPT" "$STOP_HOOK"; do
-    [[ -f "$REPO_ROOT/$f" ]] || fail "目标文件不存在: $REPO_ROOT/$f（蓝队可能尚未改动/文件路径漂移）"
+    [[ -f "$REPO_ROOT/$f" ]] || fail "目标文件不存在: $REPO_ROOT/${f}（蓝队可能尚未改动/文件路径漂移）"
 done
 
 # 辅助：取文件 after 内容（当前工作区）
@@ -381,7 +381,7 @@ SKILL_REFS_AFTER_COUNT=$(echo "$SKILL_REFS_AFTER" | grep -cE '§[0-9]' || echo 0
 SKILL_REFS_BEFORE_COUNT=$(echo "$SKILL_REFS_BEFORE" | grep -cE '§[0-9]' || echo 0)
 echo "  |S_skill_text| before=$SKILL_REFS_BEFORE_COUNT after=$SKILL_REFS_AFTER_COUNT" >> "$ARTIFACT_DIR/err-stop-hook-section-refs.out"
 [[ "$SKILL_REFS_AFTER_COUNT" -ge "$SKILL_REFS_BEFORE_COUNT" ]] || \
-    fail "scene 3.P2: |S_skill_text| 收缩 before=$SKILL_REFS_BEFORE_COUNT > after=$SKILL_REFS_AFTER_COUNT（§锚点集合不可缩）"
+    fail "scene 3.P2: |S_skill_text| 收缩 before=$SKILL_REFS_BEFORE_COUNT > after=${SKILL_REFS_AFTER_COUNT}（§锚点集合不可缩）"
 
 pass "scene 3.P2: S_skill_text ⊆ S_hook_anchored 且 |after|=$SKILL_REFS_AFTER_COUNT>=|before|=$SKILL_REFS_BEFORE_COUNT"
 
@@ -398,7 +398,7 @@ VERSION_SYNC_RC=$?
 echo "$VERSION_SYNC_OUTPUT" > "$ARTIFACT_DIR/int-version-sync.out"
 echo "rc=$VERSION_SYNC_RC" >> "$ARTIFACT_DIR/int-version-sync.out"
 [[ "$VERSION_SYNC_RC" -eq 0 ]] || \
-    fail "scene 4.P1: version-sync.acceptance.test.sh rc=$VERSION_SYNC_RC（版本三同步失败，见 artifact）"
+    fail "scene 4.P1: version-sync.acceptance.test.sh rc=${VERSION_SYNC_RC}（版本三同步失败，见 artifact）"
 pass "scene 4.P1: version-sync.acceptance.test.sh rc==0"
 
 # ===========================================================================
@@ -426,7 +426,7 @@ IRON_AFTER_TOTAL=$((RED_IRON_AFTER + BLUE_IRON_AFTER))
 } > "$ARTIFACT_DIR/int-red-blue-iron-rule.out"
 
 [[ "$IRON_AFTER_TOTAL" -ge "$IRON_BEFORE_TOTAL" ]] || \
-    fail "scene 4.P2: 红/蓝队 prompt 铁律词计数下降 before=$IRON_BEFORE_TOTAL > after=$IRON_AFTER_TOTAL（铁律弱化）"
+    fail "scene 4.P2: 红/蓝队 prompt 铁律词计数下降 before=$IRON_BEFORE_TOTAL > after=${IRON_AFTER_TOTAL}（铁律弱化）"
 pass "scene 4.P2: 红/蓝队 prompt 铁律词 after>=before (total=$IRON_AFTER_TOTAL>=$IRON_BEFORE_TOTAL)"
 
 # ===========================================================================

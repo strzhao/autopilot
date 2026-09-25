@@ -137,7 +137,7 @@ assert_grepE_eq0() {
     if [[ "$count" -eq 0 ]]; then
         _log_pass "$id" "$desc (grep -cE '$pattern' = 0，无机械阈值)"
     else
-        _log_fail "$id" "$desc (grep -cE '$pattern' = $count，存在机械阈值嫌疑，需 QA 语义确认, file=$file)"
+        _log_fail "$id" "$desc (grep -cE '$pattern' = ${count}，存在机械阈值嫌疑，需 QA 语义确认, file=$file)"
     fi
 }
 

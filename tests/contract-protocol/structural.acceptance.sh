@@ -186,7 +186,7 @@ else
     echo "  --- grep '^## ⚠️' ---"
     grep -n "^## ⚠️" "$RED_TEAM" || echo "  (无命中)"
     echo "  ---"
-    fail "8" "red-team-prompt.md ## ⚠️ 章节数 = $red_warning_count，期望 = 2（保持原有，禁止新增 ⚠️ 章节）"
+    fail "8" "red-team-prompt.md ## ⚠️ 章节数 = ${red_warning_count}，期望 = 2（保持原有，禁止新增 ⚠️ 章节）"
 fi
 
 # ── C9: blue-team-prompt.md ^## ⚠️ 章节数 = 0（保持不变）─────────────────────
@@ -202,7 +202,7 @@ else
     echo "  --- grep '^## ⚠️' ---"
     grep -n "^## ⚠️" "$BLUE_TEAM" || echo "  (无命中)"
     echo "  ---"
-    fail "9" "blue-team-prompt.md ## ⚠️ 章节数 = $blue_warning_count，期望 = 0（禁止在蓝队 prompt 新增 ⚠️ 章节）"
+    fail "9" "blue-team-prompt.md ## ⚠️ 章节数 = ${blue_warning_count}，期望 = 0（禁止在蓝队 prompt 新增 ⚠️ 章节）"
 fi
 
 # ── C10: red-team-prompt.md 含 CONTRACT_AMBIGUOUS + 不含 EXPECTED_FIELD_NAME_FROM_CONTRACT ─
@@ -259,7 +259,7 @@ elif grep -q "\"version\".*\"$TARGET_VERSION\"" "$PLUGIN_JSON" || grep -q "\"$TA
 else
     actual=$(grep -oE '"version":\s*"[^"]+"' "$PLUGIN_JSON" | head -1 || echo "未找到 version 字段")
     c11_pass=false
-    c11_details+=("plugin.json ✗ 实际: ${actual}（期望: $TARGET_VERSION）")
+    c11_details+=("plugin.json ✗ 实际: ${actual}（期望: ${TARGET_VERSION}）")
 fi
 
 # marketplace.json — autopilot 条目
@@ -283,13 +283,13 @@ sys.exit(0 if found else 1)
         else
             actual_ver=$(grep -oE '"version":\s*"[^"]+"' "$MARKETPLACE_JSON" | head -1 || echo "未找到")
             c11_pass=false
-            c11_details+=("marketplace.json autopilot 条目 ✗ 实际: ${actual_ver}（期望: $TARGET_VERSION）")
+            c11_details+=("marketplace.json autopilot 条目 ✗ 实际: ${actual_ver}（期望: ${TARGET_VERSION}）")
         fi
     fi
 else
     actual_ver=$(grep -oE '"version":\s*"[^"]+"' "$MARKETPLACE_JSON" | head -1 || echo "未找到")
     c11_pass=false
-    c11_details+=("marketplace.json ✗ 不含 $TARGET_VERSION，实际: $actual_ver")
+    c11_details+=("marketplace.json ✗ 不含 ${TARGET_VERSION}，实际: $actual_ver")
 fi
 
 # 根 CLAUDE.md — 插件索引表
@@ -301,7 +301,7 @@ elif grep -q "v$TARGET_VERSION" "$ROOT_CLAUDE_MD" || grep -q "$TARGET_VERSION" "
 else
     actual_ver=$(grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" "$ROOT_CLAUDE_MD" | grep "autopilot" -A1 | head -1 || grep -oE "v3\.[0-9]+\.[0-9]+" "$ROOT_CLAUDE_MD" | head -1 || echo "未找到")
     c11_pass=false
-    c11_details+=("根 CLAUDE.md ✗ 实际: ${actual_ver}（期望: v$TARGET_VERSION）")
+    c11_details+=("根 CLAUDE.md ✗ 实际: ${actual_ver}（期望: v${TARGET_VERSION}）")
 fi
 
 # plugins/autopilot/README.md
@@ -313,7 +313,7 @@ elif grep -q "v$TARGET_VERSION" "$AUTOPILOT_README" || grep -q "$TARGET_VERSION"
 else
     actual_ver=$(grep -oE "v3\.[0-9]+\.[0-9]+" "$AUTOPILOT_README" | head -1 || echo "未找到")
     c11_pass=false
-    c11_details+=("plugins/autopilot/README.md ✗ 实际: ${actual_ver}（期望: v$TARGET_VERSION）")
+    c11_details+=("plugins/autopilot/README.md ✗ 实际: ${actual_ver}（期望: v${TARGET_VERSION}）")
 fi
 
 echo "  C11 版本号检查明细："

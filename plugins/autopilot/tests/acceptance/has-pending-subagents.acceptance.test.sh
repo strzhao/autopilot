@@ -38,8 +38,14 @@ pass() {
 # 返回 0 = has pending；1 = no pending
 call_detect() {
     local transcript="$1"
+    local extra_path="${2:-}"
     # 用 sub-shell source stop-hook.sh 并调用函数，避免主 shell 状态污染
-    bash -c "source '$STOP_HOOK' >/dev/null 2>&1; has_pending_subagents '$transcript'"
+    # extra_path 非空时前置到 PATH —— 用于以 jq shim 强制走 fail-safe 文本路径（C7/C8）
+    if [[ -n "$extra_path" ]]; then
+        PATH="$extra_path:$PATH" bash -c "source '$STOP_HOOK' >/dev/null 2>&1; has_pending_subagents '$transcript'"
+    else
+        bash -c "source '$STOP_HOOK' >/dev/null 2>&1; has_pending_subagents '$transcript'"
+    fi
     return $?
 }
 
@@ -219,12 +225,21 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────────────────
-# C7: jq 解析失败（全文件都是垃圾）+ raw tail 含 async_launched 文本 → exit=0 fail-safe
+# C7: jq **不可用**（PATH 前置必败 shim）+ raw tail 含 async_launched 文本 → exit=0 fail-safe
+#     [2026-09-25] 夹具修正：v3.70.1 起 jq 路径改为 `fromjson?` 容错直读，"全文件都是垃圾"
+#     不再使 jq **失败**（坏行被丢弃而非报错）⇒ 原夹具走的是 jq 路径（0 launch → exit 1），
+#     根本到不了 fail-safe 分支，故恒红。契约 C7 本身成立（探针实证：强制 jq 失败后
+#     `fail-safe 文本检测 launched=1 completed=0 → pending` → exit=0），失效的只是
+#     "如何逼出 jq 失败"这一前提。改用 jq shim 强制失败（与 taskstop-terminal-signal 同手法）。
 # ──────────────────────────────────────────────────────────────────────────
 C7="$TMPDIR_BASE/c7.jsonl"
 # 多行连续垃圾，丢首行也救不了，但 tail 中保留了 async_launched 文本字面量
 printf 'garbage line one not json\nmore garbage with "status":"async_launched" text inside but invalid json\nthird garbage line\n' > "$C7"
-call_detect "$C7"
+JQ_SHIM_DIR="$TMPDIR_BASE/jq-shim"
+mkdir -p "$JQ_SHIM_DIR"
+printf '#!/bin/sh\nexit 127\n' > "$JQ_SHIM_DIR/jq"
+chmod +x "$JQ_SHIM_DIR/jq"
+call_detect "$C7" "$JQ_SHIM_DIR"
 code=$?
 if [[ $code -eq 0 ]]; then
     pass "C7: jq 失败 + 含 async_launched 文本 → fail-safe exit=0"
@@ -233,11 +248,11 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────────────────
-# C8: jq 解析失败 + 无 async_launched 文本 → exit=1
+# C8: jq **不可用**（同上 shim）+ 无 async_launched 文本 → exit=1
 # ──────────────────────────────────────────────────────────────────────────
 C8="$TMPDIR_BASE/c8.jsonl"
 printf 'pure garbage line\nmore broken stuff\nno async marker here\n' > "$C8"
-call_detect "$C8"
+call_detect "$C8" "$JQ_SHIM_DIR"
 code=$?
 if [[ $code -eq 1 ]]; then
     pass "C8: jq 失败 + 无 async_launched 文本 → exit=1"

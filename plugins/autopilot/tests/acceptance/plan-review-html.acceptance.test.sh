@@ -443,7 +443,7 @@ if (val !== true) {
 console.log('OK:' + val);
 " 2>&1)" || {
     rm -rf "$tmp_home_c7c"
-    fail "C7c: 文件不存在时 getPref('auto_close_after_decision', true) 未返回 true（实际：$c7c_result）"
+    fail "C7c: 文件不存在时 getPref('auto_close_after_decision', true) 未返回 true（实际：${c7c_result}）"
 }
 rm -rf "$tmp_home_c7c"
 pass "C7c: 文件不存在时 getPref 返回 defaultValue=true（不抛异常）"
@@ -461,7 +461,7 @@ if (val !== false) {
 console.log('OK:' + val);
 " 2>&1)" || {
     rm -rf "$tmp_home_c7d"
-    fail "C7d: setPref(false) 后 getPref 返回值不是严格的 false（实际：$c7d_result）"
+    fail "C7d: setPref(false) 后 getPref 返回值不是严格的 false（实际：${c7d_result}）"
 }
 rm -rf "$tmp_home_c7d"
 pass "C7d: setPref(false) 后 getPref 返回严格 false（boolean 严格相等）"
@@ -486,7 +486,7 @@ if (val !== 'FALLBACK') {
 console.log('OK:' + val);
 " 2>&1)" || {
     rm -rf "$tmp_home_c7e"
-    fail "C7e: 损坏 JSON 时 getPref 未静默降级为 defaultValue（实际：$c7e_result）"
+    fail "C7e: 损坏 JSON 时 getPref 未静默降级为 defaultValue（实际：${c7e_result}）"
 }
 rm -rf "$tmp_home_c7e"
 pass "C7e: 损坏 JSON 时 getPref 静默降级为 defaultValue，不抛异常"
@@ -644,7 +644,7 @@ if [[ -z "$c9c_rendered_html" ]]; then
 fi
 
 if [[ -z "$c9c_rendered_html" ]] || [[ ! -f "$c9c_rendered_html" ]]; then
-    fail "C9c: launch-plan-review.sh 运行后未找到渲染后的 plan-review.html（output: $c9c_output）"
+    fail "C9c: launch-plan-review.sh 运行后未找到渲染后的 plan-review.html（output: ${c9c_output}）"
 fi
 
 # 验证 {{AUTO_CLOSE_PREF}} 已被替换（不再是字面量）
@@ -739,7 +739,7 @@ HOME="$c11_tmp_home" timeout 5 bash "$LAUNCH_SH" "$c11_tmp_dir" >/dev/null 2>&1 
 
 c11_html="$(find "$c11_tmp_dir" -name "plan-review.html" 2>/dev/null | head -1)"
 if [[ -z "$c11_html" || ! -f "$c11_html" ]]; then
-    fail "C11a: 未找到渲染后的 plan-review.html（c11_tmp_dir=$c11_tmp_dir）"
+    fail "C11a: 未找到渲染后的 plan-review.html（c11_tmp_dir=${c11_tmp_dir}）"
 fi
 
 # C11a: marked.js 特征字符串 `(e=s)` 在渲染后 HTML 中只出现 1 次

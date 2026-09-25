@@ -197,7 +197,7 @@ HELP_EOF
                 echo "✅ 验收已通过，将进入代码合并阶段。"
                 ;;
             *)
-                echo "⚠️  未知的审批门: $GATE（合法 gate 值：review-accept）"
+                echo "⚠️  未知的审批门: ${GATE}（合法 gate 值：review-accept）"
                 exit 0
                 ;;
         esac

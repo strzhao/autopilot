@@ -146,7 +146,7 @@ code=$?
 if [[ $code -eq 0 ]]; then
     pass "C9a/S1.P1: 仅 bash 启动未通知 → exit=0 (has pending)"
 else
-    fail "C9a/S1.P1: 期望 exit=0 (has pending)，实际 exit=$code（蓝队路径 C 未落地则 FAIL 属预期）"
+    fail "C9a/S1.P1: 期望 exit=0 (has pending)，实际 exit=${code}（蓝队路径 C 未落地则 FAIL 属预期）"
 fi
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -222,7 +222,7 @@ code=$?
 if [[ $code -eq 0 ]]; then
     pass "C11a/S2.P2: jq 失败 + bash 启动未通知 → fail-safe exit=0"
 else
-    fail "C11a/S2.P2: 期望 fail-safe exit=0，实际 exit=$code（蓝队 fail-safe 对称未落地则 FAIL 属预期）"
+    fail "C11a/S2.P2: 期望 fail-safe exit=0，实际 exit=${code}（蓝队 fail-safe 对称未落地则 FAIL 属预期）"
 fi
 
 # ──────────────────────────────────────────────────────────────────────────

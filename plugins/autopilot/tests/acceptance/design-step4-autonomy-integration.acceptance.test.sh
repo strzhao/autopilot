@@ -359,7 +359,7 @@ fi
 } > "$ART_DIR/场景7.P2.out"
 cp "$ART_DIR/场景7.P2.out" "$ART_NESTED/场景7.P2.out" 2>/dev/null || true
 
-[[ -f "$QG_DRIVER" ]] || fails "场景7.P2: headless-qa-gate.driver.sh 不存在（$QG_DRIVER）"
+[[ -f "$QG_DRIVER" ]] || fails "场景7.P2: headless-qa-gate.driver.sh 不存在（${QG_DRIVER}）"
 if [[ -f "$QG_DRIVER" ]]; then
     [[ "$QG_RC" -eq 0 ]] || fails "场景7.P2: headless-qa-gate.driver.sh 非 0 退出（rc=${QG_RC}）——分级未达标未正确保持 gate"
     [[ "$QG_FAILS" -eq 0 ]] || fails "场景7.P2: headless-qa-gate.driver.sh FAIL 计数 ${QG_FAILS} != 0"

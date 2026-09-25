@@ -172,7 +172,7 @@ t4_rc=$?
 if [[ $t4_rc -eq 0 ]]; then
     pass "T4 重复键：get_field 取第一行 + set_field 写后去重 + 正文/他字段不受影响"
 else
-    fail "T4 重复键健壮性子断言失败（rc=$t4_rc，详见上方输出）"
+    fail "T4 重复键健壮性子断言失败（rc=${t4_rc}，详见上方输出）"
 fi
 
 # ── 汇总 ──
