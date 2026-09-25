@@ -1,0 +1,179 @@
+plugins/autopilot/tests/acceptance/design-step4-mech-invariants.acceptance.test.sh
+  55b9eafac58b848d 25-32,202-216,243,252,267-270,312,321
+plugins/autopilot/tests/acceptance/has-pending-subagents.acceptance.test.sh
+  55b9eafac58b848d 41,43-48,228-233,238-242,251,255
+.autopilot/knowledge/domains/bash-shell-pitfalls.md
+  55b9eafac58b848d 28
+plugins/autopilot/tests/acceptance/skill-shrinkage-invariants.acceptance.test.sh
+  55b9eafac58b848d 70,384,401,429
+package.json
+  55b9eafac58b848d 12
+plugins/autopilot/tests/acceptance/predicate-artifact-uniqueness-guard.acceptance.test.sh
+  55b9eafac58b848d 189
+plugins/autopilot/.claude-plugin/plugin.json
+  55b9eafac58b848d 3-4
+tests/contract-protocol/structural.acceptance.sh
+  55b9eafac58b848d 189,205,262,286,292,304,316
+plugins/autopilot/tests/acceptance/knowledge-context-fanout.acceptance.test.sh
+  55b9eafac58b848d 85,129,139,148,157,166,176,186,197,208,212,214-217,219-221,226,240,242
+plugins/autopilot/tests/acceptance/blue-team-boundary.acceptance.test.sh
+  55b9eafac58b848d 41,43
+plugins/autopilot/tests/acceptance/plan-review-html.acceptance.test.sh
+  55b9eafac58b848d 446,464,489,647,742
+plugins/autopilot/README.md
+  55b9eafac58b848d 3-4
+plugins/autopilot/tests/acceptance/design-step4-autonomy-integration.acceptance.test.sh
+  55b9eafac58b848d 362
+.claude-plugin/marketplace.json
+  55b9eafac58b848d 32
+plugins/autopilot/scripts/setup.sh
+  55b9eafac58b848d 200
+CLAUDE.md
+  55b9eafac58b848d 14
+plugins/autopilot/tests/acceptance/predicate-coverage.acceptance.test.sh
+  55b9eafac58b848d 140
+plugins/autopilot/tests/acceptance/knowledge-extracted-normalize.acceptance.test.sh
+  55b9eafac58b848d 175
+plugins/autopilot/tests/acceptance/stop-hook-bash-wait.acceptance.test.sh
+  55b9eafac58b848d 149,225
+tests/bash-var-multibyte-boundary.acceptance.test.mjs
+  55b9eafac58b848d 1-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "776e507cfc6f21171777b2c19d8c489d564d5aec",
+  "prompts": {
+    "23dda9cd39352991": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6fb56c96-ad82-4048-beab-68b48a5a2bf1",
+        "model": "deepseek-flash"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "55b9eafac58b848d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "56e06520-5e3f-45e8-8347-25858abfc486",
+        "model": "deepseek-flash"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 193,
+      "total_deletions": 87,
+      "accepted_lines": 188,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "CLAUDE.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        ".claude-plugin/marketplace.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        ".claude/settings.json": {
+          "additions": 5,
+          "accepted_lines": 5
+        },
+        "plugins/autopilot/tests/acceptance/knowledge-extracted-normalize.acceptance.test.sh": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/tests/acceptance/design-step4-mech-invariants.acceptance.test.sh": {
+          "additions": 31,
+          "deletions": 32,
+          "accepted_lines": 31
+        },
+        "tests/bash-var-multibyte-boundary.acceptance.test.mjs": {
+          "additions": 80,
+          "deletions": 2,
+          "accepted_lines": 78
+        },
+        "plugins/autopilot/tests/acceptance/plan-review-html.acceptance.test.sh": {
+          "additions": 5,
+          "deletions": 5,
+          "accepted_lines": 5
+        },
+        "plugins/autopilot/tests/acceptance/has-pending-subagents.acceptance.test.sh": {
+          "additions": 20,
+          "deletions": 5,
+          "accepted_lines": 20
+        },
+        "plugins/autopilot/README.md": {
+          "additions": 3,
+          "deletions": 1,
+          "accepted_lines": 2
+        },
+        "plugins/autopilot/tests/acceptance/knowledge-context-fanout.acceptance.test.sh": {
+          "additions": 23,
+          "deletions": 17,
+          "accepted_lines": 21
+        },
+        ".autopilot/knowledge/domains/bash-shell-pitfalls.md": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/tests/acceptance/predicate-artifact-uniqueness-guard.acceptance.test.sh": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/tests/acceptance/stop-hook-bash-wait.acceptance.test.sh": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 2
+        },
+        "plugins/autopilot/tests/acceptance/design-step4-autonomy-integration.acceptance.test.sh": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/tests/acceptance/predicate-coverage.acceptance.test.sh": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "tests/contract-protocol/structural.acceptance.sh": {
+          "additions": 7,
+          "deletions": 7,
+          "accepted_lines": 7
+        },
+        "plugins/autopilot/scripts/setup.sh": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/.claude-plugin/plugin.json": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 2
+        },
+        "package.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/tests/acceptance/blue-team-boundary.acceptance.test.sh": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 2
+        },
+        "plugins/autopilot/tests/acceptance/skill-shrinkage-invariants.acceptance.test.sh": {
+          "additions": 4,
+          "deletions": 4,
+          "accepted_lines": 4
+        }
+      }
+    }
+  }
+}
