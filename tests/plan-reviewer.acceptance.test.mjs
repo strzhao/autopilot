@@ -201,7 +201,7 @@ describe('SKILL.md Phase: design step completeness', () => {
     assert.ok(hasTrigger, 'Step 3 must describe trigger conditions');
   });
 
-  it('step 3 must contain review round limit (max 2)', () => {
+  it('step 3 must contain review round limit (max 5)', () => {
     const content = readFileSync(SKILL_PATH, 'utf-8');
     const designMatch = content.match(
       /##\s*Phase:\s*design([\s\S]*?)(?=##\s*Phase:|$)/i
@@ -214,15 +214,16 @@ describe('SKILL.md Phase: design step completeness', () => {
     const step3Content = step3Match[1];
 
     const hasRoundLimit =
-      step3Content.includes('2 轮') ||
-      step3Content.includes('2轮') ||
-      step3Content.includes('两轮') ||
-      step3Content.toLowerCase().includes('2 round') ||
-      step3Content.toLowerCase().includes('max 2') ||
-      step3Content.toLowerCase().includes('maximum 2');
+      step3Content.includes('最多 5 轮') ||
+      step3Content.includes('5 轮') ||
+      step3Content.includes('5轮') ||
+      step3Content.includes('五轮') ||
+      step3Content.toLowerCase().includes('5 round') ||
+      step3Content.toLowerCase().includes('max 5') ||
+      step3Content.toLowerCase().includes('maximum 5');
     assert.ok(
       hasRoundLimit,
-      'Step 3 must specify max 2 review rounds'
+      'Step 3 must specify max 5 review rounds'
     );
   });
 

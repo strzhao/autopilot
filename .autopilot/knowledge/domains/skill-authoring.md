@@ -162,3 +162,11 @@ heading_hits=$(echo "$SECTION" | grep -cE "^#### [0-9.]+ <Step Title>" || true)
 **Trade-offs**: 普通模式获得一次 commit 的原子性；worktree 模式仍两次提交（拓扑固有，代码与知识库在不同 ref）。
 **Evidence**: little-bee dogfood 显示 feat+docs 成对交替；本次改动 5 文件从 999 行净减到 968 行；新增 merge-knowledge-order.acceptance.test.sh 7 条谓词锁契约。
 **Lesson**: 当 skill 流程存在"同一仓库内两次提交"的隐式开销时，优先考虑把产生文件的步骤前置到提交 Agent 之前，用 Agent 的 `git add -A` 统一提交。worktree 等拓扑分叉用简短兜底脚本处理，不分散提交职责。关联 [[2026-04-03]]（merge Agent 化）、[[2026-05-10]]（一处真相）。
+
+### [2026-09-25] Plan 审查轮次上限 2→5——轮数上限由收敛数据定，且停点是 BLOCKER 不是轮数
+<!-- tags: autopilot, design, plan-reviewer, review-rounds, convergence, blocker-vs-important, unverified-fix, threshold-from-data, termination-boundary, v3.74.0 -->
+**Scenario**: design 步骤 3 的 plan-reviewer 重审上限写死「最多 2 轮（初审 + 1 次重审）」，用户反馈复杂任务频繁撞限。全库实测（磁盘 146 份 requirement state.md）：6 份留下 `[审查未通过，交由用户判断]`，而撞限那一刻的行为是固定的——**第 2 轮 FAIL 后按证据逐条修复，然后直接进步骤 4/implement，这批修复没有任何独立复核**（raven/20260916 带着 3 条 R2 BLOCKER 的修复进 implement；raven-cli 20260921 同）。
+**Choice**: ① 上限 2 → 5（初审 + 4 次重审）；② 停点语义写死为「任一轮 0 BLOCKER 即 PASS 进步骤 4，不得自行加轮去消除重要问题（80-89）」。
+**Alternatives rejected**: 保持 2 轮（数据反对——R1→R2 常见新 BLOCKER 而非收敛：raven/20260916 2→3、raven/20260920-彻底根治 1→3，R2 的职责是「复核 R1 的修复」，而修复本身会引入新缺陷）；按任务复杂度分流（简单 2 轮 / 复杂 4+ 轮——需 AI 预判自己这个任务复不复杂，正是它 R1 判错的那件事，属伪精度）；提到 6 以上（R5 起转为追重要问题，实测 R5 的新重要项由「R3 建议 × R4 约束」叠加制造，是不收敛目标）。
+**Evidence**: raven-cli `20260920-开始实现` 用户手动突破上限跑到 6 轮：R1 6 BLOCKER → R2 1 → R3 1 → R4 **0** → R5 0 → R6 PASS 0/0；其中 R3 那条 BLOCKER 是 reviewer 自认**前两轮共同漏检**（`errorCode` 未进契约却被 6 条谓词断言）。其余多轮案例 R1→R2 均加深而非收敛。典型任务仍在 2 轮内收敛（27 条 `Plan 审查通过` 标注的模态形态是「初审 FAIL → 重审 PASS」）⇒ 上限提高的成本是**条件性的**，只在 R2 仍 FAIL 时发生。改动落点：SKILL.md 单行原地替换净 0 行（476 保持，headless 行号锚不滑）、design-modes.md §3 同步、3 处既有测试锚点随之上调、tier1-deoverfitting P8 新增「不得自行加轮」守护。
+**Lesson**: 「终止边界」类数值只能由**收敛数据**定，无数据时拍的数会恰巧落在最坏位置——2 轮正好停在「最后一批修复未经复核」，而那正是缺陷逃逸代价最高的地方（raven-cli 之后 QA auto-fix 又烧 3 轮 / 8 小时）。配套条件同样由数据给出：停点必须由 BLOCKER 而非轮数决定，因为修复会制造新问题（R3 的修复「新引入悬空常量」），而「追重要问题」没有终点。关联 [[2026-03-22]]（外部审查后的修改必须重新验证）、[[2026-05-25]]（减法删 step 潜伏事故——终止边界类文本同属高危）。

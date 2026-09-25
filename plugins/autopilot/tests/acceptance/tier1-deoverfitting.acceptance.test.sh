@@ -226,7 +226,7 @@ fi
 # 谓词：
 #   - red-team-prompt.md 含「绝对不能」且含「实现代码」（或「只看设计」）
 #   - auto-fix-phase.md 仍含「默认不允许修改红队验收测试」
-#   - SKILL.md 仍含「最多 2 轮」（终止边界本次故意不动）
+#   - SKILL.md 仍含「最多 5 轮」（终止边界，v3.73.2 由 2 轮上调为 5 轮）
 echo ""
 echo "--- P8: 护栏 — 信息隔离铁律 + 终止边界未被误伤 ---"
 P8_FAIL=0
@@ -257,8 +257,14 @@ else
 fi
 
 if [[ -f "$SKILL_MD" ]]; then
-    if ! grep -q "最多 2 轮" "$SKILL_MD" 2>/dev/null; then
-        fail "P8: SKILL.md 缺少「最多 2 轮」，终止边界被误删（本次故意不动）"
+    if ! grep -q "最多 5 轮" "$SKILL_MD" 2>/dev/null; then
+        fail "P8: SKILL.md 缺少「最多 5 轮」，终止边界被误删（v3.73.2 上限）"
+        P8_FAIL=1
+    fi
+    # 停点语义（v3.73.2）：轮数上限只是兜底，真停点是 0 BLOCKER；
+    # 缺此约束则上限退化为「追重要问题」的 treadmill（实测 R5 修复会制造新重要问题）
+    if ! grep -q "不得自行加轮" "$SKILL_MD" 2>/dev/null; then
+        fail "P8: SKILL.md 缺少停点语义「不得自行加轮」，与轮数上限配套的约束丢失"
         P8_FAIL=1
     fi
 else
@@ -266,7 +272,7 @@ else
     P8_FAIL=1
 fi
 if [[ $P8_FAIL -eq 0 ]]; then
-    pass "P8: 信息隔离铁律（red-team-prompt.md）+ 红队保护（auto-fix-phase.md）+ 终止边界（SKILL.md 最多 2 轮）护栏完整"
+    pass "P8: 信息隔离铁律（red-team-prompt.md）+ 红队保护（auto-fix-phase.md）+ 终止边界（SKILL.md 最多 5 轮 + 不得自行加轮）护栏完整"
 fi
 
 # ── P9：无断链 — 被编辑文件中所有 references/xxx.md 引用目标均存在 ───────────────

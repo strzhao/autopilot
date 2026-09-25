@@ -126,8 +126,8 @@ python3 "$AUTOPILOT_STATE_SCRIPT" cancel [--reason "<TEXT>"]
 设计完成后必须启动 plan reviewer 子代理：
 
 - 使用 `references/plan-reviewer-prompt.md`
-- 最多 2 轮审查
-- 第 2 轮仍有 blocker 时，把 blocker 写回状态文件并交给用户判断
+- 最多 5 轮审查（0 BLOCKER 即放行；不追重要问题）
+- 第 5 轮仍有 blocker 时，把 blocker 写回状态文件并交给用户判断
 
 完成后：
 

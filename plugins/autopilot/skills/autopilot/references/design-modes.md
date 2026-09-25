@@ -48,7 +48,7 @@ qa 阶段差异：
 1. 读取 `$TASK_DIR/brainstorm.md`（brainstorm skill 的共识总结产出）
 2. 主 SKILL 接力：按主 SKILL.md「步骤 2. 代码探索与设计文档编写」执行（按需 1 个或多个 Explore agent + 并行启动 scenario-generator）
 3. 设计文档写入状态文件 `## 设计文档` 和 `## 实现计划` 区域
-4. 主 SKILL.md「步骤 3. Plan 审查」：plan-reviewer Agent 审查（最多 2 轮）
+4. 主 SKILL.md「步骤 3. Plan 审查」：plan-reviewer Agent 审查（最多 5 轮；0 BLOCKER 即放行，不为重要问题加轮）
 5. 主 SKILL.md「步骤 4. 请求审批」：自治默认放行；例外或用户要求审阅时 AskUserQuestion 三选项
 6. 审批通过 → 主 SKILL.md「步骤 5. 审批通过后」
 

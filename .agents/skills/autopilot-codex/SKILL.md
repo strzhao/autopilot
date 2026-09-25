@@ -89,7 +89,7 @@ python3 "$AUTOPILOT_STATE_SCRIPT" cancel [--reason "<TEXT>"]
   - 风险评估
   - 测试策略
   - 1-3 个真实场景验证步骤
-- 必须启动 plan reviewer 子代理，最多 2 轮
+- 必须启动 plan reviewer 子代理，最多 5 轮（0 BLOCKER 即放行）
 - 完成后设置 `gate: "design-approval"` 并停下等待用户审批
 
 ### 3. Implement

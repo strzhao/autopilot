@@ -659,14 +659,15 @@ describe('backward compatibility: prior invariants from v3.7.x preserved', () =>
     const step3Content = step3Match[1];
 
     const hasRoundLimit =
-      step3Content.includes('2 轮') ||
-      step3Content.includes('2轮') ||
-      step3Content.includes('两轮') ||
-      step3Content.toLowerCase().includes('max 2') ||
-      step3Content.toLowerCase().includes('maximum 2');
+      step3Content.includes('最多 5 轮') ||
+      step3Content.includes('5 轮') ||
+      step3Content.includes('5轮') ||
+      step3Content.includes('五轮') ||
+      step3Content.toLowerCase().includes('max 5') ||
+      step3Content.toLowerCase().includes('maximum 5');
     assert.ok(
       hasRoundLimit,
-      'Step 3 must still specify max 2 review rounds (backward compatibility)'
+      'Step 3 must still specify a bounded review round limit (v3.73.2: 5)'
     );
   });
 

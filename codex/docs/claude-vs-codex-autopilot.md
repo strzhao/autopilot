@@ -33,6 +33,7 @@
 - `design-approval` 和 `review-accept` 两个审批门与 Claude 版对齐
 - 红蓝子代理在 implement 阶段按并行语义执行，失败时必须记录 forced downgrade
 - QA 失败后进入独立 `auto-fix` phase，而不是静默留在 QA 里
+- Plan 审查轮次上限与 Claude 版对齐（5 轮；停点由 BLOCKER 决定——任一轮 0 BLOCKER 即放行，不追重要问题），v0.4.1 同步
 - `done` / `cancelled` 由 Stop hook 做最终清理，避免残留状态文件
 
 ## 不做的事情
