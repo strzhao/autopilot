@@ -6,7 +6,7 @@
 - [2026-09-15] 验证链的三处"假绿"（artifact 同名覆盖 / 校验器恒真 / 解析崩溃回落空值）+ 全局 env 干扰源（AUTOPILOT_HTML_REVIEW）与 PATH 桩隔离法 | tags: autopilot, qa, false-green, artifact-collision, harness-bug, bsd-grep, env-global, browser-popup, path-stub, test-isolation | → patterns.md
 
 ## Domains 导航（历史归档，按主题）
-- [stop-hook-state-machine](domains/stop-hook-state-machine.md) — stop-hook 兜底 / 状态机 / flag-asymmetry / pending-subagent（9 entry）
+- [stop-hook-state-machine](domains/stop-hook-state-machine.md) — stop-hook 兜底 / 状态机 / flag-asymmetry / pending-subagent（10 entry）
 - [skill-authoring](domains/skill-authoring.md) — SKILL.md 改动纪律 / 命名 / best-practice / 版本同步（17 entry）
 - [qa-testing](domains/qa-testing.md) — QA 判定 / red-team / mutation / contract / 量化门禁（15 entry）
 - [worktree-git](domains/worktree-git.md) — worktree 检测 / symlink / git porcelain / 文件管理（7 entry）
@@ -15,7 +15,8 @@
 - [2026-07-19] 减法/重构任务复刻 [2026-05-25]——claude-p 独立验证关键 step + 既有断言语义化适配减法（净非增/after>=1/net 章节）+ 补 scene 5 双重 grep 守护（v3.58.1） | tags: autopilot, skill, shrink, refactor, claude-p, independent-verification, double-grep, assertion-adaptation, predicate-coverage, scene-5, borderline-rollback, dogfood, v3.58.1 | → domains/skill-authoring.md
 - [2026-07-08] skill md 减行硬约束下新守卫全部下沉 bash，skill md 删散文净减行（v3.52.0 §5.7 谓词守卫） | tags: autopilot, skill, shrink-only, enforce-bash, stop-hook, predicate-guard, mock-cheating, trust-chain, v3.52.0 | → domains/skill-authoring.md
 
-## Decisions（47）
+## Decisions（48）
+- [2026-09-25] TaskStop 终止信号缺失（v3.73.1）——stop-hook §7.5 假阳性永久固化：被 TaskStop 停掉的后台任务不发 <task-id> 完成通知 ⇒ 启动集永久悬挂 ⇒ 每轮 Stop 静默放行、autopilot 循环整条死且不自愈（全库 137 停/17 通知；近 21 天 31/55 session 中招）；治法 终止集=完成通知 ∪ TaskStop 成功停止，jq 与 fail-safe 同源 + 计数只扣交集（教训：集合差型检测的终止信号须穷举完备，受控实验做因果闭环） | tags: autopilot, stop-hook, has-pending-subagents, taskstop, silent-wait, false-positive-persistent, terminal-signal-union, controlled-experiment, v3.73.1 | → domains/stop-hook-state-machine.md
 - [2026-09-09] pending 检测双盲区根治（v3.70.1）——macOS wc 前导空格使 v3.66.0 条件化丢首行恒不触发 + 4MB 窗口自膨胀盲区（launch 标记被 sidechain 流量推出窗外→假阴性→§9 死循环）；治法 jq -Rs split(fromjson?) 全量直读逐行容错（教训：验证证据须覆盖「机制被真实触发」场景） | tags: autopilot, stop-hook, has-pending-subagents, wc-leading-space, window-blind, full-transcript-scan, fromjson-per-line, false-negative, v3.66.0-regression, v3.70.1 | → domains/stop-hook-state-machine.md
 - [2026-09-09] 真实验收执行面闭环——执行面清单 + unexecuted_core_paths 第三字段 + real-process 强制 + tunnel 首次交付冒烟（验证边界=执行面闭集非谓词集；按需≠免验证；reviewer 独立性须复核范围圈定） | tags: autopilot, execution-surface, unexecuted-core-paths, real-process, acceptance-card, tunnel-smoke, tiered-approve, reviewer-independence, v3.69.0 | → decisions.md
 - [2026-09-09] v3.69.0 knowledge 扇出五节化——红队知识绝缘经 context.md 既有通道扇出（零新机制）+ dogfood 自指三教训（artifact 自描述 / worktree 环境 / 知识自指闭环） | tags: autopilot, knowledge-fanout, context-md, red-team, artifact-self-describing, pred-artifact-dup, worktree-env, skill-shrinkage, net-zero-lines, ai-first, dogfood, v3.69.0 | → decisions.md

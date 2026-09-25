@@ -186,6 +186,20 @@ compress_qa_report() {
 #   - hardening：fail-safe grep 全部加 -a（含 NUL 的 tail 输出会让 grep 在二进制
 #     判定下返回空而非计数）。
 #
+# v3.73.1 关键修复（生产实证：raven-cli 任务 phase=implement 停在 iter 1，stop-hook
+#   每次都判「有后台任务在跑」静默放行，autopilot 循环整条死）：
+#   - 终止信号原先只有一种 —— queue-operation enqueue 的 <task-id> 完成通知。
+#     但 **TaskStop 停掉的后台任务不发这个通知**（harness 只回一条 tool_result
+#     "Successfully stopped task: <id>"）。实测 CC 2.1.270：显式停掉的 137 个任务
+#     里只有 17 个收到过通知 ⇒ 其余 id 在启动集里永久悬挂 ⇒ 假阳性永久固化，
+#     且**不随新 transcript 内容自愈**（该 session 内每次 Stop 都命中等候分支）。
+#   - 治法：终止集 = 完成通知 ∪ TaskStop 成功停止（jq 与 fail-safe 两条路同源），
+#     路径 B（异步 Agent）与路径 C（后台 Bash）一并扣减。
+#   - 边界：只认「Successfully stopped task: <id>」这一个字面量；TaskStop 失败文案
+#     （"Task not found"，无 id）不闭合 —— 保守朝 pending，宁可多等不可漏判。
+#   - fail-safe 计数对账只扣「既是停止 id 又是异步 Agent 启动 id」的交集，避免后台
+#     Bash 的 id 混入 launched_count 时过度抵消（过度抵消会把 fail-safe 推向漏判）。
+#
 # 退出码：0 = 有 pending（同步∪异步∪后台 Bash）、1 = 无 pending（含错误降级）。
 has_pending_subagents() {
     local transcript="$1"
@@ -225,14 +239,26 @@ has_pending_subagents() {
               | select(.backgroundTaskId? != null and .backgroundTaskId? != "")
               | .backgroundTaskId]) as $bash_launched
         |
+        # 路径 B/C 的第二类终止信号 — TaskStop 成功停止（v3.73.1）
+        # TaskStop 停掉的后台任务不再运行，但 harness 不产生 <task-id> 完成通知
+        # （实测 CC 2.1.270：显式停掉的 137 个任务只有 17 个收到过通知）⇒ 该 id 在
+        # 启动集里永久悬挂 ⇒ 每次 Stop 都判 pending、§7.5 静默放行、autopilot 循环死。
+        # 故把「Successfully stopped task: <id>」并入终止集，与完成通知取并集后扣减。
+        ([.[] | select((.message.content? | type) == "array")
+              | .message.content[]
+              | select(.type == "tool_result")
+              | (.content? | tostring)
+              | (capture("Successfully stopped task: (?<id>[A-Za-z0-9]+)") | .id)?
+              | select(. != null)]) as $task_stopped
+        |
         ([.[] | select(.type? == "queue-operation" and .operation? == "enqueue")
               | .content // ""
               | (capture("<task-id>(?<id>[^<]+)</task-id>") | .id)?
               | select(. != null)]) as $async_completed
         |
-        ($async_launched - $async_completed) as $async_pending
+        ($async_launched - $async_completed - $task_stopped) as $async_pending
         |
-        ($bash_launched - $async_completed) as $bash_pending
+        ($bash_launched - $async_completed - $task_stopped) as $bash_pending
         |
         ($sync_pending | length) + ($async_pending | length) + ($bash_pending | length)
     ' "$transcript" 2>/dev/null)
@@ -258,19 +284,35 @@ has_pending_subagents() {
     [[ "$launched_count" =~ ^[0-9]+$ ]] || launched_count=0
     [[ "$completed_count" =~ ^[0-9]+$ ]] || completed_count=0
 
-    if [ "$launched_count" -gt "$completed_count" ]; then
-        echo "[has_pending_subagents] jq 失败，fail-safe 文本检测 launched=$launched_count completed=$completed_count → pending" >&2
+    # 第二类终止信号的文本投影（v3.73.1，与 jq 路径同源）：TaskStop 成功停止的 id。
+    # 计数对账只扣「既被停止、又确实是异步 Agent 启动项」的 id —— 后台 Bash 的
+    # backgroundTaskId 不进 launched_count，全量扣减会过度抵消 fail-safe。
+    local stopped_ids agent_launch_ids stopped_async_count
+    stopped_ids=$(echo "$raw_tail" | grep -ao 'Successfully stopped task: [A-Za-z0-9]*' 2>/dev/null | sed 's/^Successfully stopped task: //')
+    agent_launch_ids=$(echo "$raw_tail" | grep -ao '"agentId":"[^"]*"' 2>/dev/null | sed 's/^"agentId":"//; s/"$//')
+    stopped_async_count=0
+    if [ -n "$stopped_ids" ] && [ -n "$agent_launch_ids" ]; then
+        stopped_async_count=$(comm -12 <(printf '%s\n' "$stopped_ids" | sort -u) <(printf '%s\n' "$agent_launch_ids" | sort -u) | wc -l | tr -d ' ')
+    fi
+    [[ "$stopped_async_count" =~ ^[0-9]+$ ]] || stopped_async_count=0
+
+    if [ $((launched_count - stopped_async_count)) -gt "$completed_count" ]; then
+        echo "[has_pending_subagents] jq 失败，fail-safe 文本检测 launched=$launched_count completed=$completed_count stopped_async=$stopped_async_count → pending" >&2
         return 0
     fi
 
-    # 路径 C fail-safe（纯文本，不依赖 jq）：后台 Bash 启动 id 集 − 完成通知 id 集，
-    # 差集非空 → pending（对齐既有 fail-safe 朝 pending 哲学）。通知集与路径 B 共用
-    # <task-id> 字面量，启动集用 backgroundTaskId 字面量。sort -u 去重 + 空集防御。
+    # 路径 C fail-safe（纯文本，不依赖 jq）：后台 Bash 启动 id 集 − 终止 id 集，
+    # 差集非空 → pending（对齐既有 fail-safe 朝 pending 哲学）。终止集 = 完成通知
+    # （<task-id> 字面量，与路径 B 共用）∪ TaskStop 成功停止（v3.73.1）。
+    # sort -u 去重 + 空集防御。
     local bash_launched_ids bash_completed_ids
     bash_launched_ids=$(echo "$raw_tail" | grep -ao '"backgroundTaskId":"[^"]*"' 2>/dev/null | sed 's/^"backgroundTaskId":"//; s/"$//' | sort -u)
     bash_completed_ids=$(echo "$raw_tail" | grep -ao '<task-id>[^<]*</task-id>' 2>/dev/null | sed 's|<task-id>||; s|</task-id>||' | sort -u)
+    if [ -n "$stopped_ids" ]; then
+        bash_completed_ids=$(printf '%s\n%s\n' "$bash_completed_ids" "$stopped_ids" | sed '/^$/d' | sort -u)
+    fi
     if [ -n "$bash_launched_ids" ] && [ -n "$(comm -23 <(printf '%s\n' "$bash_launched_ids") <(printf '%s\n' "$bash_completed_ids"))" ]; then
-        echo "[has_pending_subagents] jq 失败，fail-safe 文本检测到未完成后台 Bash 任务（启动 id − 完成通知 id 非空）→ pending" >&2
+        echo "[has_pending_subagents] jq 失败，fail-safe 文本检测到未完成后台 Bash 任务（启动 id − 终止 id 非空）→ pending" >&2
         return 0
     fi
 
