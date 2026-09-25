@@ -1,0 +1,103 @@
+plugins/autopilot/scripts/taskstop-terminal-signal.acceptance.test.mjs
+  55b9eafac58b848d 1-463
+CLAUDE.md
+  55b9eafac58b848d 14
+plugins/autopilot/scripts/stop-hook.sh
+  55b9eafac58b848d 189-202,242-253,259,261,287-300,304-307,311-313,315
+package.json
+  55b9eafac58b848d 12
+.claude-plugin/marketplace.json
+  55b9eafac58b848d 32
+plugins/autopilot/README.md
+  55b9eafac58b848d 3-4
+.autopilot/knowledge/index.md
+  55b9eafac58b848d 9,18-19
+plugins/autopilot/.claude-plugin/plugin.json
+  55b9eafac58b848d 3-4
+.autopilot/knowledge/domains/stop-hook-state-machine.md
+  55b9eafac58b848d 105-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "2e346472a78fbda3f79c3992647768fb9eadb92a",
+  "prompts": {
+    "23dda9cd39352991": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6fb56c96-ad82-4048-beab-68b48a5a2bf1",
+        "model": "deepseek-flash"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        ".claude/settings.json": {
+          "additions": 5,
+          "accepted_lines": 5
+        }
+      }
+    },
+    "55b9eafac58b848d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "56e06520-5e3f-45e8-8347-25858abfc486",
+        "model": "deepseek-flash"
+      },
+      "human_author": "赵桂雄",
+      "messages": [],
+      "total_additions": 537,
+      "total_deletions": 21,
+      "accepted_lines": 531,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        ".autopilot/knowledge/index.md": {
+          "additions": 3,
+          "deletions": 2,
+          "accepted_lines": 3
+        },
+        "package.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        ".autopilot/knowledge/domains/stop-hook-state-machine.md": {
+          "additions": 8,
+          "accepted_lines": 8
+        },
+        ".claude-plugin/marketplace.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "CLAUDE.md": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "plugins/autopilot/scripts/taskstop-terminal-signal.acceptance.test.mjs": {
+          "additions": 469,
+          "deletions": 6,
+          "accepted_lines": 463
+        },
+        "plugins/autopilot/.claude-plugin/plugin.json": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 2
+        },
+        "plugins/autopilot/README.md": {
+          "additions": 2,
+          "accepted_lines": 2
+        },
+        "plugins/autopilot/scripts/stop-hook.sh": {
+          "additions": 50,
+          "deletions": 8,
+          "accepted_lines": 50
+        }
+      }
+    }
+  }
+}
