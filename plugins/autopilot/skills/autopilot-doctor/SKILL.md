@@ -251,6 +251,7 @@ ls .autopilot/knowledge/index.md .autopilot/knowledge/decisions.md .autopilot/kn
 ls .autopilot/knowledge/domains/ 2>/dev/null; \
 wc -l .autopilot/knowledge/decisions.md .autopilot/knowledge/patterns.md 2>/dev/null; \
 find .autopilot/knowledge/domains/ -name "*.md" -exec wc -l {} + 2>/dev/null; \
+ls .autopilot/knowledge/inbox/ 2>/dev/null | wc -l; \
 # 索引一致性：index.md 条目数
 grep -c "^\- \[" .autopilot/knowledge/index.md 2>/dev/null || echo "0"; \
 # 实际内容条目数（### [YYYY-MM-DD] 标题数）
@@ -372,6 +373,7 @@ ls -d types/ src/types/ 2>/dev/null
    - `.gitignore` 必须包含 `.autopilot/runtime/` 规则（缺失 = 严重扣分，导致运行时产物被误入库）
    - `git ls-files .autopilot/runtime` 必须输出空（非空 = 有历史误入库文件，需 `git rm --cached` 清理）
    - 若 `.autopilot/knowledge/` 目录不存在但 `.autopilot/decisions.md` 顶层存在 = 旧布局未迁移，建议运行 `/autopilot <任何目标>` 触发 setup.sh 自动迁移
+7. **inbox 积压**：Wave 1 收集的 inbox 文件计数 > 10 → 输出积压计数并提醒用户执行收编（协议见 autopilot knowledge-engineering.md 的 Collection Protocol）；≤ 10 不提醒
 
 **AI 判断指引**：仅分析 Wave 1 收集的数据。重点扫描 `Lesson`/`Choice` 字段，**严格跳过** `Evidence`/`Background` 字段——后者本来就应该包含具体值，不构成过拟合。
 

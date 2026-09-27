@@ -72,7 +72,7 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 #### 步骤 0. 知识上下文加载
 
-`.autopilot/` 存在时快速加载（<=15s，最多 3 个文件）：有 `index.md` → 关键词匹配 tags 按需加载 | 无 `index.md` → 全量加载 `decisions.md` + `patterns.md`。详见 `references/knowledge-engineering.md`。
+`.autopilot/` 存在时快速加载（<=15s，最多 3 个文件），两跳发现：有 `index.md` → 关键词匹配 tags 按需加载 + `ls` `inbox/` 按需读未收编条目 | 无 `index.md` → 全量加载 `decisions.md` + `patterns.md`。详见 `references/knowledge-engineering.md`。
 
 #### 步骤 1. 模式检测与分流
 
@@ -420,11 +420,11 @@ qa-reviewer 完成后：收集 Section A/B/C/D 审查结果合并为 QA 报告�
 
 #### 1. 知识提取与沉淀
 
-进入 merge 阶段后，立即回顾本次全流程产出，提取值得持久化的知识（时间限制 2 分钟，宁可少写高质量条目不要穷举）。写入 `.autopilot/knowledge/` 后设 `knowledge_extracted: true/skipped`，**不单独 commit**——普通模式下由步骤 3 commit Agent 的 `git add -A` 一并提交。
+进入 merge 阶段后，立即回顾本次全流程产出，提取值得持久化的知识（时间限制 2 分钟，宁可少写高质量条目不要穷举）。写入 `.autopilot/knowledge/inbox/`（一任务一独立新文件）后设 `knowledge_extracted: true/skipped`，**不单独 commit**——普通模式下由步骤 3 commit Agent 的 `git add -A` 一并提交。
 
-1. 读取 `references/knowledge-engineering.md` 获取完整提取规则和格式模板。**写入前**按 Integration over Append 流程搜索 index.md 找候选条目（决定合并/新建/跳过）；**写入后**按 Anti-Overfitting Principles 5 问自检 Lesson/Choice 字段
+1. 读取 `references/knowledge-engineering.md` 获取完整提取规则和格式模板。**写入** = `inbox/YYYY-MM-DD-<slug>.md` 独立新文件（写侧不做 Integration，语义合并移至收编侧）；**写入后**按 Anti-Overfitting Principles 5 问自检 Lesson/Choice 字段
 2. 分析状态文件设计文档/QA 报告/变更日志/auto-fix 修复历程，仅记录有真实学习价值的条目（设计权衡、调试教训、项目特有约定）；无值得记录 → 跳过
-3. 有条目时：自动生成 tags（模块名/技术栈/问题类型）→ 写入目标文件（通用 `decisions.md`/`patterns.md`、领域 `domains/{domain}.md`，`<!-- tags: ... -->` 格式）→ 同步更新 `index.md` 索引行 → 全局文件 >100 行建议迁移领域条目到 `domains/`。
+3. 有条目时：自动生成 tags（模块名/技术栈/问题类型）→ 写 `inbox/` 独立新文件（`<!-- tags: ... -->` 格式，同名 `-2` 递增）。**主检出侧**（`.git` 为目录）且 inbox 有积压 → 收编：Integration 合并进聚合层（`decisions.md`/`patterns.md`/`domains/*.md`）+ 重建 `index.md`（≤100 行）+ 删已收编文件；worktree 会话只写 inbox 永不收编。
 
 #### 2. 写入 Handoff（brief 模式）
 
@@ -473,4 +473,4 @@ qa-reviewer 完成后：收集 Section A/B/C/D 审查结果合并为 QA 报告�
 - `## 设计文档`：design 阶段写入，后续不修改（除非 revise 回到 design）
 
 ### 知识文件（.autopilot/knowledge/）
-知识文件独立于状态文件。merge 阶段写入 `.autopilot/knowledge/` 目录（含 `index.md` 索引、`decisions.md`/`patterns.md` 全局、`domains/*.md` 领域分区），随 commit Agent 一并提交（普通模式）或按 `references/knowledge-engineering.md` 提交到主仓库（worktree 模式），格式参见 `references/knowledge-engineering.md`。
+知识文件独立于状态文件。merge 阶段写入 `.autopilot/knowledge/` 目录（`inbox/` 收件箱新文件 + `index.md` 收编基索引、`decisions.md`/`patterns.md` 全局、`domains/*.md` 领域分区），随 commit Agent 一并提交（普通模式）或按 `references/knowledge-engineering.md` 提交到主仓库（worktree 模式），格式参见 `references/knowledge-engineering.md`。

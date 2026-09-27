@@ -467,6 +467,159 @@ describe('Structural integrity: no regressions in knowledge-engineering.md', () 
 });
 
 // ===========================================================================
+// 12. knowledge-engineering.md — Inbox Protocol（写侧，任意会话）
+// ===========================================================================
+describe('knowledge-engineering.md: Inbox Protocol (write side)', () => {
+  let content;
+
+  it('should designate inbox/ as the only write target and forbid writing aggregation files directly', async () => {
+    content = await readContent(KNOWLEDGE_REF);
+    assert.ok(
+      content.includes('inbox/'),
+      'Must document inbox/ directory as the write-side target'
+    );
+    assert.ok(
+      content.includes('禁止直接写聚合层'),
+      'Write side must forbid writing aggregation files (index/decisions/patterns/domains) directly'
+    );
+  });
+
+  it('should specify the inbox filename format YYYY-MM-DD-<slug>.md with slug constraints', async () => {
+    content ??= await readContent(KNOWLEDGE_REF);
+    assert.ok(
+      content.includes('YYYY-MM-DD-<slug>.md') &&
+        content.includes('[a-z0-9-]') &&
+        content.includes('≤40 字符'),
+      'Filename contract must be YYYY-MM-DD-<slug>.md with slug in [a-z0-9-] and <=40 chars'
+    );
+  });
+
+  it('should specify -2 suffix increment on filename collision and mkdir -p when inbox/ is absent', async () => {
+    content ??= await readContent(KNOWLEDGE_REF);
+    assert.ok(
+      content.includes('递增') && content.includes('-2') && content.includes('mkdir -p'),
+      'Must specify -2 suffix increment on collision and mkdir -p when inbox/ does not exist'
+    );
+  });
+});
+
+// ===========================================================================
+// 13. knowledge-engineering.md — Collection Protocol（仅主检出侧）
+// ===========================================================================
+describe('knowledge-engineering.md: Collection Protocol (primary checkout only)', () => {
+  let content;
+
+  it('should define primary checkout detection via .git being a directory vs worktree file', async () => {
+    content = await readContent(KNOWLEDGE_REF);
+    assert.ok(
+      content.includes('`.git` 是目录') && content.includes('`.git` 是文件'),
+      'Collection subject must be decided by .git being a directory (worktree: a file)'
+    );
+  });
+
+  it('should forbid worktree sessions from collecting (永不收编)', async () => {
+    content ??= await readContent(KNOWLEDGE_REF);
+    assert.ok(
+      content.includes('永不收编'),
+      'Worktree sessions must never run collection'
+    );
+  });
+
+  it('should describe collection steps: merge into aggregation layer, rebuild index <=100 lines, delete collected inbox files', async () => {
+    content ??= await readContent(KNOWLEDGE_REF);
+    assert.ok(
+      content.includes('重建') && content.includes('删除已收编') && content.includes('≤100 行'),
+      'Collection steps must include semantic merge into aggregation layer, rebuilding index.md (<=100 lines), deleting collected inbox files'
+    );
+  });
+
+  it('should define union conflict resolution keeping both sides on add/add name collision', async () => {
+    content ??= await readContent(KNOWLEDGE_REF);
+    assert.ok(
+      content.includes('两侧条目都保留') &&
+        content.includes('禁丢弃任侧') &&
+        content.includes('撞名'),
+      'Conflict resolution must be union: keep both sides and rename one on collision, never drop either side'
+    );
+  });
+
+  it('should record residual risk exemption referencing prose-iron-law-to-hook decision', async () => {
+    content ??= await readContent(KNOWLEDGE_REF);
+    assert.ok(
+      content.includes('prose-iron-law-to-hook'),
+      'Residual risk section must reference [2026-06-02] prose-iron-law-to-hook decision with exemption rationale'
+    );
+  });
+});
+
+// ===========================================================================
+// 14. knowledge-engineering.md — 两跳消费 + 收编基索引 + 禁全局序号
+// ===========================================================================
+describe('knowledge-engineering.md: two-hop consumption, collection-base index, no manual numbering', () => {
+  let content;
+
+  it('should document two-hop consumption: index scan + ls inbox/', async () => {
+    content = await readContent(KNOWLEDGE_REF);
+    assert.ok(
+      content.includes('两跳') && content.includes('ls .autopilot/knowledge/inbox/'),
+      'Consumption must document two-hop discovery: index tags match + ls inbox/'
+    );
+  });
+
+  it('should redefine index.md as collection-base index excluding inbox entries', async () => {
+    content ??= await readContent(KNOWLEDGE_REF);
+    assert.ok(
+      content.includes('收编基') && content.includes('不含 inbox 条目'),
+      'index.md must be defined as collection-base index rebuilt only by collection, excluding inbox entries'
+    );
+  });
+
+  it('should forbid manual global numbering with parallel-collision rationale', async () => {
+    content ??= await readContent(KNOWLEDGE_REF);
+    assert.ok(
+      content.includes('禁止手工维护全局序号') && content.includes('撞号'),
+      'Must forbid manual global numbering and explain the parallel-collection collision rationale'
+    );
+  });
+});
+
+// ===========================================================================
+// 15. SKILL.md — merge 阶段 inbox 写目标 + 收编路由 + design 两跳
+// ===========================================================================
+describe('SKILL.md: merge phase inbox write target and collection routing', () => {
+  let content;
+
+  it('should set merge phase write target to inbox/ independent files', async () => {
+    content = await readContent(SKILL_MD);
+    const mergeSection = extractSection(content, '知识提取与沉淀') ?? extractSection(content, 'merge');
+    assert.ok(
+      mergeSection !== null && mergeSection.includes('inbox/YYYY-MM-DD-<slug>.md'),
+      'Merge phase knowledge extraction must write independent inbox/YYYY-MM-DD-<slug>.md files'
+    );
+  });
+
+  it('should route collection to primary checkout and forbid it in worktrees', async () => {
+    content ??= await readContent(SKILL_MD);
+    const mergeSection = extractSection(content, '知识提取与沉淀') ??
+      extractSection(content, 'merge') ??
+      content;
+    assert.ok(
+      mergeSection.includes('.git') && mergeSection.includes('永不收编'),
+      'Merge phase must route collection to primary checkout (.git is a directory); worktree never collects'
+    );
+  });
+
+  it('should include ls inbox/ two-hop discovery in design phase knowledge loading', async () => {
+    content ??= await readContent(SKILL_MD);
+    const knowledgeSection = extractSection(content, '知识上下文加载');
+    assert.ok(
+      knowledgeSection !== null && knowledgeSection.includes('inbox'),
+      'Design phase knowledge loading must include ls inbox/ two-hop discovery'
+    );
+  });
+});
+
+// ===========================================================================
 // Helpers
 // ===========================================================================
 

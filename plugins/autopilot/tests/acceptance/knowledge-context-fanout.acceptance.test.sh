@@ -198,15 +198,20 @@ echo "  [scene4.P1] autopilot/SKILL.md numstat added=$SKILL_ADDED deleted=$SKILL
 pass "scene 4.P1: autopilot/SKILL.md 净非增 (deleted=$SKILL_DELETED >= added=$SKILL_ADDED)"
 
 # ===========================================================================
-# 断言 9（场景4.P2）：doctor SKILL.md 净非增（未触碰时 added=deleted=0，0>=0 成立）
+# 断言 9（场景4.P2）：doctor SKILL.md 净增受控
+#   原 v3.69.0 任务级锁「净非增」已随 knowledge inbox 协议（doctor Dim 12 增 inbox
+#   积压计数信号：Wave 1 计数 + Step 2 判读提醒，合计 +2 行）同步放宽：
+#   allowed_add = 2；超过仍越界（防 doctor 无序膨胀的守卫语义保留）
 # ===========================================================================
 DOCTOR_STATS=$(numstat_stat "$DOCTOR_SKILL")
 DOCTOR_ADDED=${DOCTOR_STATS% *}
 DOCTOR_DELETED=${DOCTOR_STATS#* }
-echo "  [scene4.P2] doctor/SKILL.md numstat added=$DOCTOR_ADDED deleted=$DOCTOR_DELETED" >> "$ARTIFACT_DIR/kctx-fan-numstat.out"
-[[ "$DOCTOR_DELETED" -ge "$DOCTOR_ADDED" ]] || \
-    fail "scene 4.P2: doctor/SKILL.md 净增 (deleted=$DOCTOR_DELETED < added=${DOCTOR_ADDED}，本任务不触 doctor，出现净增即越界)"
-pass "scene 4.P2: doctor/SKILL.md 净非增 (deleted=$DOCTOR_DELETED >= added=$DOCTOR_ADDED)"
+DOCTOR_ALLOWED_ADD=2
+echo "  [scene4.P2] doctor/SKILL.md numstat added=$DOCTOR_ADDED deleted=$DOCTOR_DELETED (allowed_add=$DOCTOR_ALLOWED_ADD)" >> "$ARTIFACT_DIR/kctx-fan-numstat.out"
+NET_ADD=$((DOCTOR_ADDED - DOCTOR_DELETED))
+[[ "$NET_ADD" -le "$DOCTOR_ALLOWED_ADD" ]] || \
+    fail "scene 4.P2: doctor/SKILL.md 净增超限 (net_add=$NET_ADD > allowed=${DOCTOR_ALLOWED_ADD}，inbox 信号预算 +2 行，超出即越界)"
+pass "scene 4.P2: doctor/SKILL.md 净增受控 (net_add=$NET_ADD <= allowed=$DOCTOR_ALLOWED_ADD)"
 
 # ===========================================================================
 # 断言 10（场景5.P4）：版本四处各含**当前版本**（从 plugin.json 动态读取，SSOT）每处 >=1

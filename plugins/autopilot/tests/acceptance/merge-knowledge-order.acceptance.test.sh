@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Merge phase knowledge-order contract test
-# 锁 commit/知识沉淀顺序前置 + 净减行 + worktree 兜底契约
+# 锁 commit/知识沉淀顺序前置 + 净减行 + worktree 兜底契约 + inbox 写目标（P8/P9，[2026-09-27] inbox 协议适配）
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -71,6 +71,20 @@ if grep -q 'symlink' "$KE_MD" && grep -q 'git status --porcelain' "$KE_MD"; then
   pass "P7 worktree 兜底逻辑存在（symlink + git status --porcelain）"
 else
   fail "P7 worktree 兜底逻辑缺失"
+fi
+
+# P8: 写目标 = inbox（写侧落独立收件箱新文件，禁直写聚合层；[2026-09-27] inbox 协议）
+if grep -qF '禁止直接写聚合层' "$KE_MD" && grep -qF 'YYYY-MM-DD-<slug>.md' "$KE_MD"; then
+  pass "P8 knowledge-engineering.md 写目标 = inbox（禁直写聚合层 + 文件名契约）"
+else
+  fail "P8 knowledge-engineering.md 缺 inbox 写目标契约（禁直写聚合层 / 文件名格式）"
+fi
+
+# P9: SKILL.md merge 步骤写 inbox + 主检出侧收编路由（worktree 永不收编）
+if grep -qF '.autopilot/knowledge/inbox/' "$SKILL_MD" && grep -qF '永不收编' "$SKILL_MD"; then
+  pass "P9 SKILL.md merge 写 inbox + 主检出侧收编 / worktree 永不收编路由"
+else
+  fail "P9 SKILL.md merge 步骤缺 inbox 写目标或收编路由"
 fi
 
 echo ""

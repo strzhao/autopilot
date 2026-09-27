@@ -170,3 +170,18 @@ heading_hits=$(echo "$SECTION" | grep -cE "^#### [0-9.]+ <Step Title>" || true)
 **Alternatives rejected**: 保持 2 轮（数据反对——R1→R2 常见新 BLOCKER 而非收敛：raven/20260916 2→3、raven/20260920-彻底根治 1→3，R2 的职责是「复核 R1 的修复」，而修复本身会引入新缺陷）；按任务复杂度分流（简单 2 轮 / 复杂 4+ 轮——需 AI 预判自己这个任务复不复杂，正是它 R1 判错的那件事，属伪精度）；提到 6 以上（R5 起转为追重要问题，实测 R5 的新重要项由「R3 建议 × R4 约束」叠加制造，是不收敛目标）。
 **Evidence**: raven-cli `20260920-开始实现` 用户手动突破上限跑到 6 轮：R1 6 BLOCKER → R2 1 → R3 1 → R4 **0** → R5 0 → R6 PASS 0/0；其中 R3 那条 BLOCKER 是 reviewer 自认**前两轮共同漏检**（`errorCode` 未进契约却被 6 条谓词断言）。其余多轮案例 R1→R2 均加深而非收敛。典型任务仍在 2 轮内收敛（27 条 `Plan 审查通过` 标注的模态形态是「初审 FAIL → 重审 PASS」）⇒ 上限提高的成本是**条件性的**，只在 R2 仍 FAIL 时发生。改动落点：SKILL.md 单行原地替换净 0 行（476 保持，headless 行号锚不滑）、design-modes.md §3 同步、3 处既有测试锚点随之上调、tier1-deoverfitting P8 新增「不得自行加轮」守护。
 **Lesson**: 「终止边界」类数值只能由**收敛数据**定，无数据时拍的数会恰巧落在最坏位置——2 轮正好停在「最后一批修复未经复核」，而那正是缺陷逃逸代价最高的地方（raven-cli 之后 QA auto-fix 又烧 3 轮 / 8 小时）。配套条件同样由数据给出：停点必须由 BLOCKER 而非轮数决定，因为修复会制造新问题（R3 的修复「新引入悬空常量」），而「追重要问题」没有终点。关联 [[2026-03-22]]（外部审查后的修改必须重新验证）、[[2026-05-25]]（减法删 step 潜伏事故——终止边界类文本同属高危）。
+
+### [2026-09-27] 知识库多会话零冲突收件箱机制：写侧分文件 + 主检出侧低频收编（v3.75.0）
+<!-- tags: autopilot, knowledge, inbox, conflict, worktree, parallel-sessions, collection, ai-first, minimal-mechanism -->
+**Background**: 并行会话（worktree 中聚合文件还是 symlink 直通主仓库）merge 阶段向聚合文件同一锚点追加，git 合并必然冲突——harmony-space 实测 471 次 merge 中 17 次显式处理 knowledge 冲突，会话自创 skip-worktree hack 硬扛，仓库根残留冲突 dump
+**Choice**: 三协议分层——①写侧：merge 提取只写 `knowledge/inbox/YYYY-MM-DD-<slug>.md` 独立新文件（一任务一文件，零冲突按构造，禁写聚合层）；②收编：仅主检出侧（`.git` 为目录）merge 顺带，语义合并（Integration over Append）进聚合层 → 重建 index 收编基 → 删已收编文件，worktree 永不收编；③消费：两跳发现（index 收编基 + `ls inbox/`），inbox 为正式态非待处理队列——收编永不发生系统仍正确
+**Alternatives rejected**: 完全扁平化（丢失主题聚合视图 + 存量重构面大）；追加保形 + merge 时 AI union（冲突照发只降解决成本，不满足根治）
+**Trade-offs**: 语义合并时机从写侧移到收编侧；读侧多一跳；残余冲突两路径（主检出并行收编 / 同日同 slug 跨分支撞名）靠 union 处置；协议依赖 AI 遵循文档——豁免依据 = git 冲突确定性 backstop + doctor 积压信号（援引 [2026-06-02] prose-iron-law-to-hook 的取舍记录）
+**Evidence**: 本任务 QA 28 谓词全绿（含 s2-p3 双分支真跑 git merge 零冲突 / s1-p4 freshness FRESH）；harmony-space 冲突勘察与插件机制六问探索见任务 brainstorm.md（核对锚点：2026-09-27 knowledge-engineering.md v3.75.0）
+**Lesson**: 多写者追加同一锚点的共享聚合文件在并行会话下必然冲突——根治方向是「写侧分文件 + 单写者收编」而非「合并时智能解决」；兜底设计的关键是把「靠人记的环节」（收编）从正确性关键路径拿掉，降级为聚合优化。关联 [[2026-09-09]]（knowledge 扇出五节化，消费侧先例）、[[2026-06-17]]（knowledge 时效性 prompt 层，最小机制同源）、[[2026-06-02]]（散文铁律转 hook——本次显式豁免并记录理由）。
+
+### [2026-09-27] node --test 嵌套执行 NODE_TEST_CONTEXT 泄漏零执行假绿
+<!-- tags: node-test, npm-test, env-leak, false-green, spawn-sync, nested-suite, assertion-strength, qa -->
+**Scenario**: `node --test` 驱动内 spawnSync `npm test`（内层再起 node --test）的嵌套验收结构
+**Lesson**: node --test 注入的 `NODE_TEST_CONTEXT` 会被子进程继承，内层判定递归后静默跳过全部测试文件仍 exit 0——嵌套 spawn 必须净化 env（delete `NODE_TEST_CONTEXT` / `npm_lifecycle_event`）；且 `exit==0` 断言对「零测试执行的 no-op」必然存活，须强化为汇总语义断言（`# pass N>0` ∧ `# fail 0`），任何短路路径都无法伪造
+**Evidence**: qa-reviewer 三次复现：假绿 wall≈111ms、输出仅 10 行无汇总 vs 真跑 4.5s/150 断言；修复后 s9-p1.out 含 `# pass=150 # fail=0`（核对锚点：2026-09-27 knowledge-inbox-smoke.acceptance.test.mjs）
