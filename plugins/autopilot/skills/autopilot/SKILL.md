@@ -54,7 +54,7 @@ description: 当用户需要从目标描述到代码合并的端到端自动化�
 
 ### Standard Design 模式（默认，含 brainstorm）
 
-先查复用：扫描 `.autopilot/runtime/requirements/*/brainstorm.md`，Read 候选「## 探索的目的与约束」段判定与当前目标相关性——相关则搬入 `$TASK_DIR/brainstorm.md` 跳过 Q&A 直接接力；无相关产物再委托 `Skill: "autopilot-brainstorm"`。`headless: true` 且未命中复用 → 不委托，编排器自答（推演关键问题与假设写入 `$TASK_DIR/brainstorm.md`，`[headless]` 留痕）。
+先查复用：扫描 `$TASK_DIR` 同级的 `*/brainstorm.md`（非 worktree 即 `.autopilot/runtime/requirements/`，worktree 即 `.autopilot/runtime/sessions/<name>/requirements/`——独立 brainstorm 产物落本地 sessions 目录，共享 requirements symlink 指向主仓，扫它会漏本地产物），Read 候选「## 探索的目的与约束」段判定与当前目标相关性——相关则搬入 `$TASK_DIR/brainstorm.md` 跳过 Q&A 直接接力；无相关产物再委托 `Skill: "autopilot-brainstorm"`。`headless: true` 且未命中复用 → 不委托，编排器自答（推演关键问题与假设写入 `$TASK_DIR/brainstorm.md`，`[headless]` 留痕）。
 
 接力：读 brainstorm.md → 写设计文档+实现计划 → plan-reviewer Agent 审查 → 步骤 4（自治默认 / 例外征询）（详见 references/design-modes.md §3）。
 

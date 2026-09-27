@@ -11,7 +11,7 @@ String 维护的 Claude Code 插件集合。
 
 | 插件 | 版本 | 类型 | 一句话 |
 |------|------|------|--------|
-| [autopilot](plugins/autopilot/) | v3.74.1 | Skill + Hook | AI 自动驾驶工程套件：目标→合并全流程闭环（fast/standard 自适应）+ QA 谓词闸门 + 红蓝分层验收 + worktree 自动初始化。版本演进史见 README 与 git log |
+| [autopilot](plugins/autopilot/) | v3.74.2 | Skill + Hook | AI 自动驾驶工程套件：目标→合并全流程闭环（fast/standard 自适应）+ QA 谓词闸门 + 红蓝分层验收 + worktree 自动初始化。版本演进史见 README 与 git log |
 | [writer-skill](plugins/writer-skill/) | v1.12.0 | Skill | 写作技能包：博客向 / 技术文档向 / 专业技术博客向 / 阮一峰风格 / 文章评价 |
 | [summarizer](plugins/summarizer/) | v1.0.0 | Skill | 多模态内容摘要（文章/视频/音频 → flomo） |
 | [task-notifier](plugins/task-notifier/) | v1.0.0 | Hook | 任务完成系统提示音 |
@@ -37,6 +37,8 @@ String 维护的 Claude Code 插件集合。
 | 本文件「插件索引」表中的 `vX.Y.Z` | 列表展示版本号 |
 
 autopilot-commit 已通过"读 CLAUDE.md + grep 校验"动态发现这些位置，新增版本文件时同步更新本表即可。
+
+**description 只写能力简介**：`plugin.json` / `marketplace.json` 的 `description` 保持一段可读的能力概述（百字级），**禁止把版本变更说明以括号追加进去**（历史教训：v3.38→v3.74 逐版追加堆到 ~10KB 且两处不同步，v3.74.2 已瘦身）。变更说明只进插件 README 顶部版本块与 git log；改 marketplace.json 条目时按 `name` 字段 select 定位（`.plugins[0]` 未必是目标插件）。
 
 ## 开发规范
 

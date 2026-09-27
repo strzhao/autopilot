@@ -95,7 +95,10 @@ description: autopilot design 阶段需求探索专用。在写设计文档前�
 **必须遵守**：
 
 - 从 state.md frontmatter 读取 `task_dir`，将 brainstorm.md 写入 `$TASK_DIR/brainstorm.md`
-- **独立调用（无 state.md，如 `/autopilot:autopilot-brainstorm` 直接调用）时**：`task_dir` 必须落项目根下 `.autopilot/runtime/requirements/<slug>`——slug 用 `YYYYMMDD-<任务关键词>`（参考 `runtime/requirements/` 下已有目录命名）。**严禁**写到顶层 `.autopilot/requirements/`：那是 v3.35 前旧路径，已被 `.gitignore` 拦截，落那里等于丢失产物（不入库、主流程读不到）。
+- **独立调用（无 state.md，如 `/autopilot:autopilot-brainstorm` 直接调用）时**：`task_dir` 落点先判 worktree（`[[ -f .git ]]` 为真即在 worktree）：
+  - 非 worktree：落项目根下 `.autopilot/runtime/requirements/<slug>`
+  - worktree 中：落 `.autopilot/runtime/sessions/<worktree名>/requirements/<slug>`（worktree 名 = `basename "$(git rev-parse --show-toplevel)"`）。**严禁**写 `.autopilot/runtime/requirements/`——worktree 里它是指向主仓的 symlink，隔离会话的 Write/Edit 会被 harness 守卫拒绝（"isolated in the worktree"），Bash 绕写等于污染主仓共享目录
+  - slug 用 `YYYYMMDD-<任务关键词>`（参考 task_dir 同级已有目录命名）。**严禁**写到顶层 `.autopilot/requirements/`：那是 v3.35 前旧路径，已被 `.gitignore` 拦截，落那里等于丢失产物（不入库、主流程读不到）
 - **禁止**修改 state.md 的 frontmatter（`phase`、`gate` 等字段由主 skill 控制）
 - **禁止**写入 state.md 的 `## 设计文档` 或 `## 实现计划` 区域
 - brainstorm.md 写入完成后，本 skill 职责结束，主 SKILL 接力：读取 brainstorm.md → 写设计文档 → plan-reviewer → 步骤 4（自治默认 / 例外征询）

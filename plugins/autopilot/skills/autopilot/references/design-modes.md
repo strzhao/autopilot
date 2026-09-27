@@ -38,7 +38,7 @@ qa 阶段差异：
 
 **先查复用**（委托 brainstorm 前的语义扫描，复用独立 `/autopilot-brainstorm` 产物）：
 
-- 扫描路径：`.autopilot/runtime/requirements/*/brainstorm.md`
+- 扫描路径：`$TASK_DIR` 同级的 `*/brainstorm.md`（非 worktree 即 `.autopilot/runtime/requirements/`，worktree 即 `.autopilot/runtime/sessions/<name>/requirements/`；共享 requirements symlink 指向主仓，扫它会漏 worktree 本地产物）
 - 相关性判据：Read 候选的「## 探索的目的与约束」段，语义判断是否与当前 `## 目标` 相关
 - 命中：搬入当前 `$TASK_DIR/brainstorm.md`（mv 或 cp），跳过 Q&A 直接进步骤 1（读 brainstorm.md 接力）
 - 无命中：委托 `Skill: "autopilot-brainstorm"` 完成需求探索（默认触发，`--fast` 跳过）
