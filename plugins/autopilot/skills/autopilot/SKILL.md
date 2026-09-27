@@ -446,7 +446,7 @@ qa-reviewer 完成后：收集 Section A/B/C/D 审查结果合并为 QA 报告�
 
 #### 4. Auto-Chain 评估（brief 模式专用）
 
-`brief_file` 非空时评估信心：QA 全 ✅ + retry_count=0 + handoff 偏差说明为空 → 用 `bash plugins/autopilot/scripts/lib.sh` 中的 `get_first_ready_task .autopilot/project/dag.yaml` 选下一个任务 → Edit frontmatter `next_task: "<task-id>"`；任一不满足或无就绪任务 → 保持 `""`。stop-hook 检测到 `next_task` 非空会自动 auto-chain。详见 `references/auto-chain-guide.md`。
+`brief_file` 非空时评估信心：QA 全 ✅ + handoff 偏差说明为空 → 用 `bash plugins/autopilot/scripts/lib.sh` 中的 `get_first_ready_task .autopilot/project/dag.yaml` 选下一个任务 → Edit frontmatter `next_task: "<task-id>"`；任一不满足或无就绪任务 → 保持 `""`。stop-hook 检测到 `next_task` 非空会自动 auto-chain。详见 `references/auto-chain-guide.md`。
 
 #### 5. 最终总结
 

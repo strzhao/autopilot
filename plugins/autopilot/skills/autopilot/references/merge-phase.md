@@ -67,7 +67,7 @@ commit 完成后，如果当前 commit 已被 push 到远端且远端配置了 G
 详细的信心评估标准参见 `references/auto-chain-guide.md`。
 
 简要流程：
-1. 读取 QA 报告：是否全部 ✅，retry_count 是否为 0
+1. 读取 QA 报告：是否全部 ✅
 2. 读取 handoff：是否有"偏差说明"
 3. 读取 `.autopilot/project/dag.yaml`：找下一个就绪任务
 4. 高信心 + 有就绪任务 → Edit frontmatter `next_task: "<task-id>"`
