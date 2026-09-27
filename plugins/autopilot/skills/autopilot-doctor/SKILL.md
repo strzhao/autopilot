@@ -250,11 +250,9 @@ ls .autopilot/knowledge/ 2>/dev/null; \
 ls .autopilot/knowledge/index.md .autopilot/knowledge/decisions.md .autopilot/knowledge/patterns.md 2>/dev/null; \
 ls .autopilot/knowledge/domains/ 2>/dev/null; \
 wc -l .autopilot/knowledge/decisions.md .autopilot/knowledge/patterns.md 2>/dev/null; \
-find .autopilot/knowledge/domains/ -name "*.md" -exec wc -l {} + 2>/dev/null; \
-ls .autopilot/knowledge/inbox/ 2>/dev/null | wc -l; \
-# 索引一致性：index.md 条目数
+find .autopilot/knowledge/domains/ -name "*.md" -exec wc -l {} + 2>/dev/null; ls .autopilot/knowledge/inbox/ 2>/dev/null | wc -l; \
+# 索引一致性：index.md 条目数 vs 实际内容条目数（### [YYYY-MM-DD] 标题数）
 grep -c "^\- \[" .autopilot/knowledge/index.md 2>/dev/null || echo "0"; \
-# 实际内容条目数（### [YYYY-MM-DD] 标题数）
 grep -rh "^### \[" .autopilot/knowledge/decisions.md .autopilot/knowledge/patterns.md .autopilot/knowledge/domains/ 2>/dev/null | wc -l; \
 # 元信息完整性：抽样检查（取前 30 行）
 head -30 .autopilot/knowledge/decisions.md 2>/dev/null; \

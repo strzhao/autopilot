@@ -29,7 +29,7 @@
       "name": "autopilot",
       "source": "./plugins/autopilot",
       "description": "AI 自动驾驶工程套件：从目标描述到代码合并的全流程闭环。AI 自适应 fast/standard 档位；design 阶段 brainstorm 交互式需求探索 + plan-reviewer 计划审查；implement 阶段红蓝对抗分层验收；QA 谓词闸门 + 端到端执行面验证把守 merge 门；知识工程自动沉淀跨任务经验。含需求管理（项目任务 DAG）、智能提交、工程健康度诊断（doctor）、worktree 自动初始化。版本演进史见插件 README 与 git log。",
-      "version": "3.75.0",
+      "version": "3.76.0",
       "author": {
         "name": "stringzhao",
         "email": "stringzhao@foxmail.com"
