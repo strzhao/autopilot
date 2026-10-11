@@ -10,7 +10,7 @@
   <p>
     <a href="https://github.com/strzhao/autopilot/stargazers"><img src="https://img.shields.io/github/stars/strzhao/autopilot?style=flat-square&color=0D9488" alt="Stars" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/github/license/strzhao/autopilot?style=flat-square&color=16233A" alt="MIT License" /></a>
-    <img src="https://img.shields.io/badge/version-v3.77.0-FF5A36?style=flat-square" alt="v3.77.0" />
+    <img src="https://img.shields.io/badge/version-v3.77.1-FF5A36?style=flat-square" alt="v3.77.1" />
     <img src="https://img.shields.io/badge/Claude%20Code-plugin-16233A?style=flat-square" alt="Claude Code plugin" />
     <img src="https://img.shields.io/badge/Codex-plugin-16233A?style=flat-square" alt="Codex plugin" />
   </p>

@@ -6,7 +6,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "${CLAUDE_PLUGIN_ROOT}/scripts/stop-hook.sh",
+                        "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/stop-hook.sh\"",
                         "timeout": 10
                     }
                 ]
@@ -41,7 +41,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "${CLAUDE_PLUGIN_ROOT}/scripts/worktree-bootstrap.sh",
+                        "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/worktree-bootstrap.sh\"",
                         "timeout": 300,
                         "statusMessage": "检查 worktree 配置..."
                     }
