@@ -11,11 +11,10 @@ String 维护的 Claude Code 插件集合。
 
 | 插件 | 版本 | 类型 | 一句话 |
 |------|------|------|--------|
-| [autopilot](plugins/autopilot/) | v3.77.0 | Skill + Hook | AI 自动驾驶工程套件：目标→合并全流程闭环（fast/standard 自适应）+ QA 谓词闸门 + 红蓝分层验收 + worktree 自动初始化。版本演进史见 README 与 git log |
+| [autopilot](plugins/autopilot/) | v3.77.0 | Skill + Hook | AI 自动驾驶 loop engine：状态机驱动目标→合并全流程闭环 + 红蓝对抗 + QA 谓词闸门 + 知识工程 + worktree 自动初始化。品牌与版本演进史见 README 与 git log |
 | [writer-skill](plugins/writer-skill/) | v1.12.0 | Skill | 写作技能包：博客向 / 技术文档向 / 专业技术博客向 / 阮一峰风格 / 文章评价 |
 | [summarizer](plugins/summarizer/) | v1.0.0 | Skill | 多模态内容摘要（文章/视频/音频 → flomo） |
-| [task-notifier](plugins/task-notifier/) | v1.0.0 | Hook | 任务完成系统提示音 |
-| [plugin-sync](plugins/plugin-sync/) | v1.0.0 | Hook | 跨模型插件同步（解决 `cc switch` 切换后插件丢失） |
+| [task-notifier](plugins/task-notifier/) | v1.1.0 | Hook | 任务完成系统提示音 |
 
 ## ⚠️ 核心开发原则
 
