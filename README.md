@@ -22,6 +22,12 @@
 
 ---
 
+<div align="center">
+  <img src="assets/demo/autopilot-demo.gif" alt="Real unattended autopilot run: goal to merged commit" width="88%" />
+  <br/>
+  <sub><strong>A real unattended run (replay, sped up):</strong> one prompt in — design, red/blue implementation, evidence-gated QA, merged commit out. Along the way it detects a broken baseline test script, isolates the cause, routes around it, and discloses it in the final report.</sub>
+</div>
+
 ## Why autopilot exists
 
 AI coding agents fail in a predictable way: **they look done long before they are done.** "I checked" is not a check. 864 tests green while the input box doesn't work. A screenshot copied seven times to fake seven pieces of evidence. (These are real incidents from autopilot's own development — every mechanism in this plugin exists because one of them happened.)

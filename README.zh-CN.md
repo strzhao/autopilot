@@ -18,6 +18,12 @@
 
 ---
 
+<div align="center">
+  <img src="assets/demo/autopilot-demo.gif" alt="autopilot 真实无人值守运行：从目标到合并" width="88%" />
+  <br/>
+  <sub><strong>一次真实的无人值守运行（回放，提速）：</strong>一句目标进来——设计、红蓝实现、证据闸门 QA、合并提交出去。途中它自行发现基线测试脚本坏了、隔离根因、绕行并在最终报告里如实披露。</sub>
+</div>
+
 ## autopilot 是什么
 
 当你输入 `/autopilot 实现用户头像上传功能`，它**不会**直接开始写代码。
