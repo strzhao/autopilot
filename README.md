@@ -45,7 +45,7 @@ The industry's answer so far is the *dumb loop* — replay the same prompt until
            └────────────── ✋ you clear the landing ─────────────┘
 ```
 
-You intervene **exactly twice**: approve the flight plan (design review), clear the landing (final acceptance). Everything in between is the loop's job. For CI and unattended runs there's a `--headless` mode with deterministic, greppable audit trails.
+By default you intervene **exactly twice**: approve the flight plan (design review), clear the landing (final acceptance). Everything in between is the loop's job — and when every gate passes on evidence, you can delegate the gates too (`auto_approve` in project mode, or a `--headless` mode with deterministic, greppable audit trails for CI).
 
 ## An aviation operating system for agents
 
@@ -59,7 +59,7 @@ Commercial aviation is the safest way to travel — not because pilots are smart
 | Dispatch release criteria | Predicate gate: **∀ predicates PASS ∧ 0 critical** |
 | Black box + post-flight debrief | Knowledge engineering: auto-extracted decisions & lessons |
 | Preflight inspection | `doctor`: 14-dimension airworthiness scan |
-| Captain's override | Two approvals — design & acceptance |
+| Captain's override | Human gates on design & acceptance — yours to hold, or to delegate to evidence-gated auto-approve |
 
 ## Four systems aboard
 
