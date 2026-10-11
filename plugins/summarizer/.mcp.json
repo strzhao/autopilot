@@ -22,7 +22,7 @@
         "@chatmcp/flomo-mcp"
       ],
       "env": {
-        "FLOMO_API_URL": "https://flomoapp.com/iwh/MTgzNTkzNA/05f33b8602fa108b9dd0422e711c11b3/"
+        "FLOMO_API_URL": "${FLOMO_API_URL}"
       }
     }
   }
