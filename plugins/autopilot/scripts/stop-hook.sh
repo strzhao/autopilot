@@ -618,7 +618,16 @@ if [[ "$PHASE" == "done" ]]; then
                 # qa r3 审查 [85] 修复：Case 0.5 的推进取 dag 首个就绪任务，与 state 的
                 # next_task 无关（恒空）——逃生口若指向清空 next_task 即死指令（清空为
                 # no-op，AI 原地打转）。有效逃生口 = 改 dag.yaml（置 blocked/移除）或 cancel。
-                _repair_reason="auto-chain 中断：任务 ${FIRST_READY}（dag.yaml 首个就绪任务）的任务文件未解析到（brief=\"${_brief_val}\"，空串 = dag 未设 brief 字段）。已按序三级解析均未命中：① 绝对路径原样；② ${PROJECT_ROOT}/.autopilot/project/${_brief_val}；③ ${PROJECT_ROOT}/${_brief_val}；④ 回退 ${PROJECT_ROOT}/.autopilot/project/tasks/${FIRST_READY}.md。请二选一修复后结束本回合（stop-hook 将自动重试 auto-chain）：(a) 用 Edit 修正 ${DAG_FILE} 中 ${FIRST_READY} 的 brief 字段，指向真实存在的任务文件；(b) 或在上述任一解析位置补建任务文件。逃生口：若该项目不应继续推进，可用 Edit 在 ${DAG_FILE} 中把任务 ${FIRST_READY} 的 status 置为 blocked（或移除该任务），或运行 /autopilot cancel 终止循环。本 block 已保留 active 指针，不会自毁。"
+                # verify-change 事实修正：空 brief 归因精确化（未设字段/非列表形态都取空，
+                # 不能一律称「未设 brief 字段」）+ 映射式 dag 显式告警（解析链不可读要可见）。
+                _brief_note=""
+                [[ -z "$_brief_val" ]] && _brief_note="，空串 = 未能从 dag.yaml 读取到该任务的 brief 字段（未设该字段 / 任务 id 不在「- id:」列表 / dag.yaml 非列表形态）"
+                _dag_shape_note=""
+                if [[ -f "$DAG_FILE" ]] && ! grep -q '^[[:space:]]*-[[:space:]]*id:' "$DAG_FILE" 2>/dev/null; then
+                    _dag_shape_note="另检测到 dag.yaml 未使用「- id:」列表形态（疑似映射式写法），任务解析链无法读取，请改写为标准列表形态（tasks: 下逐项「- id: <id>」）。"
+                    echo "⚠️  autopilot: dag.yaml 未使用「- id:」列表形态（疑似映射式写法），任务解析链不可读" >&2
+                fi
+                _repair_reason="auto-chain 中断：任务 ${FIRST_READY}（dag.yaml 首个就绪任务）的任务文件未解析到（brief=\"${_brief_val}\"${_brief_note}）。已按序尝试以下四级候选均未命中：① 绝对路径原样；② ${PROJECT_ROOT}/.autopilot/project/${_brief_val}；③ ${PROJECT_ROOT}/${_brief_val}；④ 回退 ${PROJECT_ROOT}/.autopilot/project/tasks/${FIRST_READY}.md。${_dag_shape_note}请二选一修复后结束本回合（stop-hook 将自动重试 auto-chain）：(a) 用 Edit 修正 ${DAG_FILE} 中 ${FIRST_READY} 的 brief 字段，指向真实存在的任务文件；(b) 或在上述任一解析位置补建任务文件。逃生口：若该项目不应继续推进，可用 Edit 在 ${DAG_FILE} 中把任务 ${FIRST_READY} 的 status 置为 blocked（或移除该任务），或运行 /autopilot cancel 终止循环。本 block 已保留 active 指针，不会自毁。"
                 jq -n --arg reason "${_repair_reason}" \
                     --arg msg "autopilot: 任务 ${FIRST_READY} 的 brief 文件未解析到，已阻止指针自毁——修 dag.yaml brief 或补建任务文件后结束本回合自动重试" \
                     '{"decision":"block","reason":$reason,"systemMessage":$msg}'
@@ -664,7 +673,15 @@ if [[ "$PHASE" == "done" ]]; then
             # 自毁点），改为 block 自修 JSON（保留 active 指针），AI 修复后结束本回合
             # stop-hook 自动重试 auto-chain。铁律：不得删除指向未完成任务的 active 指针。
             _brief_val=$(get_task_brief "$DAG_FILE" "$NEXT_TASK" 2>/dev/null || true)
-            _repair_reason="auto-chain 中断：next_task=${NEXT_TASK}（state.md next_task 字段）的任务文件未解析到（brief=\"${_brief_val}\"，空串 = dag 未设 brief 字段）。已按序三级解析均未命中：① 绝对路径原样；② ${PROJECT_ROOT}/.autopilot/project/${_brief_val}；③ ${PROJECT_ROOT}/${_brief_val}；④ 回退 ${PROJECT_ROOT}/.autopilot/project/tasks/${NEXT_TASK}.md。请二选一修复后结束本回合（stop-hook 将自动重试 auto-chain）：(a) 用 Edit 修正 ${DAG_FILE} 中 ${NEXT_TASK} 的 brief 字段，指向真实存在的任务文件；(b) 或在上述任一解析位置补建任务文件。逃生口：若该任务不应推进，用 Edit 把 ${STATE_FILE} 的 next_task 字段清空即可释放循环。本 block 已保留 active 指针，不会自毁。"
+            # verify-change 事实修正：空 brief 归因精确化 + 映射式 dag 显式告警（同 Case 0.5）。
+            _brief_note=""
+            [[ -z "$_brief_val" ]] && _brief_note="，空串 = 未能从 dag.yaml 读取到该任务的 brief 字段（未设该字段 / 任务 id 不在「- id:」列表 / dag.yaml 非列表形态）"
+            _dag_shape_note=""
+            if [[ -f "$DAG_FILE" ]] && ! grep -q '^[[:space:]]*-[[:space:]]*id:' "$DAG_FILE" 2>/dev/null; then
+                _dag_shape_note="另检测到 dag.yaml 未使用「- id:」列表形态（疑似映射式写法），任务解析链无法读取，请改写为标准列表形态（tasks: 下逐项「- id: <id>」）。"
+                echo "⚠️  autopilot: dag.yaml 未使用「- id:」列表形态（疑似映射式写法），任务解析链不可读" >&2
+            fi
+            _repair_reason="auto-chain 中断：next_task=${NEXT_TASK}（state.md next_task 字段）的任务文件未解析到（brief=\"${_brief_val}\"${_brief_note}）。已按序尝试以下四级候选均未命中：① 绝对路径原样；② ${PROJECT_ROOT}/.autopilot/project/${_brief_val}；③ ${PROJECT_ROOT}/${_brief_val}；④ 回退 ${PROJECT_ROOT}/.autopilot/project/tasks/${NEXT_TASK}.md。${_dag_shape_note}请二选一修复后结束本回合（stop-hook 将自动重试 auto-chain）：(a) 用 Edit 修正 ${DAG_FILE} 中 ${NEXT_TASK} 的 brief 字段，指向真实存在的任务文件；(b) 或在上述任一解析位置补建任务文件。逃生口：若该任务不应推进，用 Edit 把 ${STATE_FILE} 的 next_task 字段清空即可释放循环。本 block 已保留 active 指针，不会自毁。"
             echo "⚠️  autopilot: auto-chain 任务文件未解析到（next_task=${NEXT_TASK}），转 block 自修（指针保留）" >&2
             jq -n --arg reason "${_repair_reason}" \
                 --arg msg "autopilot: next_task ${NEXT_TASK} 的 brief 文件未解析到，已阻止指针自毁——修 dag.yaml brief 或补建任务文件后结束本回合自动重试" \
