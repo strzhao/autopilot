@@ -153,6 +153,9 @@ run_resolve() {
     fi
     dag_body="${dag_body}    status: pending\n    depends_on: []\n"
     printf '%b' "$dag_body" > "$PROJ_DAG"
+    # 跨文件全局契约：resolve_task_file（lib.sh）内部消费 $PROJECT_ROOT 解析 ②③ 级路径，
+    # 本文件只写不读属预期（CI shellcheck -S warning 扫全树，SC2034 按此豁免）。
+    # shellcheck disable=SC2034
     PROJECT_ROOT="$PROJ"
     resolve_task_file "$PROJ_DAG" "t1"
 }
