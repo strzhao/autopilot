@@ -10,6 +10,11 @@ PROJECT_ROOT=""
 STATE_FILE=""
 TASK_DIR=""
 WORKTREE_NAME=""
+# v3.78.0 指针自愈可见化：init_paths 本轮发生指针自愈时置为被接管 slug，否则保持空串。
+# 消费方 = stop-hook（stderr 降级通道 + §9 systemMessage 优先通道）；init_paths 每次调用重置，
+# 同进程多次调用（setup.sh/stop-hook 均只调一次，但 source 复用测试会多次）不残留旧值。
+# shellcheck disable=SC2034  # 跨文件全局：仅 stop-hook.sh 消费（lib.sh 单文件视角看似未用）
+SELF_HEALED_SLUG=""
 
 # 检测当前是否在 git worktree 中，返回 worktree 名称（目录名）
 # 不在 worktree 中时返回空字符串
@@ -32,6 +37,64 @@ get_active_file() {
     fi
 }
 
+# ── 指针自愈（v3.78.0 组件 3，治「指针丢失后全链失明」） ─────────────
+# 同族故障第三例（decisions.md [2026-09-25] TaskStop 终止信号缺失前科 + harmony-space
+# 2026-10-17 指针被误删事故）：指针丢失后 init_paths 返回空 STATE_FILE，stop-hook :442
+# 静默放行、/autopilot status 同盲，已 QA 全绿的任务永久停摆。治法 = 自愈 + 报警
+#（brainstorm 20261018-project-mode-stall 拍板：不自守卫，brief 真找不到 block 让 AI 自修）。
+#
+# selfheal_scan_candidates → stdout: 同拓扑基目录下合格候选的 state.md 路径列表（可能多行）
+#   合格 = frontmatter active:true（grep -m1 取首键，容忍重复键——get_field 同款契约）
+#          ∧ phase ≠ done（引号/裸值均容错）。
+#   严格同拓扑（不跨界）：worktree 会话只扫 runtime/sessions/<wt>/requirements/，
+#   非 worktree 只扫 runtime/requirements/——worktree 不收养主仓任务，反之亦然（场景 16.P2）。
+selfheal_scan_candidates() {
+    local base_dir
+    if [[ -n "$WORKTREE_NAME" ]]; then
+        base_dir="$PROJECT_ROOT/.autopilot/runtime/sessions/$WORKTREE_NAME/requirements"
+    else
+        base_dir="$PROJECT_ROOT/.autopilot/runtime/requirements"
+    fi
+    [[ -d "$base_dir" ]] || return 0
+    local state_file phase_val
+    for state_file in "$base_dir"/*/state.md; do
+        [[ -f "$state_file" ]] || continue   # glob 未命中兜底（nullglob 未开启时为字面量）
+        grep -m1 '^active:' "$state_file" 2>/dev/null | grep -q 'true' || continue
+        phase_val=$(grep -m1 '^phase:' "$state_file" 2>/dev/null \
+            | sed 's/^phase:[[:space:]]*//' | sed 's/^"\(.*\)"$/\1/')
+        [[ "$phase_val" == "done" ]] && continue
+        printf '%s\n' "$state_file"
+    done
+}
+
+# selfheal_active_ptr <active_file> → rc0=已重建（置 SELF_HEALED_SLUG）/ rc1=无合格候选
+#   多候选取 mtime 最新（ls -1td，与 freshness_check :294 同款跨平台惯例，禁 stat -f/-c）
+#   并报警其余（可观测性：静默择一会让并发任务的下落不可见）；零候选静默维持现状
+#  （常态无任务不报警，对齐设计「未命中 → 维持现状」）。
+selfheal_active_ptr() {
+    local active_file="$1"
+    local candidates
+    candidates=$(selfheal_scan_candidates)
+    [[ -z "$candidates" ]] && return 1
+    # newline → NUL 转 xargs（路径含空格安全，freshness_check 同款）
+    local newest
+    newest=$(printf '%s\n' "$candidates" \
+        | while IFS= read -r f; do printf '%s\0' "$f"; done \
+        | xargs -0 ls -1td 2>/dev/null | head -1)
+    [[ -z "$newest" ]] && return 1
+    local slug
+    slug=$(basename "$(dirname "$newest")")
+    mkdir -p "$(dirname "$active_file")" 2>/dev/null || true
+    echo "$slug" > "$active_file"
+    SELF_HEALED_SLUG="$slug"
+    local rest
+    rest=$(printf '%s\n' "$candidates" | awk -v n="$newest" '$0 != n')
+    if [[ -n "$rest" ]]; then
+        echo "⚠️  autopilot 指针自愈：发现多个活跃任务候选，已接管 mtime 最新的「${slug}」，未收养：$(printf '%s\n' "$rest" | awk -F'/state.md$' '{print $1}' | tr '\n' ' ')" >&2
+    fi
+    return 0
+}
+
 init_paths() {
     local target_cwd="${1:-}"
     if [[ -n "$target_cwd" ]] && [[ -d "$target_cwd" ]]; then
@@ -39,13 +102,44 @@ init_paths() {
     fi
     PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
     WORKTREE_NAME=$(get_worktree_name)
+    # shellcheck disable=SC2034  # 跨文件全局：仅 stop-hook.sh 消费，此处每次调用重置（可重入）
+    SELF_HEALED_SLUG=""
 
     # 读取 active 指针定位状态文件（worktree 感知）
     local active_file
     active_file=$(get_active_file)
+    # v3.78.0 三态合一自愈判定——必须挂在 slug 读取之后：ptr 缺失 ∨ ptr 内容为空
+    # ∨ 目标 requirements/<slug>/state.md 不存在（悬空）三种形态统一走同一自愈入口。
+    # 0 字节 ptr 与悬空 ptr 均能通过 [[ -f "$active_file" ]] 分支，只在 slug 读取后才能
+    # 识别，不能只改 else 分支（plan-review r1 BLOCKER 修复项）。
+    local slug=""
     if [[ -f "$active_file" ]]; then
-        local slug
-        slug=$(cat "$active_file")
+        slug=$(cat "$active_file" 2>/dev/null || true)
+    fi
+    local need_heal=0
+    if [[ -z "$slug" ]]; then
+        need_heal=1                      # 态 A ptr 缺失 ∨ 态 B ptr 0 字节
+    else
+        local candidate_state
+        if [[ -n "$WORKTREE_NAME" ]]; then
+            candidate_state="$PROJECT_ROOT/.autopilot/runtime/sessions/$WORKTREE_NAME/requirements/$slug/state.md"
+        else
+            candidate_state="$PROJECT_ROOT/.autopilot/runtime/requirements/$slug/state.md"
+        fi
+        if [[ ! -f "$candidate_state" ]]; then
+            need_heal=1                  # 态 C 悬空 ptr（目标 state.md 不存在）
+        fi
+    fi
+    if [[ "$need_heal" -eq 1 ]]; then
+        # 命中 → 重建 ptr + SELF_HEALED_SLUG 置位（消费方可见化）；未命中 → 维持现状
+        selfheal_active_ptr "$active_file" || true
+        if [[ -f "$active_file" ]]; then
+            slug=$(cat "$active_file" 2>/dev/null || true)
+        else
+            slug=""
+        fi
+    fi
+    if [[ -n "$slug" ]]; then
         if [[ -n "$WORKTREE_NAME" ]]; then
             TASK_DIR="$PROJECT_ROOT/.autopilot/runtime/sessions/$WORKTREE_NAME/requirements/$slug"
         else
@@ -1228,6 +1322,50 @@ get_task_brief() {
         }
         END { if (!done && matched && brief != "") print brief }
     ' "$dag_file"
+}
+
+# 从 dag.yaml 解析指定任务的任务文件路径（三级解析，v3.78.0 组件 1）。
+# 参数: dag_file task_id → stdout: 解析到的路径；三级全未命中输出空串。
+#
+# 三级解析序（brief 非空时按序 -f 探测，治 harmony-space 2026-10-17 短形态自毁事故：
+# moonwell 立项写 brief: tasks/M1-X.md 短形态，旧内联 case 只认「绝对路径原样」与
+# 「仓根相对」两形态，按仓根直拼 $PROJECT_ROOT/tasks/M1-X.md 未命中 → 兜底分支自毁指针）：
+#   1. 绝对路径原样                                （ota2 形态 /abs/path.md）
+#   2. $PROJECT_ROOT/.autopilot/project/<brief>   （moonwell 短形态 tasks/M1-X.md）
+#   3. $PROJECT_ROOT/<brief>                      （v3.54.1 全相对形态 .autopilot/project/tasks/xxx.md）
+# brief 空 → 回退 $PROJECT_ROOT/.autopilot/project/tasks/<id>.md（v3.54.0 兼容不变，
+# 存在性交由调用方 -f 判定，与旧内联行为逐字节一致）。
+# 兼容铁律（四形态全绿）：调用方对空返回值走未命中分支（block 自修），不得自毁指针。
+# 纯函数无副作用（只读 -f 探测）；依赖 $PROJECT_ROOT 全局（init_paths 赋值）。
+resolve_task_file() {
+    local dag_file="$1" task_id="$2"
+    local brief
+    brief=$(get_task_brief "$dag_file" "$task_id" 2>/dev/null || true)
+    local candidate
+    if [[ -n "$brief" ]]; then
+        case "$brief" in
+            /*)
+                if [[ -f "$brief" ]]; then
+                    printf '%s\n' "$brief"
+                    return 0
+                fi
+                ;;
+        esac
+        candidate="$PROJECT_ROOT/.autopilot/project/$brief"
+        if [[ -f "$candidate" ]]; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+        candidate="$PROJECT_ROOT/$brief"
+        if [[ -f "$candidate" ]]; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+        return 0    # 三级全未命中 → 空串（调用方 block 自修）
+    fi
+    # brief 空 → v3.54.0 回退路径
+    printf '%s\n' "$PROJECT_ROOT/.autopilot/project/tasks/${task_id}.md"
+    return 0
 }
 
 # ── Brief 模式状态文件创建 ────────────────────────────────────

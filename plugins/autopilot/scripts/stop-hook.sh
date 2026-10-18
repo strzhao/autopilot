@@ -437,6 +437,15 @@ HOOK_TRANSCRIPT=$(echo "$HOOK_INPUT" | jq -r '.transcript_path // ""' 2>/dev/nul
 # 用 stdin 的 cwd 初始化路径（为空时 fallback 到当前 CWD）
 init_paths "$HOOK_CWD"
 
+# 指针自愈可见化——stderr 降级通道（v3.78.0 组件 3）：
+# 无 JSON 输出路径（Guard 2 会话不匹配放行 / 释放分支）也要让自愈事件可见；
+# 主 JSON 路径的 systemMessage 优先通道 = merge prompt 注入处合并（单 JSON 铁律不破，
+# 先例 knowledge_extracted 归一化 stderr 提示与 _TIER5_MSG 模式）。本文件注释禁用 § 字样
+# （ai-obs-constraint-guard P3 以 diff 新增行 §<数字> 启发式守「零新 gate」契约）。
+if [[ -n "${SELF_HEALED_SLUG:-}" ]]; then
+    echo "🩹 autopilot · 指针丢失已自愈，接管 ${SELF_HEALED_SLUG}" >&2
+fi
+
 # 状态文件不存在时直接放行
 # shellcheck disable=SC2153
 if [[ ! -f "$STATE_FILE" ]]; then
@@ -559,6 +568,9 @@ if [[ "$PHASE" == "done" ]]; then
     # Case 0: project-qa 完成 → 项目完成通知 + 清理 active 指针
     if [[ "$MODE" == "project-qa" ]]; then
         bash "$SCRIPT_DIR/notify.sh" project-complete 2>/dev/null || true
+        # v3.78.0 组件 3：rm 前落盘 active:false（合法释放点闭集 1/7）——「循环已终止」
+        # 必须写进文件，否则指针自愈会把本任务当丢失收养，已完成的循环被重新拉起
+        set_field "active" "false"
         rm -f "$(get_active_file)"
         exit 0
     fi
@@ -571,17 +583,12 @@ if [[ "$PHASE" == "done" ]]; then
     if [[ "$MODE" == "project" ]] && [[ -z "$BRIEF_FILE" ]] && [[ -f "$DAG_FILE" ]]; then
         FIRST_READY=$(get_first_ready_task "$DAG_FILE")
         if [[ -n "$FIRST_READY" ]] && [[ "$FIRST_READY" != "ALL_DONE" ]]; then
-            # brief 字段优先（显式文件指针，文件命名自由），回退 tasks/<id>.md（v3.54.0 兼容）
-            _brief_ptr=$(get_task_brief "$DAG_FILE" "$FIRST_READY" 2>/dev/null || true)
-            if [[ -n "$_brief_ptr" ]]; then
-                case "$_brief_ptr" in
-                    /*) TASK_FILE="$_brief_ptr" ;;
-                    *)  TASK_FILE="$PROJECT_ROOT/$_brief_ptr" ;;
-                esac
-            else
-                TASK_FILE="$PROJECT_ROOT/.autopilot/project/tasks/${FIRST_READY}.md"
-            fi
-            if [[ -f "$TASK_FILE" ]]; then
+            # brief 字段优先（显式文件指针，文件命名自由），回退 tasks/<id>.md（v3.54.0 兼容）。
+            # v3.78.0 组件 1：内联两形态 case 下沉为 lib.sh:resolve_task_file 三级解析
+            #（绝对路径原样 → $PROJECT_ROOT/.autopilot/project/<brief> → 仓根相对），
+            # 治 moonwell 短形态 brief: tasks/M1-X.md 按仓根直拼未命中的自毁事故。
+            TASK_FILE=$(resolve_task_file "$DAG_FILE" "$FIRST_READY")
+            if [[ -n "$TASK_FILE" ]] && [[ -f "$TASK_FILE" ]]; then
                 new_slug=$(generate_task_slug "$FIRST_READY")
                 setup_requirement_dir "$new_slug"
                 TASK_FILE_ABS=$(cd "$(dirname "$TASK_FILE")" && pwd)/$(basename "$TASK_FILE")
@@ -601,11 +608,28 @@ if [[ "$PHASE" == "done" ]]; then
                 SKIP_INCREMENT=1
                 # 落入下方 block JSON 构造
             else
-                bash "$SCRIPT_DIR/notify.sh" project-design-complete 2>/dev/null || true
-                rm -f "$(get_active_file)"
+                # v3.78.0 组件 2：brief 三级解析未命中 ≠ 项目完成。旧版在此 rm active 指针
+                # + 误发 project-design-complete 通知（任务文件缺失 ≠ 完成事件），即 harmony-space
+                # 2026-10-17 事故的自毁点（transcript #47 删指针 → #48-#65 十八连静默放行，
+                # 已 QA 全绿任务永久停摆）。改为 block 自修 JSON：报实值 + 修复指引 + 逃生口，
+                # AI 修完结束本回合后 stop-hook 自动重试 auto-chain。
+                # 铁律：任何分支不得删除指向未完成任务的 active 指针。
+                _brief_val=$(get_task_brief "$DAG_FILE" "$FIRST_READY" 2>/dev/null || true)
+                # qa r3 审查 [85] 修复：Case 0.5 的推进取 dag 首个就绪任务，与 state 的
+                # next_task 无关（恒空）——逃生口若指向清空 next_task 即死指令（清空为
+                # no-op，AI 原地打转）。有效逃生口 = 改 dag.yaml（置 blocked/移除）或 cancel。
+                _repair_reason="auto-chain 中断：任务 ${FIRST_READY}（dag.yaml 首个就绪任务）的任务文件未解析到（brief=\"${_brief_val}\"，空串 = dag 未设 brief 字段）。已按序三级解析均未命中：① 绝对路径原样；② ${PROJECT_ROOT}/.autopilot/project/${_brief_val}；③ ${PROJECT_ROOT}/${_brief_val}；④ 回退 ${PROJECT_ROOT}/.autopilot/project/tasks/${FIRST_READY}.md。请二选一修复后结束本回合（stop-hook 将自动重试 auto-chain）：(a) 用 Edit 修正 ${DAG_FILE} 中 ${FIRST_READY} 的 brief 字段，指向真实存在的任务文件；(b) 或在上述任一解析位置补建任务文件。逃生口：若该项目不应继续推进，可用 Edit 在 ${DAG_FILE} 中把任务 ${FIRST_READY} 的 status 置为 blocked（或移除该任务），或运行 /autopilot cancel 终止循环。本 block 已保留 active 指针，不会自毁。"
+                jq -n --arg reason "${_repair_reason}" \
+                    --arg msg "autopilot: 任务 ${FIRST_READY} 的 brief 文件未解析到，已阻止指针自毁——修 dag.yaml brief 或补建任务文件后结束本回合自动重试" \
+                    '{"decision":"block","reason":$reason,"systemMessage":$msg}'
                 exit 0
             fi
         else
+            # r2 审查定性注：本分支实际触发条件 = FIRST_READY 为空 ∨ ALL_DONE。前者
+            # （全部任务 in-progress/blocked）时删的是指向未完成项目的指针，属既有行为
+            # 非本次引入；v3.78.0 组件 3 落盘 active:false 后自愈不收养，不劣于现状
+            #（合法释放点闭集 2/7）。
+            set_field "active" "false"
             bash "$SCRIPT_DIR/notify.sh" project-design-complete 2>/dev/null || true
             rm -f "$(get_active_file)"
             exit 0
@@ -613,17 +637,10 @@ if [[ "$PHASE" == "done" ]]; then
 
     # Case 1: AI 信号了下一个任务 → 自动链接
     elif [[ -n "$NEXT_TASK" ]] && [[ -f "$DAG_FILE" ]]; then
-        # brief 字段优先（显式文件指针，文件命名自由），回退 tasks/<id>.md（v3.54.0 兼容）
-        _brief_ptr=$(get_task_brief "$DAG_FILE" "$NEXT_TASK" 2>/dev/null || true)
-        if [[ -n "$_brief_ptr" ]]; then
-            case "$_brief_ptr" in
-                /*) TASK_FILE="$_brief_ptr" ;;
-                *)  TASK_FILE="$PROJECT_ROOT/$_brief_ptr" ;;
-            esac
-        else
-            TASK_FILE="$PROJECT_ROOT/.autopilot/project/tasks/${NEXT_TASK}.md"
-        fi
-        if [[ -f "$TASK_FILE" ]]; then
+        # brief 字段优先（显式文件指针，文件命名自由），回退 tasks/<id>.md（v3.54.0 兼容）。
+        # v3.78.0 组件 1：内联两形态 case 下沉为 lib.sh:resolve_task_file 三级解析（同 Case 0.5）。
+        TASK_FILE=$(resolve_task_file "$DAG_FILE" "$NEXT_TASK")
+        if [[ -n "$TASK_FILE" ]] && [[ -f "$TASK_FILE" ]]; then
             # 为新任务创建新的 requirements 文件夹
             new_slug=$(generate_task_slug "$NEXT_TASK")
             setup_requirement_dir "$new_slug"
@@ -642,9 +659,16 @@ if [[ "$PHASE" == "done" ]]; then
             SKIP_INCREMENT=1
             # 落入下方 block JSON 构造
         else
-            echo "⚠️  autopilot: next_task file not found: ${TASK_FILE}" >&2
-            bash "$SCRIPT_DIR/notify.sh" complete 2>/dev/null || true
-            rm -f "$(get_active_file)"
+            # v3.78.0 组件 2：next_task 文件未找到 ≠ 项目完成。旧版在此 rm active 指针 +
+            # 误发 complete 通知（任务文件缺失 ≠ 完成事件，harmony-space 2026-10-17 事故同型
+            # 自毁点），改为 block 自修 JSON（保留 active 指针），AI 修复后结束本回合
+            # stop-hook 自动重试 auto-chain。铁律：不得删除指向未完成任务的 active 指针。
+            _brief_val=$(get_task_brief "$DAG_FILE" "$NEXT_TASK" 2>/dev/null || true)
+            _repair_reason="auto-chain 中断：next_task=${NEXT_TASK}（state.md next_task 字段）的任务文件未解析到（brief=\"${_brief_val}\"，空串 = dag 未设 brief 字段）。已按序三级解析均未命中：① 绝对路径原样；② ${PROJECT_ROOT}/.autopilot/project/${_brief_val}；③ ${PROJECT_ROOT}/${_brief_val}；④ 回退 ${PROJECT_ROOT}/.autopilot/project/tasks/${NEXT_TASK}.md。请二选一修复后结束本回合（stop-hook 将自动重试 auto-chain）：(a) 用 Edit 修正 ${DAG_FILE} 中 ${NEXT_TASK} 的 brief 字段，指向真实存在的任务文件；(b) 或在上述任一解析位置补建任务文件。逃生口：若该任务不应推进，用 Edit 把 ${STATE_FILE} 的 next_task 字段清空即可释放循环。本 block 已保留 active 指针，不会自毁。"
+            echo "⚠️  autopilot: auto-chain 任务文件未解析到（next_task=${NEXT_TASK}），转 block 自修（指针保留）" >&2
+            jq -n --arg reason "${_repair_reason}" \
+                --arg msg "autopilot: next_task ${NEXT_TASK} 的 brief 文件未解析到，已阻止指针自毁——修 dag.yaml brief 或补建任务文件后结束本回合自动重试" \
+                '{"decision":"block","reason":$reason,"systemMessage":$msg}'
             exit 0
         fi
     # Case 2: 项目子任务完成 + 无 next_task → 检查是否全部完成
@@ -669,12 +693,16 @@ if [[ "$PHASE" == "done" ]]; then
             # 落入下方 block JSON 构造
         else
             # 还有任务但 AI 未信号高信心 → 释放，等用户操作
+            # v3.78.0 组件 3：rm 前落盘 active:false（合法释放点闭集 3/7），防自愈收养
+            set_field "active" "false"
             bash "$SCRIPT_DIR/notify.sh" complete 2>/dev/null || true
             rm -f "$(get_active_file)"
             exit 0
         fi
     # Case 3: 单任务模式 → 正常清理（保留 requirements 文件夹，移除 active 指针）
     else
+        # v3.78.0 组件 3：rm 前落盘 active:false（合法释放点闭集 4/7，场景 11 done 释放谓词）
+        set_field "active" "false"
         bash "$SCRIPT_DIR/notify.sh" complete 2>/dev/null || true
         rm -f "$(get_active_file)"
         exit 0
@@ -920,6 +948,10 @@ fi
 if [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
     echo "🛑 autopilot: 达到最大迭代次数 ($MAX_ITERATIONS)。" >&2
     bash "$SCRIPT_DIR/notify.sh" error 2>/dev/null || true
+    # v3.78.0 组件 3：rm 前落盘 active:false（合法释放点闭集 5/7）。此处任务未完成，
+    # 若只删指针不落盘，指针自愈会把「已达上限的任务」当丢失收养 → 收养→秒杀循环
+    # 反复架空安全阀（场景 14）。落盘后自愈扫描候选闭集不含本任务，循环真正终止。
+    set_field "active" "false"
     rm -f "$(get_active_file)"
     exit 0
 fi
@@ -1265,6 +1297,14 @@ if [[ -n "${_TIER5_MSG:-}" ]]; then
     SYSTEM_MSG="${SYSTEM_MSG}
 
 ${_TIER5_MSG}"
+fi
+# 指针自愈可见化——systemMessage 优先通道（v3.78.0 组件 3）：本轮发生过指针自愈 →
+# 合并进既有 block JSON（单 JSON 铁律不破）；stderr 降级通道已在本轮 init_paths 后
+# 无条件输出，覆盖无 JSON 输出路径（Guard 2 放行等）。
+if [[ -n "${SELF_HEALED_SLUG:-}" ]]; then
+    SYSTEM_MSG="${SYSTEM_MSG}
+
+🩹 autopilot · 指针丢失已自愈，接管 ${SELF_HEALED_SLUG}"
 fi
 
 jq -n \

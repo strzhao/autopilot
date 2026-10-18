@@ -1,5 +1,11 @@
 # Patterns & Lessons（热区：近 30 天活跃决策）
 
+### [2026-10-18] QA 谓词口径裁决三型——E1 基线红闭集 / CONTRACT_AMBIGUOUS 对称留痕 / 弱 marker 锚注册行（v3.78.0）
+<!-- tags: autopilot, qa, predicate-gate, e1-adjudication, contract-ambiguous, baseline-red-closure, weak-marker, acceptance-lock, false-green, v3.78.0 -->
+**Scenario**: 单次 QA 连遇三处冻结谓词与现实冲突：① S13-P1「全量套件 exit==0 无 FAIL」撞 3 项基线红——实测 HEAD 即红且与本 diff 输入面无关（`_ai_*` 函数零 hunk / §7.5 零 hunk / 测试文件未改；一项系缺外部 transcript 前置）；② S11 P1/P3/P5「stdout JSON」对历史静默释放分支（exit 0 空 stdout，本次未改）不可满足，红队以 CONTRACT_AMBIGUOUS 注释收窄但未在 SSOT 留痕——与 S13-P1 的正式裁决形成不对称；③ S13-P2 的 marker 检查 `grep -q "S01"` 锚的是 .mjs 头部注释映射表，测试体删空仍全绿（node --test 零用例也 exit 0）。
+**Lesson**: ① **E1 裁决（断言前提与现实矛盾）的收窄口径必须强于原断言的反作弊性**：「失败集 ⊆ HEAD 基线红闭集 + 修复面必须绿 + 零新增红」比「全量绿」更难骗（任何新增红直接爆），配 `lock_acceptance_tests` 重锁 + SSOT 与变更日志双留痕；② **同族口径修订留痕必须对称**——CONTRACT_AMBIGUOUS 收窄与 E1 裁决同等进 SSOT，否则审计链断；③ **防「空头文件假绿」：结构存在性检查必须锚测试注册行（`test('<marker>`）而非注释/文档**——[2026-09-15] 假绿家族第四形态（前三：artifact 同名覆盖 / 校验器恒真 / 解析崩溃回落空值，本次：marker 锚错对象）。
+**Why**: 谓词闸门的公信力取决于「口径变更可审计 + 存在性检查不可伪造」；收窄不是放水，是把误注册的前提修正为可机械判定的等价契约。
+
 ### [2026-09-15] 验证链的三处"假绿" + 全局 env 隐性干扰源（PATH 桩隔离法）
 <!-- tags: autopilot, qa, false-green, artifact-naming-collision, harness-bug, multibyte, awk, bsd-grep, env-global, autopilot-html-review, browser-popup, path-stub, test-isolation, dogfood -->
 **Scenario**: 一次 QA 连踩三个"看起来通过"的假信号，全部出在**验证工具自身**而非被测实现：① **artifact 同名覆盖**——SSOT 约定的 `/tmp/autopilot-artifacts/场景N.M.out` 被多个测试共用，后跑者覆盖前者，24 条谓词中 16 条的 artifact 内容实为别的测试产物（「无 artifact 的 PASS 自动判 FAIL」险些被绕过）；② **校验器恒真**——校验脚本 `sig()` 漏写 `echo`，签名变量恒空，`grep -qF ""` 对任何文件都命中 → 16/24 失败被判 0 失败；③ **解析器崩溃回落空值**——`awk` 在含非法字节序列的日志上崩溃，`${nb:-0}` 把"没解析出"变成"0 失败" → 未经证据的 PASS。

@@ -15,6 +15,12 @@
 #   - 单任务模式（显式传单任务偏好）state 应 auto_approve: false + html_review: true（回归不破）
 #   - stop-hook §5.5：state 满足 gate=review-accept ∧ phase=qa ∧ auto_approve=true → 自动转 phase=merge
 #
+# 基线修复留痕（20261018-开始实现 组件 4）：AC-P3 夹具构造早于 v3.68/v3.69 分级字段，
+# 缺 e2e_status / leftover_critical / unexecuted_core_paths 三字段 → stop-hook §5.7b
+# （fail-safe 宁卡不放）先于 §5.5 命中：清 gate + block 回 qa，phase 停在 qa → AC-P3-b
+# 在 main 基线即红。断言 phase==merge 与 §5.5 契约（stop-hook §5.5 达标条件）一致，
+# 属夹具过期非引擎 bug。修复 = 夹具补三字段（verified/0/0 恰为 §5.5 达标条件），不动断言。
+#
 # 覆盖验收场景（每条 ≥1 硬断言，失败 exit 1）：
 #   AC-P1：brief 模式 create_brief_state_file 4 参 → state auto_approve==true ∧ html_review==false
 #   AC-P2：单任务显式偏好（6 参传 false/true）→ state auto_approve==false ∧ html_review==true（回归不破）
@@ -214,6 +220,8 @@ echo "brief-qa" > "$TMP_P3/.autopilot/runtime/active.ptr"
 
 # 构造 state：phase=qa + gate=review-accept + auto_approve=true（brief 默认值产出后的状态）
 # 必要字段补全（参考 auto-approve-gate-bypass fixture，让 stop-hook 过 §1-4 不被拦截）
+# e2e_status/leftover_critical/unexecuted_core_paths = v3.68/v3.69 分级字段（组件 4 夹具
+# 修复，verified/0/0 恰为 §5.5 达标条件 → §5.7b 不拦截、§5.5 正常推进 merge）
 cat > "$TMP_P3/.autopilot/runtime/requirements/brief-qa/state.md" <<EOF
 ---
 active: true
@@ -229,6 +237,9 @@ fast_mode: true
 brief_file: ""
 next_task: ""
 auto_approve: true
+e2e_status: "verified"
+leftover_critical: 0
+unexecuted_core_paths: 0
 knowledge_extracted: ""
 task_dir: "$TMP_P3/.autopilot/runtime/requirements/brief-qa"
 session_id: p3sess

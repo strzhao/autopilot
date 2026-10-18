@@ -356,6 +356,9 @@ HELP_EOF
             exit 0
         fi
         # 仅移除 active 指针，requirements 文件夹保留作为历史归档
+        # v3.78.0 组件 3：rm 前落盘 active:false（合法释放点闭集 6/7）——用户显式取消
+        # 是合法终止信号，不落盘会被指针自愈当作丢失收养，cancel 被下次 Stop 静默撤销（场景 15）
+        set_field "active" "false"
         rm -f "$(get_active_file)"
         echo "🛑 autopilot 已取消，active 指针已清理。"
         [[ -n "$TASK_DIR" ]] && echo "   需求文件夹保留在: $TASK_DIR"
@@ -371,6 +374,9 @@ if [[ -f "$STATE_FILE" ]]; then
     EXISTING_PHASE=$(get_field "phase" || true)
     if [[ "$EXISTING_PHASE" == "done" ]]; then
         # phase=done 的状态文件是残留（stop hook 未及时清理），清理 active 指针
+        # v3.78.0 组件 3：rm 前落盘 active:false（合法释放点闭集 7/7），保证自愈扫描
+        # 候选闭集不含已终止任务；随后 setup_requirement_dir 会写入新任务指针完成替换
+        set_field "active" "false"
         rm -f "$(get_active_file)"
         echo "🧹 清理了上一次已完成的 autopilot active 指针。"
     else

@@ -1,5 +1,12 @@
 # Architecture Decisions（热区：近 30 天活跃决策）
 
+### [2026-10-18] 循环引擎自毁链根治——brief 三级解析 + 指针自愈 + 终止信号闭集落盘（v3.78.0）
+<!-- tags: autopilot, stop-hook, active-ptr, self-heal, auto-chain, brief-path-resolution, termination-signal-closure, escape-hatch-validity, silent-exit, ralph-loop, harmony-space, v3.78.0 -->
+**Background**: harmony-space moon worktree 实证事故链（2026-10-17）：dag.yaml 用 `brief: tasks/M1-X.md` 短相对形态，stop-hook Case 1 auto-chain 按仓根解析未命中 → 兜底分支 `rm -f active.ptr` 自毁 + exit 0 静默（transcript 事件 #47 删指针同秒实锤）→ 此后 18 次 Stop 全部静默放行（#48-#65），QA 全绿任务永久停摆，用户每张卡手打「继续」硬推。对照组：9 月 ota2 链全程 hook 驱动成功，唯一差异是 brief 写绝对路径——机制本身是好的，是解析只支持一种形态且兜底动作是自毁。
+**Choice**: 四件套：① `resolve_task_file` 三级解析（绝对原样 → `$PROJECT_ROOT/.autopilot/project/<brief>` → `$PROJECT_ROOT/<brief>`，空 brief 回退 `tasks/<id>.md`）；② 自毁分支改 block 自修 JSON（报实值+修复指引+逃生口，**逃生口必须绑定该分支的实际驱动变量**——Case 0.5 的推进与 state 的 next_task 无关，「清空 next_task」是 no-op 死指令，reviewer 沙箱实证 AI 按其操作原地打转）；③ init_paths 三态合一自愈（ptr 缺失/0 字节/悬空在 slug 读取后统一判定——前两态都能通过 `[[ -f ]]`；同拓扑基目录扫描不跨界，候选=active:true∧phase≠done，mtime 择新）；④ **终止信号闭集落盘**：全库 `rm -f "$(get_active_file)"` 9 处逐一盘点，7 处合法释放/终止点 rm 前 `set_field "active" "false"`——否则 cancel 被下次 Stop 静默撤销、§7 max_iterations 安全阀被「收养→秒杀」循环架空（plan-reviewer r1 抓出漏盘 3/9）。
+**Evidence**: 红队 real-process 20/20 + 契约层 39/39（no-op kill：ptr 切换+目录断言；T01-P4 反证 + 4 处 negate）；plan-reviewer 两轮（r1 FAIL 1 BLOCKER）；qa-reviewer Critical=0 且独立复核 E1 裁决与释放点闭集（7 处最大间距 2 行）；受控实验复刻 moonwell 现场（删 ptr + 短形态 brief）全过。
+**Lesson**: [2026-05-31]「静默放行必须补可见性+活性」的完整落地形态 = **自愈收养（活性）+ 自毁分支转 block 自修（活性）+ 终止态写文件（穷举完备的终止信号）+ 全程 systemMessage/stderr（可见性）**。两个普适判据：**(a) 兜底分支的动作与语义必须对齐**——「文件未找到」的兜底不该是不可逆的状态销毁；**(b) 逃生口有效性 = 指令能实际改变 hook 下次判定**，写文案前先推演该分支里哪个变量在驱动。终止信号与 [2026-09-25] TaskStop 终止信号同族：**信号集穷举必须覆盖全部产生点**（9 处 rm 少盘 3 处即架空两道安全机制）。
+
 ### [2026-09-15] design 步骤 4 审批域 AI-First 落地——闭合 guardrail 删除 + 机械门禁为安全真源 + 反向注入指令同轮清理（v3.72.0）
 <!-- tags: autopilot, design, approval-gate, auto-approve, ai-first, overfitting, guardrail-vs-overfitting, degrees-of-freedom, default-plus-escape-hatch, mechanical-gate, stop-hook-prompt, reverse-injection, dogfood, v3.72.0 -->
 **Background**: design 步骤 4 的「五类高风险清单 + 命任一即必须问」（v3.62.0 引入）在真实负载下命中率 ≈100%——扫描本机 100 个 state.md + 20 个有 transcript 的 session（144 次 AskUserQuestion）：16 次设计/方案审批**每一次 AI 都自述命中 guardrail**（新抽象 / 大半径 / schema 迁移 / API 契约 / 发版 / 认证），而全盘 transcript 中 AI 主动写 `auto_approve: true` 仅 5 次 → 「低风险→自治」路径等价死代码。用户诉求：AI 很强大，规则清单是限制而非护栏。

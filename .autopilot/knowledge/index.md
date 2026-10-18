@@ -2,6 +2,8 @@
 
 > 三层 Progressive Disclosure：本索引（≤5s 扫描）→ 全局 decisions/patterns（热区）→ domains/（历史归档按主题）。
 
+- [2026-10-18] 循环引擎自毁链根治——brief 三级解析 + 指针自愈 + 终止信号闭集落盘（v3.78.0） | tags: autopilot, stop-hook, active-ptr, self-heal, auto-chain, brief-path-resolution, termination-signal-closure, escape-hatch-validity, silent-exit, ralph-loop, harmony-space, v3.78.0 | → decisions.md
+- [2026-10-18] QA 谓词口径裁决三型（E1 基线红闭集 / CONTRACT_AMBIGUOUS 对称留痕 / 弱 marker 锚注册行） | tags: autopilot, qa, predicate-gate, e1-adjudication, contract-ambiguous, baseline-red-closure, weak-marker, acceptance-lock, false-green, v3.78.0 | → patterns.md
 - [2026-09-15] design 步骤 4 审批域 AI-First 落地——删闭合 guardrail 清单 + 机械门禁为安全真源 + 反向注入指令同轮清理（v3.72.0） | tags: autopilot, design, approval-gate, auto-approve, ai-first, guardrail-vs-overfitting, degrees-of-freedom, default-plus-escape-hatch, mechanical-gate, reverse-injection, v3.72.0 | → decisions.md
 - [2026-09-15] 验证链的三处"假绿"（artifact 同名覆盖 / 校验器恒真 / 解析崩溃回落空值）+ 全局 env 干扰源（AUTOPILOT_HTML_REVIEW）与 PATH 桩隔离法 | tags: autopilot, qa, false-green, artifact-collision, harness-bug, bsd-grep, env-global, browser-popup, path-stub, test-isolation | → patterns.md
 
@@ -15,7 +17,7 @@
 - [2026-07-19] 减法/重构任务复刻 [2026-05-25]——claude-p 独立验证关键 step + 既有断言语义化适配减法（净非增/after>=1/net 章节）+ 补 scene 5 双重 grep 守护（v3.58.1） | tags: autopilot, skill, shrink, refactor, claude-p, independent-verification, double-grep, assertion-adaptation, predicate-coverage, scene-5, borderline-rollback, dogfood, v3.58.1 | → domains/skill-authoring.md
 - [2026-07-08] skill md 减行硬约束下新守卫全部下沉 bash，skill md 删散文净减行（v3.52.0 §5.7 谓词守卫） | tags: autopilot, skill, shrink-only, enforce-bash, stop-hook, predicate-guard, mock-cheating, trust-chain, v3.52.0 | → domains/skill-authoring.md
 
-## Decisions（49）
+## Decisions（51）
 - [2026-09-25] Plan 审查轮次上限 2→5（v3.74.0）——治设计阶段「最后一批修复未经复核」缺口：实测 146 份 state.md 中 6 份撞 2 轮上限，撞限那一刻的修复未复核即进 implement；raven-cli 20260920 手动跑到 6 轮，BLOCKER 收敛 6→1→1→0（R4 归零）且 R3 那条系 reviewer 自认前两轮共同漏检；同时把停点写死为「0 BLOCKER」而非轮数（追重要问题不收敛：R5 的修复制造新重要项）；成本条件性——仅 R2 仍 FAIL 的复杂任务多跑 | tags: autopilot, design, plan-reviewer, review-rounds, convergence, blocker-vs-important, unverified-fix, threshold-from-data, v3.74.0 | → domains/skill-authoring.md
 - [2026-09-25] TaskStop 终止信号缺失（v3.73.1）——stop-hook §7.5 假阳性永久固化：被 TaskStop 停掉的后台任务不发 <task-id> 完成通知 ⇒ 启动集永久悬挂 ⇒ 每轮 Stop 静默放行、autopilot 循环整条死且不自愈（全库 137 停/17 通知；近 21 天 31/55 session 中招）；治法 终止集=完成通知 ∪ TaskStop 成功停止，jq 与 fail-safe 同源 + 计数只扣交集（教训：集合差型检测的终止信号须穷举完备，受控实验做因果闭环） | tags: autopilot, stop-hook, has-pending-subagents, taskstop, silent-wait, false-positive-persistent, terminal-signal-union, controlled-experiment, v3.73.1 | → domains/stop-hook-state-machine.md
 - [2026-09-09] pending 检测双盲区根治（v3.70.1）——macOS wc 前导空格使 v3.66.0 条件化丢首行恒不触发 + 4MB 窗口自膨胀盲区（launch 标记被 sidechain 流量推出窗外→假阴性→§9 死循环）；治法 jq -Rs split(fromjson?) 全量直读逐行容错（教训：验证证据须覆盖「机制被真实触发」场景） | tags: autopilot, stop-hook, has-pending-subagents, wc-leading-space, window-blind, full-transcript-scan, fromjson-per-line, false-negative, v3.66.0-regression, v3.70.1 | → domains/stop-hook-state-machine.md
@@ -69,7 +71,7 @@
 - [2026-03-26] doctor Dim 1 测试金字塔分层评估优于文件计数 | tags: autopilot, doctor, testing, test-pyramid, scoring | → domains/knowledge-token-arch.md
 - [2026-03-21] 知识工程采用三层 Progressive Disclosure 而非单层扩展 | tags: knowledge, architecture, progressive-disclosure | → domains/knowledge-token-arch.md
 
-## Patterns（62）
+## Patterns（63）
 - [2026-09-10] headless 机制上线（v3.71.0）——设计期 plan-reviewer 沙箱实测谓词杀伤力（零修复全 PASS 的 contains 污染锚 + 正确实现必假失败的引号格式锚）+ fixture 前缀精确性（sess- vs sess_ 一字之差假红）+ flag-asymmetry 全边矩阵 | tags: autopilot, headless, flag-asymmetry, mutation-killing, predicate-design, plan-reviewer, sandbox-probe, fixture-precision, v3.71.0 | → patterns.md
 - [2026-09-10] bash 接受 CJK 函数名但 ShellCheck 拒之（SC1036）——lint 门禁在 bash -n 之外；函数名 ASCII、谓词 id 进描述、directive 行只留代码 | tags: bash, shellcheck, cjk, function-name, sc1036, lint-gate, macos, acceptance-test | → domains/bash-shell-pitfalls.md
 - [2026-09-10] autopilot headless（zcode runtime）标准用法——模式自判偏 fast（不加 --fast ≠ standard）+ 预授权话术确定性跳审批 + env 剥离红线（session 归属放行 = 闭环静默卡死） | tags: autopilot, headless, zcode, fast-mode, standard-mode, auto-approve, preauthorization, session-claim, env-leak, mode-self-judgment, v3.70.1 | → patterns.md
