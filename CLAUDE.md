@@ -57,6 +57,7 @@ autopilot-commit 已通过"读 CLAUDE.md + grep 校验"动态发现这些位置�
 - **安全**：不提交 secrets；hook 校验输入；MCP 优先只读
 - **性能**：hook 超时合理，避免长任务；skill 引用文件不要过大
 - **兼容**：脚本跨平台（macOS/Linux/Windows），用 POSIX 命令，提供降级方案
+- **门禁对齐**：本地静态门必须追平 CI 门——CI 用 `shellcheck -S warning` 扫全 plugins 树（ludeeus/action-shellcheck），本地只扫单文件会漏 CI 红面（v3.78.0 SC2034 教训：跨文件全局 setter 只写不读被 CI 命中）。新增/修改 .sh 后跑：`find plugins -name "*.sh" -not -path "*/.git/*" -print0 | xargs -0 shellcheck -S warning`
 
 ## .autopilot/ 文件管理
 
