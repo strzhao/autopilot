@@ -532,7 +532,12 @@ describe('T7 工程硬约束守恒（场景9，任务起点即绿）', () => {
       r.status,
       0,
       `全树 shellcheck -S warning 必须零告警（CI 门禁对齐），实际 exit=${r.status}` +
-        (r.error ? `，error=${r.error.message}（需安装 shellcheck）` : '') +
+        (r.status === 127 || r.error
+          ? `（127/error=环境缺 shellcheck 二进制——CI Unit Tests job 须与 lint job 同源安装，见 ci.yml）`
+          : r.status === 123
+            ? `（123=xargs 聚合：至少一个文件有告警，明细见下方 stdout；常见根因=shellcheck 版本分叉，须与 lint job 同源）`
+            : '') +
+        `\nstdout 尾部（shellcheck 告警明细）: ${(r.stdout || '').slice(-1500)}` +
         `\nstderr 尾部: ${(r.stderr || '').slice(-500)}`
     );
   });

@@ -26,5 +26,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      # 场景9.P2（T7 守恒测试）在单测内跑 shellcheck 全树门——必须与 lint job 同源
+      # （koalaman stable release，ludeeus/action-shellcheck 底层同源），否则 runner
+      # 预装的旧版本与本地产新版本分叉，出现「lint job 绿 / Unit Tests 红」假分叉
+      - name: Install shellcheck (same source as lint job)
+        run: |
+          wget -qO- "https://github.com/koalaman/shellcheck/releases/download/stable/shellcheck-stable.linux.x86_64.tar.xz" | tar -xJ
+          sudo cp shellcheck-stable/shellcheck /usr/local/bin/shellcheck
+          shellcheck --version
       - name: Run autopilot tests
         run: npm test
