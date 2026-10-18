@@ -39,7 +39,12 @@
    - **观测绑定**（机器可判）：
      - `observe:` 观测什么 —— 按技术栈选：GUI→可达性树节点属性 / CLI→exit code、stdout / API→响应字段 / 文件→stat。
      - `assert:` DbC 谓词（`== / >= / contains / exists`，禁"约/大概"等自然语言）。
-     - `channel:` `det-machine`（数字/exit/文件/AX 属性，零主观）｜ `real-process`（真子进程或真 API 一次冒烟）｜ `visual-residue`（仅 AX 表达不了的纯视觉，写成二值清单项）。
+     - `channel:` `det-machine`（数字/exit/文件/AX 属性，零主观）｜ `real-process`（真子进程或真 API 一次冒烟）｜ `visual-residue`（仅 AX 表达不了的纯视觉，写成二值清单项）｜ `ux-exploration`（AI 探索式走查/锚图对照，发现清单落 artifact）。
+     - **`ux-exploration` channel 定义**（两种形态由谓词 observe 字段区分，同一 channel 共用同一机械守卫与 artifact 强制）：
+       - **anchor-compare**：已有冻结 design anchor 时，对照锚逐维度语义评分（布局结构/间距节奏/色彩 tokens/字阶/文案逐字），差异清单落 artifact。还原度判定留 AI 多模态，禁伪精度分数权重；语义对照 ≠ 像素门，「禁 golden-image 像素快照」铁律不变。
+       - **exploration**：按 UX 启发式清单（空态/加载态/错误态/反馈/一致性/边界）自由走查，AI 探索 agent 真实驱动实现产物，发现清单落 artifact。
+       - 判定口径二值：Critical 发现 = 0 → PASS，> 0 → FAIL（进 auto-fix）。
+       - 生成规则：目标含 UI/前端/界面/页面/交互语义 → exploration 谓词 ≥1；另有冻结锚（设计文档含视觉规格节或 design-anchor 存在）→ anchor-compare 谓词 ≥1；无 UI 语义不生成（条件短路）。driver 复用现有枚举（如 `playwright:<target>`），artifact 路径约定不变。
      - **real-process 强制规则**：目标/设计文档含 **CLI / API / 服务 / 部署 / 外部系统**语义的交付物（如「提供 xxx 命令」「暴露 xxx 接口」「部署后可访问」「对接 xxx 服务」），对应场景**至少 1 条** `real-process` 谓词——真跑一次该可执行链路并留 artifact，**禁止全 Config 锚点**（纯文档说明类交付物——只改说明文字、无可执行语义——才允许全 Config）。治「文档声明了可执行工作流却从未真实执行」的验收边界盲区：验证边界 = 执行面闭集，声明了就必须冒烟。
      - `negate:` 可选，用于"不执行 / 状态不变"类反向谓词。
      - `driver:` 驱动类型与目标，格式 `<type>:<target>`。type 枚举：`curl`（HTTP/API）/ `playwright`（浏览器/AX）/ `node-script`（纯 Node 逻辑，禁网络/外部依赖）/ `fs-grep`（文件内容匹配）/ `freshness`（产物新鲜度）。**反向约束**：`node-script` 不得用于 `curl|fetch|playwright|overmind|pylon|mysql` 类观测（须改用对应真实驱动类型），stop-hook §5.7 机械校验。
@@ -64,6 +69,8 @@
   - P1 [det-machine]: When {触发}, {系统} shall {响应} ｜ observe: {观测目标} ｜ assert: {DbC 谓词} ｜ driver: {type}:{target} ｜ artifact: /tmp/autopilot-artifacts/{id}.out
   - P2 [visual-residue]: While {状态}, {系统} shall {响应} ｜ observe: 截图 ｜ assert: {二值清单项} ｜ driver: playwright:{target} ｜ artifact: /tmp/autopilot-artifacts/{id}.out
   - P3 [real-process]: If {异常}, then {系统} shall {响应} ｜ observe: {exit/响应} ｜ assert: {DbC 谓词} ｜ driver: curl:{url} ｜ negate: {可选}
+  - P4 [ux-exploration]: While design anchor 已冻结, {系统} shall 对照锚逐维度语义对照且 Critical 差异 = 0 ｜ observe: anchor-compare 差异清单 ｜ assert: critical_diff == 0 ｜ driver: playwright:{target} ｜ artifact: /tmp/autopilot-artifacts/{id}.out
+  - P5 [ux-exploration]: When {UI 交付物可真实驱动}, {系统} shall UX 启发式走查无 Critical 发现 ｜ observe: exploration 发现清单 ｜ assert: critical_count == 0 ｜ driver: playwright:{target} ｜ artifact: /tmp/autopilot-artifacts/{id}.out
 
 （按重要性排序，Happy Path 优先）
 

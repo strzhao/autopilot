@@ -63,3 +63,30 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/visual-companion/stop-server.sh $SESSION_DIR
 ```
 
 使用 `--project-dir` 时，mockup 文件持久化在 `$TASK_DIR/visual/` 中。
+
+## Mockup 全保真规范（四锚定）
+
+mockup 是「视觉精确源」——AI 手写 HTML 若掺占位内容，会被下游当真实设计双层失真。生成时四项全部锚定真实源：
+
+1. **真实 tokens**：读项目 theme/tokens 文件（`colors.json` / `tokens.scss` / tailwind config 等），色彩、圆角、间距逐字引用，禁止目测近似值。
+2. **真实数据**：用仓库 seed 数据、接口样例、README 示例；禁止编造数字与 lorem ipsum。
+3. **真实设备框**：按目标平台画状态栏/导航栏/手势条（iOS 灵动岛 / Android 打孔屏 / 桌面浏览器窗口框）。
+4. **真实字体栈**：引用项目实际 font-family 与字阶，不假设系统默认。
+
+禁占位卡片（灰矩形 +「内容区」占位文字）、禁拍脑袋主观评分表（无锚依据的打分）。
+
+## VLM 自检环（写入后 Feedback Loop）
+
+每屏写入后执行，通过才推进下一屏：
+
+1. 读回渲染结果，自评单一问题：「能否以假乱真当产品截图？」
+2. 不达标 → 按 VLM 反馈修正重写（`<name>-v2.html`），再自评。
+3. 上限 2 轮——防无限循环（与编排器 max_retries 同构）；2 轮后仍不达标，如实向用户说明差距点后推进。
+
+## Design Anchor 冻结协议
+
+**用户确认选定方案是冻结前置**——未经用户确认不得冻结。确认后：
+
+1. 把选定 mockup 拷贝到 `$TASK_DIR/design-anchor/`（HTML 源 + `README.md` 渲染说明：如何打开、目标平台、字体依赖）。
+2. 写 `$TASK_DIR/design-anchor/manifest.md`，含**冻结声明**：本目录为冻结后唯一视觉锚，design/implement/qa 各阶段禁止修改锚；后续还原对照与 anchor-compare 谓词均以本锚为唯一基准。
+3. 条件短路：纯后端任务不启用视觉伴侣——无锚则下游 anchor-compare 自然不生成。

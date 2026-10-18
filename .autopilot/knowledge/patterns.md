@@ -195,3 +195,15 @@
 > 历史归档（< 2026-05-17）按主题迁移至 domains/，详见 index.md
 
 
+
+### [2026-10-18] 冻结谓词自指触发自家守卫——QA 门死锁陷阱
+<!-- tags: autopilot, qa, predicate-gate, self-reference, driver-guard, fixture-keyword, deadlock, false-block, dogfood, plan-review -->
+**Scenario**: 验收场景里「测守卫负例」的谓词自身用 node-script driver，且描述/观测文本里写了被测机制的反向判定关键字（守卫的关键字字面量闭集）——守卫扫描的 blob 恰是本 state.md 的谓词行本身，QA 求值前任何一次实跑守卫即违规 rc2 → stop-hook block 且不耗 retry_count，而本次机制改动不触碰该守卫函数 → QA 门永久死锁无法自愈。
+**Lesson**: 冻结「测试某机制」的谓词前，必须拿谓词行本身实跑一遍被测守卫自证——凡谓词文本会进入任何机械扫描 blob 的场景，触发字面量只允许出现在测试自建的 fixture 文件里，谓词行内用指称（「反向判定集内的关键字，闭集见函数实现」）替代字面量。plan-reviewer 静态审查抓不住这类陷阱（它不实跑），编排器在冻结后、放行前的守卫自检是唯一拦截点。
+**Evidence**: 第 2 轮 plan-reviewer 对 state.md 实跑 validate_predicate_driver 输出 `PRED-DRIVER-VIOLATION: 场景8.P3 …`（8.P3 描述含 fixture 网络关键字字面量且自身 driver=node-script）rc=2；改为指称式措辞后同命令 rc=0，死锁消解。
+
+### [2026-10-18] 白名单制测试运行器的执行面假全量
+<!-- tags: autopilot, qa, execution-surface, npm-test, whitelist, test-runner, false-green, regression-closure, acceptance-test -->
+**Scenario**: 测试运行器为显式白名单制（聚合命令逐个列出测试文件）时，「全量回归绿」只覆盖白名单内文件——新增测试不挂白名单则数十条断言静默退出机器门（聚合命令仍 exit 0）；既有仅手动执行的守卫脚本（无任何 runner/CI 引用）也不在覆盖内；契约写了「回归闭集全绿」但声明的机器门根本跑不到闭集，守卫被改坏时机器门依旧全绿。
+**Lesson**: 声明回归闭集时必须同轮声明其执行面——新增测试显式挂进 runner 清单；仅有手动入口的既有测试以 wrapper 子进程形态纳入自动执行面；「全量」措辞必须与 runner 的真实文件枚举对齐。这是执行面闭集教训（验证边界=执行面闭集非谓词集）在测试运行器维度的复刻。
+**Evidence**: 根 package.json test 脚本为 8 文件显式白名单；五个守卫 .sh 全仓 grep 无任何 runner/CI 引用；修复=T7 新 .mjs 挂白名单 + .mjs 内子进程依次执行五守卫 .sh 并断言 exit=0，此后聚合命令才真正覆盖回归闭集。

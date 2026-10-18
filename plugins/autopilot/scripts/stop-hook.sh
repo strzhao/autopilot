@@ -861,12 +861,12 @@ if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]]; then
             '{"decision":"block","reason":$reason,"systemMessage":$msg}'
         exit 0
     fi
-    # (c) channel 合法性：合法集 = {det-machine, real-process, visual-residue}
+    # (c) channel 合法性：合法集 = {det-machine, real-process, visual-residue, ux-exploration}
     #     治 AI 自创 [human-obs] 等标签豁免 GUI 谓词（iina dogfood 实证）
     _pred_chan_rc=0
     _pred_chan_out=$(validate_predicate_channels "${STATE_FILE}" 2>/dev/null) || _pred_chan_rc=$?
     if [[ "${_pred_chan_rc}" -eq 2 ]] || echo "${_pred_chan_out}" | grep -q "PRED-CHANNEL-ILLEGAL"; then
-        _pred_reason="QA 谓词 channel 非法（${_pred_chan_out}）。合法集 = {det-machine, real-process, visual-residue}（SSOT: scenario-generator-prompt.md）。禁止自创 [human-obs] 等标签豁免谓词。此 block 不耗 max_retries（非 auto-fix 路径）。"
+        _pred_reason="QA 谓词 channel 非法（${_pred_chan_out}）。合法集 = {det-machine, real-process, visual-residue, ux-exploration}（SSOT: scenario-generator-prompt.md）。禁止自创 [human-obs] 等标签豁免谓词。此 block 不耗 max_retries（非 auto-fix 路径）。"
         set_field "gate" '""'
         GATE=""
         jq -n --arg reason "${_pred_reason}" \
@@ -874,16 +874,16 @@ if [[ "${GATE}" == "review-accept" ]] && [[ "${PHASE}" == "qa" ]]; then
             '{"decision":"block","reason":$reason,"systemMessage":$msg}'
         exit 0
     fi
-    # (d) visual-residue 谓词须有 artifact（二值清单）
-    #     治 AI 把 GUI 谓词改标合法 visual-residue 继续逃避 artifact 产出
+    # (d) visual-residue/ux-exploration 谓词须有 artifact（二值清单/发现清单）
+    #     治 AI 把 GUI/走查谓词改标合法 channel 继续逃避 artifact 产出
     _pred_cov_rc=0
     _pred_cov_out=$(validate_predicate_coverage "${STATE_FILE}" 2>/dev/null) || _pred_cov_rc=$?
     if [[ "${_pred_cov_rc}" -eq 2 ]] || echo "${_pred_cov_out}" | grep -q "PRED-COVERAGE-GAP"; then
-        _pred_reason="QA visual-residue 谓词缺 artifact（${_pred_cov_out}）。visual-residue 留人也须产出二值清单 artifact（/tmp/autopilot-artifacts/<pred-id>.out），留人是清单辅助非免自动化金牌。det-machine/real-process 由 driver 守卫兜底不强制 artifact。此 block 不耗 max_retries（非 auto-fix 路径）。"
+        _pred_reason="QA visual-residue/ux-exploration 谓词缺 artifact（${_pred_cov_out}）。visual-residue 留人、ux-exploration 走查对照，均须产出清单 artifact（/tmp/autopilot-artifacts/<pred-id>.out），清单是辅助非免自动化金牌。det-machine/real-process 由 driver 守卫兜底不强制 artifact。此 block 不耗 max_retries（非 auto-fix 路径）。"
         set_field "gate" '""'
         GATE=""
         jq -n --arg reason "${_pred_reason}" \
-            --arg msg "autopilot stop-hook §5.7: visual-residue 谓词缺 artifact，回 qa 补二值清单后重设 gate" \
+            --arg msg "autopilot stop-hook §5.7: visual-residue/ux-exploration 谓词缺 artifact，回 qa 补清单 artifact 后重设 gate" \
             '{"decision":"block","reason":$reason,"systemMessage":$msg}'
         exit 0
     fi

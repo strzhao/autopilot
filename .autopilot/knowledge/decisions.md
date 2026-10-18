@@ -245,3 +245,10 @@
 **Evidence**: commit v3.69.0（本仓）。plan-review 两轮（第 1 轮 BLOCKER 版本同步漏 README）；run-all 46/46 rc=0；红队 10 断言 HEAD 基线红灯；13 谓词 artifact MD5 重复 0；qa-reviewer 独立复跑全部命令。核对锚点：v3.69.0 SKILL.md:79 五节契约行 / red-team-prompt.md:45 消费义务行 / knowledge-context-fanout.acceptance.test.sh 10 断言。关联 [[2026-09-08]] [[2026-07-01]] [[2026-05-08]]。
 
 > 历史归档（< 2026-05-17）按主题迁移至 domains/，详见 index.md
+
+### [2026-10-18] UI 视觉质量三断点沿谓词骨架补齐——ux-exploration channel 双形态 + 冻结锚协议（v3.79.0）
+<!-- tags: autopilot, qa, ux-exploration, visual-fidelity, design-anchor, predicate-channel, channel-enum-extension, acc-guard-30, ai-first, v3.79.0 -->
+**Background**: harmony-space 实证 UI 质量三断点——brainstorm mockup 无保真标准（AI 手写 HTML 被当「视觉精确源」双层失真：占位卡片/编造数据/拍脑袋评分）、design→implement 无结构化视觉传递通道（视觉意图只能挤文字）、观感验证只剩人眼清单且不阻塞合并（HUMAN-PENDING 常态化）。
+**Choice**: 沿既有谓词骨架逐断点补齐而非新建执行面：① channel 合法集只扩不缩新增 ux-exploration，双形态共用同一机械守卫——anchor-compare（对照冻结锚逐维度语义评分：布局/间距/色彩/字阶/文案）与 exploration（UX 启发式自由走查：空态/加载态/错误态/反馈/一致性/边界），Critical 发现=谓词 FAIL 进 auto-fix；② 冻结锚协议：brainstorm 用户确认→拷贝 design-anchor/ 冻结（manifest 声明各阶段禁改锚）→设计文档视觉规格节引用→蓝队按锚实现；③ AI First 分层——语义判断（保真评分/探索发现）留 prompt 层，机械校验（枚举/artifact 存在性/MD5 去重）下沉 bash；det-machine/real-process 不强制 artifact 的既有口径不动。
+**Alternatives rejected**: 独立视觉工具链（千行级脚本+多端驱动硬编码进插件+与谓词骨架平行执行面复杂度翻倍）；视觉第二管线（YAGNI——问题根源是三个断点非缺整条管线）；golden-image 像素 diff 门（既有铁律不变：基线易漂移、多端渲染差异噪声）。
+**Trade-offs**: 求值质量依赖 AI 语义判断（by design），机械守卫只保 artifact 存在性/去重；全保真 mockup 生成规范为 prompt 层软约束（VLM 自检环限轮次）；机制有效性依赖首个真实项目（harmony-space）验证场回灌。

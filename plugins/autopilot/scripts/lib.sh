@@ -1017,7 +1017,7 @@ tree_sig() {
 
 # validate_predicate_channels <state_file>
 #
-# 校验 ## 验收场景 谓词的 [channel] 合法性。合法集 = {det-machine, real-process, visual-residue}
+# 校验 ## 验收场景 谓词的 [channel] 合法性。合法集 = {det-machine, real-process, visual-residue, ux-exploration}
 # （SSOT: scenario-generator-prompt.md:42）。治 AI 自创 [human-obs] 等标签豁免 GUI 谓词。
 #
 # 退出码语义（与 validate_predicate_driver 同构的双信号）：
@@ -1047,7 +1047,8 @@ validate_predicate_channels() {
             if (chan != "" \
                 && chan != "det-machine" \
                 && chan != "real-process" \
-                && chan != "visual-residue") {
+                && chan != "visual-residue" \
+                && chan != "ux-exploration") {
                 id = bold
                 sub(/^\*\*/, "", id); sub(/\*\*.*$/, "", id)
                 sub(/[[:space:]]*\[.*$/, "", id)
@@ -1072,14 +1073,14 @@ validate_predicate_channels() {
 
 # validate_predicate_coverage <state_file>
 #
-# 校验 ## 验收场景 [visual-residue] 谓词须有 artifact 字段（C5 收紧口径）。
+# 校验 ## 验收场景 [visual-residue]/[ux-exploration] 谓词须有 artifact 字段（C5 收紧口径 + ux-exploration 扩员）。
 # det-machine/real-process 谓词由 validate_predicate_driver 兜底，不强制 artifact（兼容 ACC-GUARD-30）。
-# 治 AI 把 GUI 谓词从非法 channel 改标合法 visual-residue 继续逃避 artifact 产出。
+# 治 AI 把 GUI/走查谓词从非法 channel 改标合法 channel 继续逃避 artifact 产出——留 AI 是清单辅助非免产物。
 #
 # 退出码语义：
-#   0 = 合规（visual-residue 谓词全有 artifact）
-#   2 = 违规（任一 visual-residue 谓词缺 artifact）
-#   1 = no-op（无 visual-residue 谓词，或 ## 验收场景 无谓词）
+#   0 = 合规（visual-residue/ux-exploration 谓词全有 artifact）
+#   2 = 违规（任一 visual-residue/ux-exploration 谓词缺 artifact）
+#   1 = no-op（无 visual-residue/ux-exploration 谓词，或 ## 验收场景 无谓词）
 # 违规时 stdout 含 "PRED-COVERAGE-GAP: <id> 无 artifact"。
 validate_predicate_coverage() {
     local state_file="${1:-}"
@@ -1099,7 +1100,7 @@ validate_predicate_coverage() {
                     chan = substr(bold, RSTART+1, RLENGTH-2)
                 }
             }
-            if (chan == "visual-residue") {
+            if (chan == "visual-residue" || chan == "ux-exploration") {
                 saw_visual = 1
                 has_art = (line ~ /artifact:[[:space:]]*[^[:space:]]/)
                 if (!has_art) {

@@ -56,6 +56,12 @@
 ## 跨任务设计约束
 (命名规范、共享接口、错误处理模式等)
 
+## 视觉规格
+(可选——仅 UI 交付物任务需要，无 UI 交付物时省略本节)
+- 锚图路径：$TASK_DIR/design-anchor/（相对引用；冻结后唯一视觉锚）
+- 逐屏规格要点：(每屏布局/间距/字阶/色彩要点，与锚图一一对应)
+- 冻结声明：design/implement/qa 各阶段禁止修改锚图
+
 ## Handoff 策略
 (任务间信息传递的关键内容)
 ```
@@ -77,6 +83,7 @@ design 步骤 2 编排器把验收场景生成器的输出冻结写入 `## 验�
 **谓词格式规约**（stop-hook §5.7 机械解析，必须遵守）：
 - 用 bullet-list + fullwidth `｜` 分隔各字段，禁 halfwidth `|`（避 jq 管道符 hazard）。
 - 每条谓词一行：`- **<id> [channel]** <描述> ｜ observe: <观测> ｜ assert: <DbC> ｜ driver: <type>:<target> ｜ artifact: <path>`。
+- `channel` 枚举（闭集，只扩不缩；SSOT: references/scenario-generator-prompt.md）：`det-machine` / `real-process` / `visual-residue` / `ux-exploration`。`visual-residue` 与 `ux-exploration` 谓词强制 artifact 字段（stop-hook §5.7 校验）。
 - `driver` type 枚举：`curl` / `playwright` / `node-script`（禁网络/外部依赖）/ `fs-grep` / `freshness`。`node-script` 不得用于 `curl|fetch|playwright|overmind|pylon|mysql` 类观测。
 - `artifact` 路径约定：`/tmp/autopilot-artifacts/<pred-id>.out`。QA 求值时编排器写入真实驱动输出，stop-hook §5.7 校验文件存在且非空，不依赖 ## QA 报告。PASS 谓词须将真实驱动输出写入预注册 artifact 路径，缺失即 block 回 qa（非 auto-fix，不耗 retry_count）。
 
