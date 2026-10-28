@@ -75,7 +75,7 @@ depends_on: ["XXX", "YYY"]
 
 ## 核心原则
 
-1. **原子性**: 每个任务是独立的 autopilot 运行，有完整的 design → implement → qa → merge 闭环
+1. **默认合并**: 每个任务是一次独立 autopilot 运行（design → implement → qa → merge 全流程），任务数是项目总开销的第一乘数——能合并的不拆，仅当单次运行无法承载才拆，宁少勿多
 2. **信息隔离**: 任务间通过 handoff 文件传递上下文，不共享会话状态
 3. **上下文预算 <10KB**: L0 DAG 概览 + L1 任务简报 + L2 依赖 handoff + L3 架构摘要
 4. **Handoff 链**: 每个任务完成后写 ≤500 字 handoff，只有直接下游读取
