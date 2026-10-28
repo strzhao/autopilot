@@ -230,10 +230,18 @@ $(printf '%b' "$KEY_TABLE")"
 # ═══════════════════════════════════════════════════════════════════════════
 # 场景3.P2 / 3.P3 / 6.P2：从全量执行读数中提取专项证据
 # ═══════════════════════════════════════════════════════════════════════════
+# 评估窗口 = SKILL_REL 最近一次真实改动的累积 diff（该 commit^ → 工作区，含未提交增量）。
+# 2026-10-28 修：原 HEAD/HEAD~1 窗口在静默史上必空 → 3.P3 按反假绿判 FAIL → 套件
+# change-scoped 恒红；对齐被审计的 skill-md-net-shrinkage「fallback 照评」哲学——
+# 评最近真实窗口（天然非空，最后真实修改即验证对象），仅当全史无改动才判不可评
+SKILL_LAST_TOUCH="$(git -C "$REPO_ROOT" log -1 --format=%H -- "$SKILL_REL" 2>/dev/null || true)"
+SKILL_DIFF_CUM=""
+if [[ -n "$SKILL_LAST_TOUCH" ]]; then
+    SKILL_DIFF_CUM="$(git -C "$REPO_ROOT" diff --numstat "${SKILL_LAST_TOUCH}^" -- "$SKILL_REL" 2>/dev/null || true)"
+fi
 SKILL_DIFF_HEAD="$(git -C "$REPO_ROOT" diff --numstat HEAD -- "$SKILL_REL" 2>/dev/null || true)"
-SKILL_DIFF_HEAD1="$(git -C "$REPO_ROOT" diff --numstat HEAD~1 -- "$SKILL_REL" 2>/dev/null || true)"
 SKILL_PRE_NONEMPTY=0
-if [[ -n "$SKILL_DIFF_HEAD" || -n "$SKILL_DIFF_HEAD1" ]]; then
+if [[ -n "$SKILL_DIFF_CUM" ]]; then
     SKILL_PRE_NONEMPTY=1
 fi
 
@@ -281,7 +289,7 @@ else
 fi
 {
     echo "skill-md-net-shrinkage.acceptance.test.sh"
-    echo "前置: SKILL.md diff 非空 = ${SKILL_PRE_NONEMPTY}（HEAD: ${SKILL_DIFF_HEAD:-(空)} / HEAD~1: ${SKILL_DIFF_HEAD1:-(空)}）"
+    echo "前置: SKILL.md 累积窗口非空 = ${SKILL_PRE_NONEMPTY}（last_touch=${SKILL_LAST_TOUCH:-(无)} 累积diff: ${SKILL_DIFF_CUM:-(空)} ／ HEAD 未提交增量: ${SKILL_DIFF_HEAD:-(空)}）"
     echo "log_fail_markers=${NS_FAILS}"
     echo "log_tail:"
     tail -5 "$NS_LOG" 2>/dev/null || echo "(无日志)"
@@ -289,7 +297,7 @@ fi
 cp "$ART_DIR/场景3.P3.out" "$ART_NESTED/场景3.P3.out" 2>/dev/null || true
 
 if [[ "$SKILL_PRE_NONEMPTY" -ne 1 ]]; then
-    fails "场景3.P3: 非空前置不成立（SKILL.md HEAD/HEAD~1 diff 皆空）——净收缩断言在 0/0 上空转（假绿），判 FAIL"
+    fails "场景3.P3: 非空前置不成立（SKILL.md 全史无改动记录，累积窗口为空）——净收缩断言无可评对象，判 FAIL"
 fi
 if [[ ! -f "$NS_LOG" ]]; then
     fails "场景3.P3: skill-md-net-shrinkage 未被执行（日志缺失，可能文件被删）"

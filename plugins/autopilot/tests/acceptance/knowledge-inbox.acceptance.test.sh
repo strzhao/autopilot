@@ -40,7 +40,10 @@ SKILL_MD="$PLUGIN_DIR/skills/autopilot/SKILL.md"
 KE_MD="$PLUGIN_DIR/skills/autopilot/references/knowledge-engineering.md"
 PR_MD="$PLUGIN_DIR/skills/autopilot/references/plan-reviewer-prompt.md"
 DOCTOR_MD="$PLUGIN_DIR/skills/autopilot-doctor/SKILL.md"
-BASE_COMMIT="937f6e3"
+# Tripwire 基线：对 hooks/ 与零改动清单脚本（stop-hook/lib/setup/worktree.mjs）的任何
+# 合法改动，必须同步推进本基线，否则场景8.P2/P3 恒红（2026-10-28 教训：937f6e3 基线
+# 自 v3.77.1 hooks 引号修复（479b501）起过期，v3.78.0 脚本改动后双重过期）
+BASE_COMMIT="40a9c02"
 ART_DIR="/tmp/autopilot-artifacts"
 TODAY="$(date +%Y-%m-%d)"
 NL=$'\n'
@@ -55,7 +58,7 @@ trap 'rm -rf "$TMP_ROOT"' EXIT
 [[ -f "$PR_MD" ]]      || { echo "[FATAL] plan-reviewer-prompt.md 不存在: $PR_MD"; exit 1; }
 [[ -f "$DOCTOR_MD" ]]  || { echo "[FATAL] doctor SKILL.md 不存在: $DOCTOR_MD"; exit 1; }
 command -v git >/dev/null || { echo "[FATAL] 需要 git"; exit 1; }
-# 基线锚点（谓词注记：主 SKILL.md 行数基线 = 476（main 937f6e3））必须可达
+# 基线锚点必须可达（谓词注记：主 SKILL.md 行数基线 476 出自 main 937f6e3，与 BASE_COMMIT 解耦）
 git -C "$REPO_ROOT" cat-file -e "${BASE_COMMIT}^{commit}" 2>/dev/null \
   || { echo "[FATAL] 基线锚点 ${BASE_COMMIT} 不可达（CONTRACT: 场景8 前后对比基）"; exit 1; }
 
