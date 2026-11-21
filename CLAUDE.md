@@ -33,6 +33,7 @@ String 维护的 Claude Code 插件集合。
 | `plugins/<name>/.claude-plugin/plugin.json` | 插件系统据此检测新版本，遗漏 = 用户无法更新 |
 | `plugins/<name>/package.json`（如存在） | npm 包版本 |
 | `.claude-plugin/marketplace.json` | 仓库级索引，按 `name` 字段定位条目更新 `version` |
+| `plugins/autopilot/.claude-plugin/plugin.json` | `claude plugin update` 读的版本源——漏更会导致 update 判「已是最新」|
 | 本文件「插件索引」表中的 `vX.Y.Z` | 列表展示版本号 |
 
 autopilot-commit 已通过"读 CLAUDE.md + grep 校验"动态发现这些位置，新增版本文件时同步更新本表即可。
