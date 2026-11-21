@@ -390,6 +390,82 @@ function writeLocalConfig(worktreePath) {
 }
 
 // ─── REPAIR ───
+// ─── Dependency install: bounded, stamped, lock-guarded ───
+// hook 有 300s 总预算（hooks.json）。装依赖历史上是同步阻塞且无超时：并发创建时
+// pnpm store 锁把 N 个安装串行化 + 宿主负载拖慢，集体超 300s 被 Claude Code 强杀
+// （表现为 "Hook cancelled"），worktree 创建整单失败（2026-11-20 批量创建实测）。
+// 原则：worktree 创建成功 ≠ 依赖装好。安装超时/失败/并发让路都只降级为
+// 「agent 侧需自行 pnpm install」，hook 本身必须成功返回。
+const INSTALL_TIMEOUT_MS = 180_000;
+const INSTALL_STAMP = join('node_modules', '.autopilot-install-ok');
+
+function processAlive(pid) {
+  try { process.kill(pid, 0); return true; } catch { return false; }
+}
+
+function installLockDir(root) {
+  return join(root, '.autopilot', 'runtime', 'install.lock');
+}
+
+function acquireInstallLock(root) {
+  const lockDir = installLockDir(root);
+  mkdirSync(dirname(lockDir), { recursive: true });
+  try {
+    mkdirSync(lockDir);
+    writeFileSync(join(lockDir, 'pid'), String(process.pid));
+    return true;
+  } catch {
+    // 被占：持锁进程已死则清理后重试一次；活着就让路（跳过安装）
+    try {
+      const pid = parseInt(readFileSync(join(lockDir, 'pid'), 'utf8').trim(), 10);
+      if (!Number.isNaN(pid) && !processAlive(pid)) {
+        log('   ⚠ 清理残留安装锁（持锁进程已死），重试获取');
+        rmSync(lockDir, { recursive: true, force: true });
+        return acquireInstallLock(root);
+      }
+    } catch { /* 锁文件损坏，按被占处理 */ }
+    return false;
+  }
+}
+
+function releaseInstallLock(root) {
+  try { rmSync(installLockDir(root), { recursive: true, force: true }); } catch { /* ignore */ }
+}
+
+function installDeps(worktreePath, root) {
+  const stamp = join(worktreePath, INSTALL_STAMP);
+  if (existsSync(stamp)) {
+    log('→ node_modules 已完整（stamp 存在），跳过安装');
+    return;
+  }
+  if (!acquireInstallLock(root)) {
+    log('→ ⚠ 另一个依赖安装正在进行（install.lock 被占），跳过安装');
+    log('   worktree 已就绪；agent 侧首步需自行 pnpm install');
+    return;
+  }
+  try {
+    log(`→ 安装依赖（自动识别包管理器，≤${Math.round(INSTALL_TIMEOUT_MS / 1000)}s）...`);
+    const execOpts = { cwd: worktreePath, stdio: ['pipe', 'pipe', 'inherit'], timeout: INSTALL_TIMEOUT_MS };
+    try {
+      if (existsSync(join(worktreePath, 'pnpm-lock.yaml'))) {
+        execSync('pnpm install', execOpts);
+      } else if (existsSync(join(worktreePath, 'yarn.lock'))) {
+        execSync('yarn install', execOpts);
+      } else {
+        execSync('npm install', execOpts);
+      }
+      writeFileSync(stamp, new Date().toISOString());
+      log('   ✓ 依赖安装完成');
+    } catch (e) {
+      // 超时/失败都不让 hook 失败：worktree 已创建，依赖留给 agent 侧补装
+      const reason = e.killed ? `超过 ${Math.round(INSTALL_TIMEOUT_MS / 1000)}s 预算被中止` : e.message;
+      log(`   ⚠ 依赖安装未完成（${reason}）；worktree 已就绪，agent 侧首步需自行 pnpm install`);
+    }
+  } finally {
+    releaseInstallLock(root);
+  }
+}
+
 function repair(worktreePath) {
   const root = repoRoot(worktreePath);
   // 防御：拒绝把主仓库当作 worktree 修复，否则 symlink src/dst 同路径会
@@ -451,33 +527,17 @@ function repair(worktreePath) {
 
   // Install dependencies — 仅当存在 package.json 时（避免在非 Node 项目里跑无意义安装）
   if (existsSync(join(worktreePath, 'package.json'))) {
-    const nodeModules = join(worktreePath, 'node_modules');
-    if (!existsSync(nodeModules)) {
-      log('→ 安装依赖（自动识别包管理器）...');
-      const execOpts = { cwd: worktreePath, stdio: ['pipe', 'pipe', 'inherit'] };
-      try {
-        if (existsSync(join(worktreePath, 'pnpm-lock.yaml'))) {
-          execSync('pnpm install', execOpts);
-        } else if (existsSync(join(worktreePath, 'yarn.lock'))) {
-          execSync('yarn install', execOpts);
-        } else {
-          execSync('npm install', execOpts);
-        }
-      } catch (e) {
-        log(`   ⚠ 依赖安装失败: ${e.message}`);
-      }
-    } else {
-      log('→ node_modules 已存在，跳过安装');
-    }
+    installDeps(worktreePath, root);
   }
 
   // Prisma generate
   if (existsSync(join(worktreePath, 'prisma'))) {
     log('→ 检测到 prisma 目录，执行 prisma generate...');
     try {
-      execSync('npx prisma generate', { cwd: worktreePath, stdio: ['pipe', 'pipe', 'inherit'] });
+      execSync('npx prisma generate', { cwd: worktreePath, stdio: ['pipe', 'pipe', 'inherit'], timeout: 60_000 });
     } catch (e) {
-      log(`   ⚠ prisma generate 失败: ${e.message}`);
+      const reason = e.killed ? '超过 60s 预算被中止' : e.message;
+      log(`   ⚠ prisma generate 未完成（${reason}）；agent 侧需要时自行执行`);
     }
   }
 
